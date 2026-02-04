@@ -181,10 +181,10 @@ define( function( require )
 		var total = 0;
 		var result = PathFinding.searchLongIgnoreCellType( from_x | 0, from_y | 0, to_x | 0, to_y | 0, range || 0, path, true);
 
-		if(result.success)
-			total = result.pathLength + 1
+		if (result.success) {
+			total = result.pathLength + 1;
 
-			this.walk.index =     1 * 2; // skip first index
+			this.walk.index = 1 * 2; // skip first index
 			this.walk.total = total * 2;
 			if (total > 0) {
 				this.walk.pos.set(this.position);
@@ -234,6 +234,7 @@ define( function( require )
 						play:   true
 					});
 				}
+		}
 			}
 	}
 

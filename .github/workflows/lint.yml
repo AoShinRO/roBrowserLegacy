@@ -4,8 +4,31 @@ on:
     push:
         branches:
             - master
-    pull_request:
+        paths-ignore:
+            - 'src/Vendors/**'
+            - 'applications/tools/**'
 
+            # Docs
+            - '**/*.md'
+            - 'doc/**'
+
+            # Editor/linter/config meta
+            - '.vscode/**'
+            - '.gitattributes'
+    pull_request:
+            branches:
+            - master
+        paths-ignore:
+            - 'src/Vendors/**'
+            - 'applications/tools/**'
+
+            # Docs
+            - '**/*.md'
+            - 'doc/**'
+
+            # Editor/linter/config meta
+            - '.vscode/**'
+            - '.gitattributes'
 permissions:
     contents: read
 

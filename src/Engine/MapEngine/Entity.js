@@ -2866,7 +2866,9 @@ function processBlockStatus(entity, pkt) {
 	const guardStatuses = [StatusConst.KYRIE, StatusConst.AUTOGUARD, StatusConst.PARRYING];
 
 	if (guardStatuses.includes(pkt.index)) {
-		if (!entity._guardStatuses) entity._guardStatuses = new Set();
+		if (!entity._guardStatuses) {
+			entity._guardStatuses = new Set();
+		}
 		if (pkt.state && !entity._guardStatuses.has(pkt.index)) {
 			entity._guardStatuses.add(pkt.index);
 		} else if (!pkt.state) {

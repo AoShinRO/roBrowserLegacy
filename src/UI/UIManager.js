@@ -10,6 +10,7 @@
 
 import jQuery from 'Utils/jquery.js';
 import UIComponent from './UIComponent.js';
+import ROComponent from './ROComponent.js';
 import UIVersionManager from './UIVersionManager.js';
 import KEYS from 'Controls/KeyEventHandler.js';
 import Renderer from 'Renderer/Renderer.js';
@@ -89,7 +90,7 @@ class UIManager {
 	 * @param {UIComponent} component object
 	 */
 	static addComponent(component) {
-		if (!(component instanceof UIComponent)) {
+		if (!(component instanceof UIComponent) && !(component instanceof ROComponent)) {
 			throw new Error('UIManager::addComponent() - Invalid type of component');
 		}
 
@@ -143,9 +144,11 @@ class UIManager {
 			const component = this.components[keys[i]];
 			const ui = component.ui;
 
-			if (!ui || !ui[0]) continue;
+			//compatible with old components
+			const el = component.ui ? component.ui[0] : component instanceof HTMLElement ? component : null;
 
-			const el = ui[0];
+			if (!el) continue;
+
 			const rect = el.getBoundingClientRect();
 			const x = rect.left;
 			const y = rect.top;

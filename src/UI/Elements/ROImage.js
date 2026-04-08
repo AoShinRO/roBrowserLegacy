@@ -1,0 +1,42 @@
+import DB from 'DB/DBManager.js';
+import Client from 'Core/Client.js';
+import Targa from 'Loaders/Targa.js';
+
+/**
+ * <ro-image src="basic_interface/titlebar_mid.bmp"></ro-image>
+ *
+ * Replaces: <div data-background="basic_interface/titlebar_mid.bmp">
+ */
+class ROImage extends HTMLElement {
+	connectedCallback() {
+		this._loadSrc(this.getAttribute('src'));
+	}
+
+	static get observedAttributes() {
+		return ['src'];
+	}
+
+	attributeChangedCallback(name, oldVal, newVal) {
+		if (name === 'src') this._loadSrc(newVal);
+	}
+
+	_loadSrc(path) {
+		if (!path) return;
+		Client.loadFile(DB.INTERFACE_PATH + path, dataURI => {
+			if (dataURI instanceof ArrayBuffer) {
+				try {
+					const tga = new Targa();
+					tga.load(new Uint8Array(dataURI));
+					this.style.backgroundImage = `url(${tga.getDataURL()})`;
+				} catch (e) {
+					console.error(e.message);
+				}
+			} else {
+				this.style.backgroundImage = `url(${dataURI})`;
+			}
+		});
+	}
+}
+
+customElements.define('ro-image', ROImage);
+export default ROImage;

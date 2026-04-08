@@ -9,6 +9,7 @@ import Targa from 'Loaders/Targa.js';
  */
 class ROImage extends HTMLElement {
 	connectedCallback() {
+		this.style.display = 'none'; // não ocupa espaço no layout
 		this._loadSrc(this.getAttribute('src'));
 	}
 
@@ -22,17 +23,20 @@ class ROImage extends HTMLElement {
 
 	_loadSrc(path) {
 		if (!path) return;
+		const target = this.parentElement;
+		if (!target) return;
+
 		Client.loadFile(DB.INTERFACE_PATH + path, dataURI => {
 			if (dataURI instanceof ArrayBuffer) {
 				try {
 					const tga = new Targa();
 					tga.load(new Uint8Array(dataURI));
-					this.style.backgroundImage = `url(${tga.getDataURL()})`;
+					target.style.backgroundImage = `url(${tga.getDataURL()})`;
 				} catch (e) {
 					console.error(e.message);
 				}
 			} else {
-				this.style.backgroundImage = `url(${dataURI})`;
+				target.style.backgroundImage = `url(${dataURI})`;
 			}
 		});
 	}

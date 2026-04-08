@@ -31,8 +31,13 @@ body {
 	min-height: 100vh;
 }
 
-button {
+button,
+ro-button {
 	padding: 0;
+}
+
+ro-button {
+	display: inline-block;
 }
 
 .ui-btn {

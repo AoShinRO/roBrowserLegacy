@@ -142,8 +142,6 @@ class UIManager {
 
 		for (let i = 0; i < keys.length; ++i) {
 			const component = this.components[keys[i]];
-			const ui = component.ui;
-
 			//compatible with old components
 			const el = component.ui ? component.ui[0] : component instanceof HTMLElement ? component : null;
 

@@ -29,6 +29,7 @@ Clan.render = function render() {
 
 Clan.init = function init() {
 	this.draggable('.titlebar');
+	this.ui.hide();
 };
 
 Clan.onAppend = function onAppend() {
@@ -77,6 +78,7 @@ Clan.hide = function hide() {
 };
 
 Clan.setData = function setData(clan) {
+	if (!this._shadow && !this._host) return;
 	const root = this._shadow || this._host;
 	const info = root.querySelector('.content.info');
 	if (!info) return;

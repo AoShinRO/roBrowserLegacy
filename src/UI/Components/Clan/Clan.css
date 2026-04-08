@@ -143,7 +143,7 @@
 	background-repeat: no-repeat;
 }
 
-#Clan .content.info .members button {
+#Clan .content.info .members ro-button {
 	margin-left: 5px;
 	vertical-align: -4px;
 	border: none;

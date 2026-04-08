@@ -114,6 +114,8 @@ class ROComponent {
 		// Create jQuery compatibility proxy
 		this._createUIProxy();
 
+		document.body.appendChild(this._host);
+
 		// Initialize (subclass provides this)
 		if (this.init) {
 			this.init();
@@ -121,6 +123,8 @@ class ROComponent {
 
 		// Mouse intersection handling
 		this._setupMouseMode();
+
+		this._host.remove();
 
 		this.__loaded = true;
 	}
@@ -238,6 +242,11 @@ class ROComponent {
 
 			// Fire x_remove event (used by mouse intersection cleanup)
 			this._host.dispatchEvent(new Event('x_remove'));
+			if (this._shadow) {
+				this._shadow.querySelectorAll('*').forEach(node => {
+					node.dispatchEvent(new Event('x_remove'));
+				});
+			}
 
 			// Detach from DOM
 			this._host.remove();
@@ -336,6 +345,16 @@ class ROComponent {
 
 		if (full) {
 			for (const key of Object.keys(this)) {
+				if (
+					key === '_host' ||
+					key === '_shadow' ||
+					key === '_container' ||
+					key === 'ui' ||
+					key === '__loaded' ||
+					key === '__scrollbarObserver'
+				) {
+					continue; // Don't copy DOM state
+				}
 				cloned[key] = this[key];
 			}
 		}
@@ -444,15 +463,15 @@ class ROComponent {
 				return;
 			}
 
-			const rect = host.getBoundingClientRect();
-			const x = rect.left - Mouse.screen.x;
-			const y = rect.top - Mouse.screen.y;
-			const width = rect.width;
-			const height = rect.height;
+			const x = host.offsetLeft - Mouse.screen.x;
+			const y = host.offsetTop - Mouse.screen.y;
+			const width = host.offsetWidth;
+			const height = host.offsetHeight;
 
 			// Build snap cache from other active components
 			_snapCache = [];
 			if (UIPreferences.windowmagnet && component.manager) {
+				const hostParent = host.offsetParent;
 				const components = component.manager.components;
 				for (const name in components) {
 					const other = components[name];
@@ -461,15 +480,22 @@ class ROComponent {
 					const el = other._host || (other.ui && other.ui[0]);
 					if (!el) continue;
 
-					const oRect = el.getBoundingClientRect();
+					if (hostParent && el.offsetParent && el.offsetParent !== hostParent) {
+						continue;
+					}
+
 					_snapCache.push({
-						left: oRect.left,
-						top: oRect.top,
-						right: oRect.left + oRect.width,
-						bottom: oRect.top + oRect.height
+						left: el.offsetLeft,
+						top: el.offsetTop,
+						right: el.offsetLeft + el.offsetWidth,
+						bottom: el.offsetTop + el.offsetHeight
 					});
 				}
 			}
+
+			host.style.transition = '';
+			// Force reflow to apply immediately
+			host.offsetHeight; // eslint-disable-line no-unused-expressions
 
 			let drag;
 			let currentOpacity = 1.0;
@@ -624,13 +650,12 @@ class ROComponent {
 	// ─── Mouse intersection setup ──────────────────────────
 
 	_setupMouseMode() {
-		const host = this._host;
-
+		const element = this.__mouseStopBlock || this._host;
 		if (this.mouseMode === ROComponent.MouseMode.STOP) {
 			let _intersect;
 			let _enter = 0;
 
-			host.addEventListener('mouseenter', () => {
+			element.addEventListener('mouseenter', () => {
 				if (_enter === 0) {
 					_intersect = Mouse.intersect;
 					_enter++;
@@ -642,7 +667,7 @@ class ROComponent {
 				}
 			});
 
-			host.addEventListener('mouseleave', () => {
+			element.addEventListener('mouseleave', () => {
 				if (_enter > 0) {
 					_enter--;
 					if (_enter === 0 && _intersect) {
@@ -655,7 +680,7 @@ class ROComponent {
 			});
 
 			// Firefox fix: mouseleave not fired on detach
-			host.addEventListener('x_remove', () => {
+			element.addEventListener('x_remove', () => {
 				if (_enter > 0) {
 					_enter = 0;
 					if (_intersect) {
@@ -666,11 +691,11 @@ class ROComponent {
 			});
 
 			// Focus on mousedown
-			host.addEventListener('mousedown', () => this.focus());
+			element.addEventListener('mousedown', () => this.focus());
 		}
 
 		if (this.mouseMode !== ROComponent.MouseMode.CROSS) {
-			host.addEventListener('touchstart', e => e.stopImmediatePropagation());
+			element.addEventListener('touchstart', e => e.stopImmediatePropagation());
 		}
 	}
 
@@ -678,14 +703,15 @@ class ROComponent {
 
 	_setupScrollbars() {
 		const self = this;
-		const root = this._host;
+		// Use shadow root as root (where the real content is)
+		const root = this._shadow || this._host;
 
 		setTimeout(() => {
-			if (!root || !root.parentNode) return;
+			if (!root || !this._host.parentNode) return;
 
 			const checkScrollbars = el => {
-				// Check the element itself and all descendants
-				const candidates = [el, ...el.querySelectorAll('*')];
+				// For shadow root, querySelectorAll works on internal elements
+				const candidates = el.querySelectorAll ? [el, ...el.querySelectorAll('*')] : [el];
 				for (const node of candidates) {
 					if (node.nodeType !== 1) continue;
 
@@ -701,13 +727,12 @@ class ROComponent {
 				}
 			};
 
-			// Stagger checks to wait for CSS parsing
 			checkScrollbars(root);
 			setTimeout(() => checkScrollbars(root), 50);
 			setTimeout(() => checkScrollbars(root), 150);
 			setTimeout(() => checkScrollbars(root), 500);
 
-			// Re-apply on visibility or content changes
+			// Observe the shadow root (not the host)
 			const observer = new MutationObserver(mutations => {
 				let needsCheck = false;
 				for (const mutation of mutations) {
@@ -727,7 +752,9 @@ class ROComponent {
 				if (needsCheck) checkScrollbars(root);
 			});
 
-			observer.observe(root, {
+			// Observe the container inside the shadow (where mutations happen)
+			const observeTarget = self._container || root;
+			observer.observe(observeTarget, {
 				childList: true,
 				subtree: true,
 				attributes: true,
@@ -735,7 +762,7 @@ class ROComponent {
 				attributeFilter: ['style', 'class']
 			});
 
-			self._scrollbarObserver = observer;
+			self.__scrollbarObserver = observer;
 		}, 0);
 	}
 
@@ -807,7 +834,6 @@ class ROComponent {
 				}
 			});
 
-			// Watch for class changes to toggle active state
 			const observer = new MutationObserver(mutations => {
 				for (const m of mutations) {
 					if (m.attributeName === 'class') {
@@ -819,7 +845,13 @@ class ROComponent {
 					}
 				}
 			});
+
 			observer.observe(node, { attributes: true, attributeFilter: ['class'] });
+
+			node.addEventListener('x_remove', () => observer.disconnect(), { once: true });
+			if (!node._roActiveObserver) {
+				node._roActiveObserver = observer;
+			}
 		}
 
 		// Hover background
@@ -917,6 +949,7 @@ class ROComponent {
 	 */
 	_createUIProxy() {
 		const host = this._host;
+		const component = this;
 		const proxy = {
 			0: host,
 			length: 1,
@@ -976,6 +1009,7 @@ class ROComponent {
 
 			show() {
 				host.style.display = '';
+				component._fixPositionOverflow();
 				return proxy;
 			},
 			hide() {

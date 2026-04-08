@@ -3,4 +3,4 @@ import './ROButton.js';
 import './ROText.js';
 import './ROImage.js';
 
-// Future: ROActor, ROWindow, etc.
+// Future: ROActor, etc.

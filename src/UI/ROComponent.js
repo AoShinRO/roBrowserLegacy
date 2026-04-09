@@ -1053,10 +1053,14 @@ class ROComponent {
 			},
 
 			offsetParent() {
-				const parent = host.offsetParent || document.body;
+				let el = host.offsetParent || document.documentElement;
+				while (el && el !== document.documentElement && window.getComputedStyle(el).position === 'static') {
+					el = el.offsetParent;
+				}
+				el = el || document.documentElement;
 				return {
-					length: parent ? 1 : 0,
-					0: parent
+					length: el ? 1 : 0,
+					0: el
 				};
 			},
 

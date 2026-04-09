@@ -184,7 +184,6 @@ class ROComponent {
 		// Focus
 		this.focus();
 	}
-	// src/UI/ROComponent.js — adicionar dentro da classe ROComponent
 
 	/**
 	 * Fix component position after append or screen resize.
@@ -703,12 +702,16 @@ class ROComponent {
 
 	_setupScrollbars() {
 		const self = this;
-		const root = this._container || this._host; // ← _container está dentro do shadow
+		// Search inside the shadow container, not the host (light DOM)
+		const root = this._container || this._host;
+		// Observe the shadow root to detect changes inside Shadow DOM
+		const observeTarget = this._shadow || this._host;
 
 		setTimeout(() => {
-			if (!root || !self._host?.parentNode) return;
+			if (!this._host || !this._host.parentNode) return;
 
 			const checkScrollbars = el => {
+				// Check the element itself and all descendants
 				const candidates = [el, ...el.querySelectorAll('*')];
 				for (const node of candidates) {
 					if (node.nodeType !== 1) continue;
@@ -725,11 +728,13 @@ class ROComponent {
 				}
 			};
 
+			// Stagger checks to wait for CSS parsing
 			checkScrollbars(root);
 			setTimeout(() => checkScrollbars(root), 50);
 			setTimeout(() => checkScrollbars(root), 150);
 			setTimeout(() => checkScrollbars(root), 500);
 
+			// Re-apply on visibility or content changes
 			const observer = new MutationObserver(mutations => {
 				let needsCheck = false;
 				for (const mutation of mutations) {
@@ -749,8 +754,7 @@ class ROComponent {
 				if (needsCheck) checkScrollbars(root);
 			});
 
-			observer.observe(root, {
-				// ← observa _container (dentro do shadow)
+			observer.observe(observeTarget, {
 				childList: true,
 				subtree: true,
 				attributes: true,
@@ -758,7 +762,7 @@ class ROComponent {
 				attributeFilter: ['style', 'class']
 			});
 
-			self.__scrollbarObserver = observer;
+			self._scrollbarObserver = observer;
 		}, 0);
 	}
 

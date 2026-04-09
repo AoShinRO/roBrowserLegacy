@@ -12,9 +12,9 @@ import Session from 'Engine/SessionStorage.js';
 import Preferences from 'Core/Preferences.js';
 import DB from 'DB/DBManager.js';
 import Client from 'Core/Client.js';
+import 'UI/Elements/Elements.js';
 import ROComponent from 'UI/ROComponent.js';
 import UIManager from 'UI/UIManager.js';
-import 'UI/Elements/Elements.js';
 import htmlText from './Clan.html?raw';
 import cssText from './Clan.css?raw';
 

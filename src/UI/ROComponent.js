@@ -1029,21 +1029,22 @@ class ROComponent {
 			length: 1,
 
 			css(prop, value) {
+				// Setter: .css({ top: 100, left: 200 })
+				if (typeof prop === 'object') {
+					for (const [k, v] of Object.entries(prop)) {
+						host.style[k] = typeof v === 'number' ? v + 'px' : v;
+					}
+					return proxy;
+				}
 				if (value === undefined) {
-					// Getter
+					// Getter: .css('top')
 					return (
 						window.getComputedStyle(host).getPropertyValue(prop.replace(/([A-Z])/g, '-$1').toLowerCase()) ||
 						host.style[prop]
 					);
 				}
-				// Setter
-				if (typeof prop === 'object') {
-					for (const [k, v] of Object.entries(prop)) {
-						host.style[k] = typeof v === 'number' ? v + 'px' : v;
-					}
-				} else {
-					host.style[prop] = typeof value === 'number' ? value + 'px' : value;
-				}
+				// Setter: .css('top', 100)
+				host.style[prop] = typeof value === 'number' ? value + 'px' : value;
 				return proxy;
 			},
 

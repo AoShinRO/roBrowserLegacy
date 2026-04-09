@@ -295,12 +295,12 @@ class ScrollBar {
 			const sh = $element[0].scrollHeight;
 
 			if (sh <= h) {
-				$scrollbar.hide();
+				$scrollbar[0].style.display = 'none';
 				$element.css('padding-right', element._roOriginalPaddingRight + 'px');
 				return;
 			}
 
-			$scrollbar.show();
+			$scrollbar[0].style.display = '';
 			$element.css('padding-right', element._roOriginalPaddingRight + (skin.width || 13) + 'px');
 
 			const st = $element[0].scrollTop;
@@ -336,7 +336,7 @@ class ScrollBar {
 				clearInterval(poller);
 			}
 			poller = setInterval(() => {
-				if (!element.isConnected) {
+				if (!$element[0].isConnected) {
 					clearInterval(poller);
 					poller = null;
 					return;

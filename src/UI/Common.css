@@ -115,3 +115,8 @@ ro-button {
 
 	transform: none;
 }
+
+/* Hide native cursor inside Shadow DOM when custom cursor is active */
+:host-context(.custom-cursor) * {
+	cursor: none !important;
+}

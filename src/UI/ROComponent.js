@@ -647,6 +647,78 @@ class ROComponent {
 	}
 
 	// ─── Mouse intersection setup ──────────────────────────
+	_setupShadowCursorEvents() {
+		const container = this._container;
+		if (!container) return;
+
+		const CLICKABLE_SELECTOR = [
+			'a',
+			'button',
+			'ro-button',
+			'input',
+			'label',
+			'select',
+			'textarea',
+			'.item-link',
+			'.draggable',
+			'.ro-custom-scrollbar',
+			'.ro-custom-scrollbar *'
+		].join(',');
+
+		let _hovering = false;
+		let _savedType = Cursor.ACTION.DEFAULT;
+
+		container.addEventListener('mouseover', e => {
+			const target = e.target;
+			if (target.closest && target.closest(CLICKABLE_SELECTOR)) {
+				if (!_hovering) {
+					_savedType = Cursor.getActualType();
+					_hovering = true;
+				}
+				if (Cursor.getActualType() !== Cursor.ACTION.CLICK) {
+					Cursor.setType(Cursor.ACTION.CLICK);
+				}
+			}
+		});
+
+		container.addEventListener('mouseout', e => {
+			if (!_hovering) return;
+
+			const related = e.relatedTarget;
+			// Still over a clickable element inside this shadow? Do nothing.
+			if (related && related.closest && related.closest(CLICKABLE_SELECTOR)) {
+				return;
+			}
+
+			_hovering = false;
+			Cursor.setType(_savedType);
+		});
+
+		container.addEventListener('mousedown', e => {
+			const target = e.target;
+			if (target.closest && target.closest(CLICKABLE_SELECTOR)) {
+				if (!_hovering) {
+					_savedType = Cursor.getActualType();
+					_hovering = true;
+				}
+				Cursor.setType(Cursor.ACTION.CLICK, true, 1);
+			}
+		});
+
+		container.addEventListener('mouseup', e => {
+			const target = e.target;
+			if (target.closest && target.closest(CLICKABLE_SELECTOR)) {
+				if (Cursor.getActualType() !== Cursor.ACTION.CLICK) {
+					Cursor.setType(Cursor.ACTION.CLICK);
+				}
+				return;
+			}
+			if (_hovering) {
+				_hovering = false;
+				Cursor.setType(_savedType);
+			}
+		});
+	}
 
 	_setupMouseMode() {
 		const element = this.__mouseStopBlock || this._host;
@@ -696,6 +768,8 @@ class ROComponent {
 		if (this.mouseMode !== ROComponent.MouseMode.CROSS) {
 			element.addEventListener('touchstart', e => e.stopImmediatePropagation());
 		}
+		// Shadow DOM cursor events (clickable hover detection)
+		this._setupShadowCursorEvents();
 	}
 
 	// ─── Scrollbar setup ───────────────────────────────────

@@ -703,15 +703,31 @@ class ROComponent {
 
 	_setupScrollbars() {
 		const self = this;
-		// Use shadow root as root (where the real content is)
-		const root = this._shadow || this._host;
+		// Search inside the shadow DOM, not the host
+		const root = this._container || this._host;
+
+		// Inject scrollbar CSS into shadow DOM (if exists)
+		if (this._shadow) {
+			const scrollbarCSS = [
+				'.ro-custom-scrollbar { position: absolute; right: 0; top: 0; width: 13px; z-index: 100; display: flex; flex-direction: column; }',
+				'.ro-custom-scrollbar .btn-up { height: 12px; background-repeat: no-repeat; cursor: pointer; }',
+				'.ro-custom-scrollbar .btn-down { height: 13px; background-repeat: no-repeat; cursor: pointer; }',
+				'.ro-custom-scrollbar .track { flex: 1; background-repeat: repeat-y; position: relative; cursor: pointer; }',
+				'.ro-custom-scrollbar .thumb { position: absolute; top: 0; left: 0; width: 100%; min-height: 10px; cursor: pointer; border-color: transparent; border-style: solid; border-width: 4px 0; box-sizing: border-box; }'
+			].join('\n');
+
+			// Add to the existing <style> in the shadow
+			const existingStyle = this._shadow.querySelector('style');
+			if (existingStyle) {
+				existingStyle.textContent += '\n/** Scrollbar **/\n' + scrollbarCSS;
+			}
+		}
 
 		setTimeout(() => {
-			if (!root || !this._host.parentNode) return;
+			if (!root || !self._host?.parentNode) return;
 
 			const checkScrollbars = el => {
-				// For shadow root, querySelectorAll works on internal elements
-				const candidates = el.querySelectorAll ? [el, ...el.querySelectorAll('*')] : [el];
+				const candidates = [el, ...el.querySelectorAll('*')];
 				for (const node of candidates) {
 					if (node.nodeType !== 1) continue;
 
@@ -732,7 +748,6 @@ class ROComponent {
 			setTimeout(() => checkScrollbars(root), 150);
 			setTimeout(() => checkScrollbars(root), 500);
 
-			// Observe the shadow root (not the host)
 			const observer = new MutationObserver(mutations => {
 				let needsCheck = false;
 				for (const mutation of mutations) {
@@ -753,8 +768,7 @@ class ROComponent {
 			});
 
 			// Observe the container inside the shadow (where mutations happen)
-			const observeTarget = self._container || root;
-			observer.observe(observeTarget, {
+			observer.observe(root, {
 				childList: true,
 				subtree: true,
 				attributes: true,

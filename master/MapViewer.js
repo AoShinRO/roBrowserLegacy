@@ -39,7 +39,7 @@ var __copyProps = (to, from, except, desc) => {
 	}
 	return to;
 };
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
 	value: mod,
 	enumerable: true
 }) : target, mod));
@@ -579,11 +579,12 @@ var init_iconv_lite = __esmMin((() => {
 				let pos = 0;
 				for (i = 0; i < list.length; ++i) {
 					let buf = list[i];
-					if (isInstance(buf, Uint8Array)) if (pos + buf.length > buffer.length) {
-						if (!Buffer2.isBuffer(buf)) buf = Buffer2.from(buf);
-						buf.copy(buffer, pos);
-					} else Uint8Array.prototype.set.call(buffer, buf, pos);
-					else if (!Buffer2.isBuffer(buf)) throw new TypeError("\"list\" argument must be an Array of Buffers");
+					if (isInstance(buf, Uint8Array)) {
+						if (pos + buf.length > buffer.length) {
+							if (!Buffer2.isBuffer(buf)) buf = Buffer2.from(buf);
+							buf.copy(buffer, pos);
+						} else Uint8Array.prototype.set.call(buffer, buf, pos);
+					} else if (!Buffer2.isBuffer(buf)) throw new TypeError("\"list\" argument must be an Array of Buffers");
 					else buf.copy(buffer, pos);
 					pos += buf.length;
 				}
@@ -736,18 +737,23 @@ var init_iconv_lite = __esmMin((() => {
 				byteOffset = +byteOffset;
 				if (numberIsNaN(byteOffset)) byteOffset = dir ? 0 : buffer.length - 1;
 				if (byteOffset < 0) byteOffset = buffer.length + byteOffset;
-				if (byteOffset >= buffer.length) if (dir) return -1;
-				else byteOffset = buffer.length - 1;
-				else if (byteOffset < 0) if (dir) byteOffset = 0;
-				else return -1;
+				if (byteOffset >= buffer.length) {
+					if (dir) return -1;
+					else byteOffset = buffer.length - 1;
+				} else if (byteOffset < 0) {
+					if (dir) byteOffset = 0;
+					else return -1;
+				}
 				if (typeof val === "string") val = Buffer2.from(val, encoding);
 				if (Buffer2.isBuffer(val)) {
 					if (val.length === 0) return -1;
 					return arrayIndexOf(buffer, val, byteOffset, encoding, dir);
 				} else if (typeof val === "number") {
 					val = val & 255;
-					if (typeof Uint8Array.prototype.indexOf === "function") if (dir) return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset);
-					else return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset);
+					if (typeof Uint8Array.prototype.indexOf === "function") {
+						if (dir) return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset);
+						else return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset);
+					}
 					return arrayIndexOf(buffer, [val], byteOffset, encoding, dir);
 				}
 				throw new TypeError("val must be string, number or Buffer");
@@ -1042,8 +1048,8 @@ var init_iconv_lite = __esmMin((() => {
 				const first = this[offset];
 				const last = this[offset + 7];
 				if (first === void 0 || last === void 0) boundsError(offset, this.length - 8);
-				const lo = first + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
-				const hi = this[++offset] + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + last * 2 ** 24;
+				const lo = first + this[++offset] * 256 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
+				const hi = this[++offset] + this[++offset] * 256 + this[++offset] * 2 ** 16 + last * 2 ** 24;
 				return BigInt(lo) + (BigInt(hi) << BigInt(32));
 			});
 			Buffer2.prototype.readBigUInt64BE = defineBigIntMethod(function readBigUInt64BE(offset) {
@@ -1052,8 +1058,8 @@ var init_iconv_lite = __esmMin((() => {
 				const first = this[offset];
 				const last = this[offset + 7];
 				if (first === void 0 || last === void 0) boundsError(offset, this.length - 8);
-				const hi = first * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
-				const lo = this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last;
+				const hi = first * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 256 + this[++offset];
+				const lo = this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 256 + last;
 				return (BigInt(hi) << BigInt(32)) + BigInt(lo);
 			});
 			Buffer2.prototype.readIntLE = function readIntLE(offset, byteLength2, noAssert) {
@@ -1114,8 +1120,8 @@ var init_iconv_lite = __esmMin((() => {
 				const first = this[offset];
 				const last = this[offset + 7];
 				if (first === void 0 || last === void 0) boundsError(offset, this.length - 8);
-				const val = this[offset + 4] + this[offset + 5] * 2 ** 8 + this[offset + 6] * 2 ** 16 + (last << 24);
-				return (BigInt(val) << BigInt(32)) + BigInt(first + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
+				const val = this[offset + 4] + this[offset + 5] * 256 + this[offset + 6] * 2 ** 16 + (last << 24);
+				return (BigInt(val) << BigInt(32)) + BigInt(first + this[++offset] * 256 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
 			});
 			Buffer2.prototype.readBigInt64BE = defineBigIntMethod(function readBigInt64BE(offset) {
 				offset = offset >>> 0;
@@ -1123,8 +1129,8 @@ var init_iconv_lite = __esmMin((() => {
 				const first = this[offset];
 				const last = this[offset + 7];
 				if (first === void 0 || last === void 0) boundsError(offset, this.length - 8);
-				const val = (first << 24) + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
-				return (BigInt(val) << BigInt(32)) + BigInt(this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last);
+				const val = (first << 24) + this[++offset] * 2 ** 16 + this[++offset] * 256 + this[++offset];
+				return (BigInt(val) << BigInt(32)) + BigInt(this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 256 + last);
 			});
 			Buffer2.prototype.readFloatLE = function readFloatLE(offset, noAssert) {
 				offset = offset >>> 0;
@@ -1499,9 +1505,10 @@ var init_iconv_lite = __esmMin((() => {
 				if (value > max || value < min) {
 					const n = typeof min === "bigint" ? "n" : "";
 					let range;
-					if (byteLength2 > 3) if (min === 0 || min === BigInt(0)) range = `>= 0${n} and < 2${n} ** ${(byteLength2 + 1) * 8}${n}`;
-					else range = `>= -(2${n} ** ${(byteLength2 + 1) * 8 - 1}${n}) and < 2 ** ${(byteLength2 + 1) * 8 - 1}${n}`;
-					else range = `>= ${min}${n} and <= ${max}${n}`;
+					if (byteLength2 > 3) {
+						if (min === 0 || min === BigInt(0)) range = `>= 0${n} and < 2${n} ** ${(byteLength2 + 1) * 8}${n}`;
+						else range = `>= -(2${n} ** ${(byteLength2 + 1) * 8 - 1}${n}) and < 2 ** ${(byteLength2 + 1) * 8 - 1}${n}`;
+					} else range = `>= ${min}${n} and <= ${max}${n}`;
 					throw new errors.ERR_OUT_OF_RANGE("value", range, value);
 				}
 				checkBounds(buf, offset, byteLength2);
@@ -1732,9 +1739,10 @@ var init_iconv_lite = __esmMin((() => {
 			SafeBuffer.alloc = function(size, fill, encoding) {
 				if (typeof size !== "number") throw new TypeError("Argument must be a number");
 				var buf = Buffer2(size);
-				if (fill !== void 0) if (typeof encoding === "string") buf.fill(fill, encoding);
-				else buf.fill(fill);
-				else buf.fill(0);
+				if (fill !== void 0) {
+					if (typeof encoding === "string") buf.fill(fill, encoding);
+					else buf.fill(fill);
+				} else buf.fill(0);
 				return buf;
 			};
 			SafeBuffer.allocUnsafe = function(size) {
@@ -1867,8 +1875,10 @@ var init_iconv_lite = __esmMin((() => {
 				if (--j < i || nb === -2) return 0;
 				nb = utf8CheckByte(buf[j]);
 				if (nb >= 0) {
-					if (nb > 0) if (nb === 2) nb = 0;
-					else self.lastNeed = nb - 3;
+					if (nb > 0) {
+						if (nb === 2) nb = 0;
+						else self.lastNeed = nb - 3;
+					}
 					return nb;
 				}
 				return 0;
@@ -2088,9 +2098,11 @@ var init_iconv_lite = __esmMin((() => {
 						acc = acc << 6 | curByte & 63;
 						contBytes--;
 						accBytes++;
-						if (contBytes === 0) if (accBytes === 2 && acc < 128 && acc > 0) res += this.defaultCharUnicode;
-						else if (accBytes === 3 && acc < 2048) res += this.defaultCharUnicode;
-						else res += String.fromCharCode(acc);
+						if (contBytes === 0) {
+							if (accBytes === 2 && acc < 128 && acc > 0) res += this.defaultCharUnicode;
+							else if (accBytes === 3 && acc < 2048) res += this.defaultCharUnicode;
+							else res += String.fromCharCode(acc);
+						}
 					} else res += this.defaultCharUnicode;
 				}
 				this.acc = acc;
@@ -2162,15 +2174,17 @@ var init_iconv_lite = __esmMin((() => {
 					var code = src.readUInt16LE(i);
 					var isHighSurrogate = code >= 55296 && code < 56320;
 					var isLowSurrogate = code >= 56320 && code < 57344;
-					if (this.highSurrogate) if (isHighSurrogate || !isLowSurrogate) {
-						write32.call(dst, this.highSurrogate, offset);
-						offset += 4;
-					} else {
-						var codepoint = (this.highSurrogate - 55296 << 10 | code - 56320) + 65536;
-						write32.call(dst, codepoint, offset);
-						offset += 4;
-						this.highSurrogate = 0;
-						continue;
+					if (this.highSurrogate) {
+						if (isHighSurrogate || !isLowSurrogate) {
+							write32.call(dst, this.highSurrogate, offset);
+							offset += 4;
+						} else {
+							var codepoint = (this.highSurrogate - 55296 << 10 | code - 56320) + 65536;
+							write32.call(dst, codepoint, offset);
+							offset += 4;
+							this.highSurrogate = 0;
+							continue;
+						}
 					}
 					if (isHighSurrogate) this.highSurrogate = code;
 					else {
@@ -3461,18 +3475,20 @@ var init_iconv_lite = __esmMin((() => {
 						var uCode = nextChar;
 						nextChar = -1;
 					}
-					if (uCode >= 55296 && uCode < 57344) if (uCode < 56320) if (leadSurrogate === -1) {
-						leadSurrogate = uCode;
-						continue;
-					} else {
-						leadSurrogate = uCode;
-						uCode = UNASSIGNED;
-					}
-					else if (leadSurrogate !== -1) {
-						uCode = 65536 + (leadSurrogate - 55296) * 1024 + (uCode - 56320);
-						leadSurrogate = -1;
-					} else uCode = UNASSIGNED;
-					else if (leadSurrogate !== -1) {
+					if (uCode >= 55296 && uCode < 57344) {
+						if (uCode < 56320) {
+							if (leadSurrogate === -1) {
+								leadSurrogate = uCode;
+								continue;
+							} else {
+								leadSurrogate = uCode;
+								uCode = UNASSIGNED;
+							}
+						} else if (leadSurrogate !== -1) {
+							uCode = 65536 + (leadSurrogate - 55296) * 1024 + (uCode - 56320);
+							leadSurrogate = -1;
+						} else uCode = UNASSIGNED;
+					} else if (leadSurrogate !== -1) {
 						nextChar = uCode;
 						uCode = UNASSIGNED;
 						leadSurrogate = -1;
@@ -3540,10 +3556,12 @@ var init_iconv_lite = __esmMin((() => {
 				var j = 0;
 				if (this.seqObj) {
 					var dbcsCode = this.seqObj[DEF_CHAR];
-					if (dbcsCode !== void 0) if (dbcsCode < 256) newBuf[j++] = dbcsCode;
-					else {
-						newBuf[j++] = dbcsCode >> 8;
-						newBuf[j++] = dbcsCode & 255;
+					if (dbcsCode !== void 0) {
+						if (dbcsCode < 256) newBuf[j++] = dbcsCode;
+						else {
+							newBuf[j++] = dbcsCode >> 8;
+							newBuf[j++] = dbcsCode & 255;
+						}
 					}
 					this.seqObj = void 0;
 				}
@@ -10664,9 +10682,7 @@ function detectEncodingByLangtype(langType, disableKorean) {
 		case 242:
 			result = "utf-16be";
 			break;
-		default:
-			result = "windows-1252";
-			break;
+		default: result = "windows-1252";
 	}
 	if (disableKorean) result = "windows-1252";
 	return result;
@@ -11006,7 +11022,7 @@ function getDateSub() {
 */
 function isROExec(file) {
 	if (!file.name.match(/\.exe$/i)) return false;
-	if (file.size < 1024 * 1024 * 3 || file.size > 1024 * 1024 * 7) return false;
+	if (file.size < 3145728 || file.size > 7340032) return false;
 	return true;
 }
 var _fp, Executable_default;
@@ -11199,9 +11215,9 @@ var _memory, _rememberTime, _lastCheckTick, _cleanUpInterval, _cleaningInProgres
 var init_MemoryManager = __esmMin((() => {
 	init_MemoryItem();
 	_memory = {};
-	_rememberTime = 30 * 1e3;
+	_rememberTime = 3e4;
 	_lastCheckTick = 0;
-	_cleanUpInterval = 10 * 1e3;
+	_cleanUpInterval = 1e4;
 	_cleaningInProgress = false;
 	_cleanIndex = 0;
 	_filesToClean = [];
@@ -11331,9 +11347,7 @@ var init_MemoryManager = __esmMin((() => {
 						}
 					}
 					break;
-				default:
-					if (file.match && file.match(/^blob:/)) URL.revokeObjectURL(file);
-					break;
+				default: if (file.match && file.match(/^blob:/)) URL.revokeObjectURL(file);
 			}
 			delete _memory[filename];
 		};
@@ -77891,7 +77905,7 @@ var init_preload_helper = __esmMin((() => {
 //#region src/UI/Common.css?raw
 var Common_default$1;
 var init_Common$1 = __esmMin((() => {
-	Common_default$1 = "/* Avoid input focus border */\r\n:focus {\r\n	outline: none;\r\n}\r\n::-moz-focus-inner {\r\n	border: 0;\r\n}\r\n\r\n* {\r\n	-moz-user-select: none;\r\n}\r\n\r\nhtml,\r\nbody {\r\n	touch-action: manipulation;\r\n	margin: 0;\r\n}\r\n\r\n/* Prevent mobile browser auto-zoom on input focus and double-tap */\r\n:host {\r\n	touch-action: manipulation;\r\n}\r\n\r\ninput,\r\ntextarea,\r\nselect {\r\n	touch-action: manipulation;\r\n}\r\n\r\ncanvas {\r\n	touch-action: none;\r\n}\r\n\r\nbody {\r\n	background-color: black;\r\n	font-size: 12px;\r\n	font-family: 'SCDream', Arial, Helvetica, sans-serif;\r\n	overflow: hidden;\r\n	-webkit-user-select: none;\r\n	user-select: none;\r\n	min-width: 100vw;\r\n	min-height: 100vh;\r\n	letter-spacing: 0;\r\n	line-height: 1.2;\r\n}\r\n\r\n.title {\r\n	font-size: 12px;\r\n}\r\n\r\nbutton,\r\nui-button {\r\n	padding: 0;\r\n}\r\n\r\nui-button {\r\n	display: inline-block;\r\n}\r\n\r\n.ui-btn {\r\n	-webkit-appearance: none;\r\n	appearance: none;\r\n	display: inline-flex;\r\n	align-items: center;\r\n	justify-content: center;\r\n\r\n	height: 20px;\r\n	min-width: 52px;\r\n	padding: 0 10px;\r\n\r\n	font-size: 12px;\r\n	line-height: 1;\r\n	color: #3f3f3f;\r\n	text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.85);\r\n\r\n	border-radius: 4px;\r\n	border: 1px solid;\r\n\r\n	/* 3D border: top right bottom left */\r\n	border-color: #cfcfcf #a9a9a9 #5f5f5f #bdbdbd;\r\n\r\n	/* glossy + subtle depth */\r\n	background: linear-gradient(to bottom, #ffffff 0%, #f2f2f2 35%, #dcdcdc 55%, #f9f9f9 100%);\r\n\r\n	box-shadow:\r\n		inset 0 1px 0 rgba(255, 255, 255, 0.95),\r\n		/* top highlight */ inset 0 -1px 0 rgba(0, 0, 0, 0.12),\r\n		/* bottom inner edge */ 0 1px 0 rgba(0, 0, 0, 0.12); /* outer bottom shadow */\r\n\r\n	cursor: pointer;\r\n}\r\n\r\n/* Hover: hơi xanh nhẹ giống button Reset */\r\n.ui-btn:hover {\r\n	border-color: #c9d1dd #8ea2c4 #4d5f86 #b1bfd5;\r\n	background: linear-gradient(to bottom, #f7fbff 0%, #dfe8f6 35%, #c0d0ee 55%, #f0f6ff 100%);\r\n\r\n	box-shadow:\r\n		inset 0 1px 0 rgba(255, 255, 255, 0.95),\r\n		inset 0 -1px 0 rgba(0, 0, 0, 0.12),\r\n		0 1px 0 rgba(0, 0, 0, 0.12);\r\n}\r\n\r\n/* Active: giống \"ấn xuống\" */\r\n.ui-btn:active {\r\n	border-color: #9fb0c9 #6f86a6 #3b4b67 #7f96b6;\r\n\r\n	background: linear-gradient(to bottom, #cdd8eb 0%, #b7c8e5 45%, #dfe9fb 100%);\r\n\r\n	box-shadow:\r\n		inset 0 2px 3px rgba(0, 0, 0, 0.18),\r\n		inset 0 1px 0 rgba(255, 255, 255, 0.35);\r\n\r\n	transform: translateY(1px); /* cảm giác bị nhấn */\r\n}\r\n\r\n/* Disabled */\r\n.ui-btn:disabled,\r\n.ui-btn.is-disabled {\r\n	cursor: default;\r\n	color: #8f8f8f;\r\n	text-shadow: none;\r\n\r\n	border-color: #d3d3d3 #bdbdbd #9b9b9b #c9c9c9;\r\n\r\n	background: linear-gradient(to bottom, #f6f6f6 0%, #e7e7e7 55%, #fafafa 100%);\r\n\r\n	box-shadow:\r\n		inset 0 1px 0 rgba(255, 255, 255, 0.9),\r\n		inset 0 -1px 0 rgba(0, 0, 0, 0.08),\r\n		0 1px 0 rgba(0, 0, 0, 0.08);\r\n\r\n	transform: none;\r\n}\r\n\r\n/* Hide native cursor inside Shadow DOM when custom cursor is active */\r\n:host-context(.custom-cursor) * {\r\n	cursor: none !important;\r\n}\r\n";
+	Common_default$1 = "/* Avoid input focus border */\r\n:focus {\r\n	outline: none;\r\n}\r\n::-moz-focus-inner {\r\n	border: 0;\r\n}\r\n\r\n* {\r\n	-moz-user-select: none;\r\n}\r\n\r\nhtml,\r\nbody {\r\n	touch-action: manipulation;\r\n	margin: 0;\r\n}\r\n\r\n/* Reference for the viewport sized body below */\r\nhtml {\r\n	height: 100%;\r\n}\r\n\r\n/* Prevent mobile browser auto-zoom on input focus and double-tap */\r\n:host {\r\n	touch-action: manipulation;\r\n}\r\n\r\ninput,\r\ntextarea,\r\nselect {\r\n	touch-action: manipulation;\r\n}\r\n\r\ncanvas {\r\n	touch-action: none;\r\n}\r\n\r\nbody {\r\n	background-color: black;\r\n	font-size: 12px;\r\n	/* 'SCDream' first: wins only when the server actually serves the client font (loaded via\r\n	   @font-face in DBManager). When it isn't served it resolves to Arial — the official client's\r\n	   window UI font for intl/america servicetype (Ragexe draws window text with CreateFontA on the\r\n	   Gulim/Arial face table). Liberation Sans / Arimo provide Arial metrics on Linux. */\r\n	font-family: 'SCDream', Arial, 'Liberation Sans', Arimo, sans-serif;\r\n	/* Normalize any resolved font's x-height to Arial's (sxHeight 1062 / unitsPerEm 2048 = 0.5186),\r\n	   so text keeps Arial's apparent size on every OS/font. It's inherited and crosses Shadow DOM\r\n	   hosts, so it also rescales elements that use a non-Arial face; those opt out with\r\n	   `font-size-adjust: none` on the selector declaring that font (Intro, GrfViewer, JoystickUI\r\n	   header). SCDream, when a server serves it, is normalized to Arial on purpose.\r\n	   Progressive enhancement: engines that don't support the numeric form ignore it\r\n	   and render at the resolved font's native x-height (no JS fallback needed — Arial\r\n	   / Liberation Sans already carry correct metrics, only annex fonts degrade). */\r\n	font-size-adjust: 0.5186;\r\n	overflow: hidden;\r\n	-webkit-user-select: none;\r\n	user-select: none;\r\n	min-width: 100vw;\r\n	min-height: 100vh;\r\n	letter-spacing: 0;\r\n	line-height: 1.2;\r\n}\r\n\r\n/* Apps owning the 3D viewport (set by Renderer.init) are a fixed viewport: size the body to it and\r\n   contain it. `overflow: hidden` alone doesn't clip the body box — it propagates to the viewport —\r\n   so content positioned off screen (entity overlays, signboards, dragged windows) still extends the\r\n   document's scrollable area, and the browser scrolls, or on mobile lays the page out at its\r\n   fallback width and scales it down, to reveal it. Paint containment clips the box for real. */\r\nbody.ro-viewport {\r\n	width: 100%;\r\n	height: 100%;\r\n	min-width: 0;\r\n	min-height: 0;\r\n	contain: paint;\r\n}\r\n\r\n.title {\r\n	font-size: 12px;\r\n}\r\n\r\nbutton,\r\nui-button {\r\n	padding: 0;\r\n}\r\n\r\nui-button {\r\n	display: inline-block;\r\n}\r\n\r\n.ui-btn {\r\n	-webkit-appearance: none;\r\n	appearance: none;\r\n	display: inline-flex;\r\n	align-items: center;\r\n	justify-content: center;\r\n\r\n	height: 20px;\r\n	min-width: 52px;\r\n	padding: 0 10px;\r\n\r\n	font-size: 12px;\r\n	line-height: 1;\r\n	color: #3f3f3f;\r\n	text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.85);\r\n\r\n	border-radius: 4px;\r\n	border: 1px solid;\r\n\r\n	/* 3D border: top right bottom left */\r\n	border-color: #cfcfcf #a9a9a9 #5f5f5f #bdbdbd;\r\n\r\n	/* glossy + subtle depth */\r\n	background: linear-gradient(to bottom, #ffffff 0%, #f2f2f2 35%, #dcdcdc 55%, #f9f9f9 100%);\r\n\r\n	box-shadow:\r\n		inset 0 1px 0 rgba(255, 255, 255, 0.95),\r\n		/* top highlight */ inset 0 -1px 0 rgba(0, 0, 0, 0.12),\r\n		/* bottom inner edge */ 0 1px 0 rgba(0, 0, 0, 0.12); /* outer bottom shadow */\r\n\r\n	cursor: pointer;\r\n}\r\n\r\n/* Hover: hơi xanh nhẹ giống button Reset */\r\n.ui-btn:hover {\r\n	border-color: #c9d1dd #8ea2c4 #4d5f86 #b1bfd5;\r\n	background: linear-gradient(to bottom, #f7fbff 0%, #dfe8f6 35%, #c0d0ee 55%, #f0f6ff 100%);\r\n\r\n	box-shadow:\r\n		inset 0 1px 0 rgba(255, 255, 255, 0.95),\r\n		inset 0 -1px 0 rgba(0, 0, 0, 0.12),\r\n		0 1px 0 rgba(0, 0, 0, 0.12);\r\n}\r\n\r\n/* Active: giống \"ấn xuống\" */\r\n.ui-btn:active {\r\n	border-color: #9fb0c9 #6f86a6 #3b4b67 #7f96b6;\r\n\r\n	background: linear-gradient(to bottom, #cdd8eb 0%, #b7c8e5 45%, #dfe9fb 100%);\r\n\r\n	box-shadow:\r\n		inset 0 2px 3px rgba(0, 0, 0, 0.18),\r\n		inset 0 1px 0 rgba(255, 255, 255, 0.35);\r\n\r\n	transform: translateY(1px); /* cảm giác bị nhấn */\r\n}\r\n\r\n/* Disabled */\r\n.ui-btn:disabled,\r\n.ui-btn.is-disabled {\r\n	cursor: default;\r\n	color: #8f8f8f;\r\n	text-shadow: none;\r\n\r\n	border-color: #d3d3d3 #bdbdbd #9b9b9b #c9c9c9;\r\n\r\n	background: linear-gradient(to bottom, #f6f6f6 0%, #e7e7e7 55%, #fafafa 100%);\r\n\r\n	box-shadow:\r\n		inset 0 1px 0 rgba(255, 255, 255, 0.9),\r\n		inset 0 -1px 0 rgba(0, 0, 0, 0.08),\r\n		0 1px 0 rgba(0, 0, 0, 0.08);\r\n\r\n	transform: none;\r\n}\r\n\r\n/* Hide native cursor inside Shadow DOM when custom cursor is active */\r\n:host-context(.custom-cursor) * {\r\n	cursor: none !important;\r\n}\r\n";
 }));
 //#endregion
 //#region src/Controls/MouseEventHandler.js
@@ -78031,20 +78045,28 @@ var init_SessionStorage = __esmMin((() => {
 		LangType: 0,
 		ServerName: null,
 		ratesInfo: null,
-		Character: null,
+		/** @type {Player|Entity|null} The entity currently controlled by the client */
 		Entity: null,
 		AdminList: [],
 		underAutoCounter: false,
 		moveAction: null,
-		zeny: 0,
-		weight: 0,
-		max_weight: 0,
+		/**
+		* Player money, stored on the player entity.
+		* Kept here as an accessor for the many consumers reading it from the session.
+		*/
+		get zeny() {
+			return this.Entity ? this.Entity.money : 0;
+		},
+		set zeny(value) {
+			if (this.Entity) this.Entity.money = value;
+		},
 		petId: 0,
 		pet: {},
 		hasParty: false,
 		isPartyLeader: false,
 		hasGuild: false,
 		guildRight: 0,
+		guildName: "",
 		isGuildMaster: false,
 		Playing: false,
 		hasCart: false,
@@ -82057,7 +82079,7 @@ var init_gl_matrix$1 = __esmMin((() => {
 //#endregion
 //#region src/Utils/PathFinding.js
 function calc_index(x, y) {
-	return x + y * MAX_WALKPATH & MAX_WALKPATH * MAX_WALKPATH - 1;
+	return x + y * MAX_WALKPATH & 1023;
 }
 function calc_cost(i, x1, y1) {
 	return (Math.abs(x1 - _x[i]) + Math.abs(y1 - _y[i])) * MOVE_COST;
@@ -82294,7 +82316,7 @@ function search(x0, y0, x1, y1, range, out) {
 		if ((dirFlag & 12) === 12 && types[x + 1 + (y - 1) * width] & TYPE.WALKABLE) error += add_path(heap, x + 1, y - 1, dist + MOVE_DIAGONAL_COST, currentNode, x1, y1);
 		if ((dirFlag & 9) === 9 && types[x + 1 + (y + 1) * width] & TYPE.WALKABLE) error += add_path(heap, x + 1, y + 1, dist + MOVE_DIAGONAL_COST, currentNode, x1, y1);
 		_flag$1[currentNode] = 1;
-		if (error || heap[0] >= MAX_HEAP - 5) return 0;
+		if (error || heap[0] >= 145) return 0;
 	}
 	for (pathLen = 0, i = currentNode; pathLen < 100 && i !== calc_index(x0, y0); i = _before[i], pathLen++);
 	finalLen = 0;
@@ -82386,14 +82408,14 @@ var init_PathFinding = __esmMin((() => {
 	MOVE_DIAGONAL_COST = 14;
 	_heap = new Uint32Array(MAX_HEAP);
 	_heap_clean = new Uint32Array(MAX_HEAP);
-	short_clean = new Uint16Array(MAX_WALKPATH * MAX_WALKPATH);
-	char_clean = new Uint8Array(MAX_WALKPATH * MAX_WALKPATH);
-	_x = new Uint16Array(MAX_WALKPATH * MAX_WALKPATH);
-	_y = new Uint16Array(MAX_WALKPATH * MAX_WALKPATH);
-	_dist = new Uint16Array(MAX_WALKPATH * MAX_WALKPATH);
-	_cost = new Uint16Array(MAX_WALKPATH * MAX_WALKPATH);
-	_before = new Uint16Array(MAX_WALKPATH * MAX_WALKPATH);
-	_flag$1 = new Uint8Array(MAX_WALKPATH * MAX_WALKPATH);
+	short_clean = /* @__PURE__ */ new Uint16Array(1024);
+	char_clean = /* @__PURE__ */ new Uint8Array(1024);
+	_x = /* @__PURE__ */ new Uint16Array(1024);
+	_y = /* @__PURE__ */ new Uint16Array(1024);
+	_dist = /* @__PURE__ */ new Uint16Array(1024);
+	_cost = /* @__PURE__ */ new Uint16Array(1024);
+	_before = /* @__PURE__ */ new Uint16Array(1024);
+	_flag$1 = /* @__PURE__ */ new Uint8Array(1024);
 	PathFinding_default = {
 		search,
 		searchLong,
@@ -82571,9 +82593,7 @@ var init_libgif = __esmMin((() => {
 					case "NETSCAPE":
 						parseNetscapeExt(block);
 						break;
-					default:
-						parseUnknownAppExt(block);
-						break;
+					default: parseUnknownAppExt(block);
 				}
 			};
 			var parseUnknownExt = function(block) {
@@ -82601,7 +82621,6 @@ var init_libgif = __esmMin((() => {
 				default:
 					block.extType = "unknown";
 					parseUnknownExt(block);
-					break;
 			}
 		};
 		var parseImg = function(img) {
@@ -82747,20 +82766,21 @@ var init_libgif = __esmMin((() => {
 			if (draw && showProgressBar) {
 				var height = progressBarHeight;
 				var left, mid, top, width;
-				if (options.is_vp) if (!ctx_scaled) {
-					top = options.vp_t + options.vp_h - height;
-					height = height;
-					left = options.vp_l;
-					mid = left + pos / length * options.vp_w;
-					width = canvas.width;
+				if (options.is_vp) {
+					if (!ctx_scaled) {
+						top = options.vp_t + options.vp_h - height;
+						height = height;
+						left = options.vp_l;
+						mid = left + pos / length * options.vp_w;
+						width = canvas.width;
+					} else {
+						top = (options.vp_t + options.vp_h - height) / get_canvas_scale();
+						height = height / get_canvas_scale();
+						left = options.vp_l / get_canvas_scale();
+						mid = left + pos / length * (options.vp_w / get_canvas_scale());
+						width = canvas.width / get_canvas_scale();
+					}
 				} else {
-					top = (options.vp_t + options.vp_h - height) / get_canvas_scale();
-					height = height / get_canvas_scale();
-					left = options.vp_l / get_canvas_scale();
-					mid = left + pos / length * (options.vp_w / get_canvas_scale());
-					width = canvas.width / get_canvas_scale();
-				}
-				else {
 					top = (canvas.height - height) / (ctx_scaled ? get_canvas_scale() : 1);
 					mid = pos / length * canvas.width / (ctx_scaled ? get_canvas_scale() : 1);
 					width = canvas.width / (ctx_scaled ? get_canvas_scale() : 1);
@@ -82819,9 +82839,10 @@ var init_libgif = __esmMin((() => {
 			var currIdx = frames.length;
 			var ct = img.lctFlag ? img.lct : hdr.gct;
 			if (currIdx > 0) {
-				if (lastDisposalMethod === 3) if (disposalRestoreFromIdx !== null) frame.putImageData(frames[disposalRestoreFromIdx].data, 0, 0);
-				else frame.clearRect(lastImg.leftPos, lastImg.topPos, lastImg.width, lastImg.height);
-				else disposalRestoreFromIdx = currIdx - 1;
+				if (lastDisposalMethod === 3) {
+					if (disposalRestoreFromIdx !== null) frame.putImageData(frames[disposalRestoreFromIdx].data, 0, 0);
+					else frame.clearRect(lastImg.leftPos, lastImg.topPos, lastImg.width, lastImg.height);
+				} else disposalRestoreFromIdx = currIdx - 1;
 				if (lastDisposalMethod === 2) frame.clearRect(lastImg.leftPos, lastImg.topPos, lastImg.width, lastImg.height);
 			}
 			var imgData = frame.getImageData(img.leftPos, img.topPos, img.width, img.height);
@@ -83847,9 +83868,7 @@ var init_Altitude = __esmMin((() => {
 				case 13:
 					buffer = buffer13x13;
 					break;
-				default:
-					buffer = new Float32Array(size * size * 30);
-					break;
+				default: buffer = new Float32Array(size * size * 30);
 			}
 			for (x = -middle; x <= middle; ++x) for (y = -middle; y <= middle; ++y, i += 30) {
 				index = (pos_x + x + (pos_y + y) * Altitude.width) * 5;
@@ -144886,19 +144905,24 @@ var init_xmlparse = __esmMin((() => {
 							for (var n = xml.firstChild; n; n = n.nextSibling) if (n.nodeType == 1) hasElementChild = true;
 							else if (n.nodeType == 3 && n.nodeValue.match(/[^ \f\n\r\t\v]/)) textChild++;
 							else if (n.nodeType == 4) cdataChild++;
-							if (hasElementChild) if (textChild < 2 && cdataChild < 2) {
-								X.removeWhite(xml);
-								for (var n = xml.firstChild; n; n = n.nextSibling) if (n.nodeType == 3) o["#text"] = X.escape(n.nodeValue);
-								else if (n.nodeType == 4) o["#cdata"] = X.escape(n.nodeValue);
-								else if (o[n.nodeName]) if (o[n.nodeName] instanceof Array) o[n.nodeName][o[n.nodeName].length] = X.toObj(n);
-								else o[n.nodeName] = [o[n.nodeName], X.toObj(n)];
-								else o[n.nodeName] = X.toObj(n);
-							} else if (!xml.attributes.length) o = X.escape(X.innerXml(xml));
-							else o["#text"] = X.escape(X.innerXml(xml));
-							else if (textChild) if (!xml.attributes.length) o = X.escape(X.innerXml(xml));
-							else o["#text"] = X.escape(X.innerXml(xml));
-							else if (cdataChild) if (cdataChild > 1) o = X.escape(X.innerXml(xml));
-							else for (var n = xml.firstChild; n; n = n.nextSibling) o["#cdata"] = X.escape(n.nodeValue);
+							if (hasElementChild) {
+								if (textChild < 2 && cdataChild < 2) {
+									X.removeWhite(xml);
+									for (var n = xml.firstChild; n; n = n.nextSibling) if (n.nodeType == 3) o["#text"] = X.escape(n.nodeValue);
+									else if (n.nodeType == 4) o["#cdata"] = X.escape(n.nodeValue);
+									else if (o[n.nodeName]) {
+										if (o[n.nodeName] instanceof Array) o[n.nodeName][o[n.nodeName].length] = X.toObj(n);
+										else o[n.nodeName] = [o[n.nodeName], X.toObj(n)];
+									} else o[n.nodeName] = X.toObj(n);
+								} else if (!xml.attributes.length) o = X.escape(X.innerXml(xml));
+								else o["#text"] = X.escape(X.innerXml(xml));
+							} else if (textChild) {
+								if (!xml.attributes.length) o = X.escape(X.innerXml(xml));
+								else o["#text"] = X.escape(X.innerXml(xml));
+							} else if (cdataChild) {
+								if (cdataChild > 1) o = X.escape(X.innerXml(xml));
+								else for (var n = xml.firstChild; n; n = n.nextSibling) o["#cdata"] = X.escape(n.nodeValue);
+							}
 						}
 						if (!xml.attributes.length && !xml.firstChild) o = null;
 					} else if (xml.nodeType == 9) o = X.toObj(xml.documentElement);
@@ -144946,12 +144970,13 @@ var init_xmlparse = __esmMin((() => {
 				},
 				removeWhite: function(e) {
 					e.normalize();
-					for (var n = e.firstChild; n;) if (n.nodeType == 3) if (!n.nodeValue.match(/[^ \f\n\r\t\v]/)) {
-						var nxt = n.nextSibling;
-						e.removeChild(n);
-						n = nxt;
-					} else n = n.nextSibling;
-					else if (n.nodeType == 1) {
+					for (var n = e.firstChild; n;) if (n.nodeType == 3) {
+						if (!n.nodeValue.match(/[^ \f\n\r\t\v]/)) {
+							var nxt = n.nextSibling;
+							e.removeChild(n);
+							n = nxt;
+						} else n = n.nextSibling;
+					} else if (n.nodeType == 1) {
 						X.removeWhite(n);
 						n = n.nextSibling;
 					} else n = n.nextSibling;
@@ -145125,7 +145150,7 @@ function isDigit(value) {
 	return !isNaN(parseInt(value, 10));
 }
 function divideu128(value) {
-	const DIVISOR = Long.fromNumber(1e3 * 1e3 * 1e3);
+	const DIVISOR = Long.fromNumber(1e9);
 	let _rem = Long.fromNumber(0);
 	if (!value.parts[0] && !value.parts[1] && !value.parts[2] && !value.parts[3]) return {
 		quotient: value,
@@ -145186,12 +145211,14 @@ function internalCalculateObjectSize(object, serializeFunctions, ignoreUndefined
 		const { obj, ignoreUndefined: frameIgnoreUndefined } = objectStack.pop();
 		total += 5;
 		const isObjArray = Array.isArray(obj);
+		const isObjMap = !isObjArray && (obj instanceof Map || isMap(obj));
 		let target = obj;
-		if (!isObjArray && typeof obj?.toBSON === "function") target = obj.toBSON();
+		if (!isObjArray && !isObjMap && typeof obj?.toBSON === "function") target = obj.toBSON();
 		if (isObjArray) {
 			const array = target;
 			for (let i = 0; i < array.length; i++) total += calculateElementSize(i.toString(), array[i], serializeFunctions, true, frameIgnoreUndefined, objectStack);
-		} else for (const key of Object.keys(target)) total += calculateElementSize(key, target[key], serializeFunctions, false, frameIgnoreUndefined, objectStack);
+		} else if (isObjMap) for (const [key, value] of target) total += calculateElementSize(key, value, serializeFunctions, false, frameIgnoreUndefined, objectStack);
+		else for (const key of Object.keys(target)) total += calculateElementSize(key, target[key], serializeFunctions, false, frameIgnoreUndefined, objectStack);
 	}
 	return total;
 }
@@ -145199,9 +145226,10 @@ function calculateElementSize(name, value, serializeFunctions = false, isArray =
 	if (typeof value?.toBSON === "function") value = value.toBSON();
 	switch (typeof value) {
 		case "string": return 1 + ByteUtils.utf8ByteLength(name) + 1 + 4 + ByteUtils.utf8ByteLength(value) + 1;
-		case "number": if (Math.floor(value) === value && value >= JS_INT_MIN && value <= JS_INT_MAX) if (value >= BSON_INT32_MIN && value <= BSON_INT32_MAX) return ByteUtils.utf8ByteLength(name) + 1 + 5;
-		else return ByteUtils.utf8ByteLength(name) + 1 + 9;
-		else return ByteUtils.utf8ByteLength(name) + 1 + 9;
+		case "number": if (Math.floor(value) === value && value >= JS_INT_MIN && value <= JS_INT_MAX) {
+			if (value >= BSON_INT32_MIN && value <= BSON_INT32_MAX) return ByteUtils.utf8ByteLength(name) + 1 + 5;
+			else return ByteUtils.utf8ByteLength(name) + 1 + 9;
+		} else return ByteUtils.utf8ByteLength(name) + 1 + 9;
 		case "undefined":
 			if (isArray || !ignoreUndefined) return ByteUtils.utf8ByteLength(name) + 1 + 1;
 			return 0;
@@ -145213,18 +145241,20 @@ function calculateElementSize(name, value, serializeFunctions = false, isArray =
 		else if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer || isAnyArrayBuffer(value)) return ByteUtils.utf8ByteLength(name) + 1 + 6 + value.byteLength;
 		else if (value._bsontype === "Long" || value._bsontype === "Double" || value._bsontype === "Timestamp") return ByteUtils.utf8ByteLength(name) + 1 + 9;
 		else if (value._bsontype === "Decimal128") return ByteUtils.utf8ByteLength(name) + 1 + 17;
-		else if (value._bsontype === "Code") if (value.scope != null && Object.keys(value.scope).length > 0) {
-			objectStack.push({
-				obj: value.scope,
-				ignoreUndefined
-			});
-			return ByteUtils.utf8ByteLength(name) + 1 + 1 + 4 + 4 + ByteUtils.utf8ByteLength(value.code.toString()) + 1;
-		} else return ByteUtils.utf8ByteLength(name) + 1 + 1 + 4 + ByteUtils.utf8ByteLength(value.code.toString()) + 1;
-		else if (value._bsontype === "Binary") {
+		else if (value._bsontype === "Int32") return ByteUtils.utf8ByteLength(name) + 1 + 5;
+		else if (value._bsontype === "Code") {
+			if (value.scope != null && Object.keys(value.scope).length > 0) {
+				objectStack.push({
+					obj: value.scope,
+					ignoreUndefined
+				});
+				return ByteUtils.utf8ByteLength(name) + 1 + 1 + 4 + 4 + ByteUtils.utf8ByteLength(value.code.toString()) + 1;
+			} else return ByteUtils.utf8ByteLength(name) + 1 + 1 + 4 + ByteUtils.utf8ByteLength(value.code.toString()) + 1;
+		} else if (value._bsontype === "Binary") {
 			const binary = value;
 			if (binary.sub_type === Binary.SUBTYPE_BYTE_ARRAY) return ByteUtils.utf8ByteLength(name) + 1 + (binary.position + 1 + 4 + 1 + 4);
 			else return ByteUtils.utf8ByteLength(name) + 1 + (binary.position + 1 + 4 + 1);
-		} else if (value._bsontype === "Symbol") return ByteUtils.utf8ByteLength(name) + 1 + ByteUtils.utf8ByteLength(value.value) + 4 + 1 + 1;
+		} else if (value._bsontype === "BSONSymbol") return ByteUtils.utf8ByteLength(name) + 1 + ByteUtils.utf8ByteLength(value.value) + 4 + 1 + 1;
 		else if (value._bsontype === "DBRef") {
 			const ordered_values = Object.assign({
 				$ref: value.collection,
@@ -145327,34 +145357,37 @@ function deserializeObject(buffer, index, options, isArray = false) {
 	let currentIsArray = isArray;
 	while (true) {
 		const elementType = buffer[index++];
-		if (elementType === 0) if (currentFrame) if (index === currentFrame.lastIndex) {
-			const completedFrame = currentFrame;
-			currentFrame = completedFrame.prev;
-			if (currentFrame === null) {
-				currentDest = rootObject;
-				currentIsArray = isArray;
-			} else {
-				currentDest = currentFrame.holdingDocument;
-				currentIsArray = currentFrame.isArray;
-			}
-			let result = completedFrame.holdingDocument;
-			switch (completedFrame.elementType) {
-				case BSON_DATA_OBJECT:
-					if (completedFrame.isPossibleDBRef) result = toPotentialDbRef(result);
-					break;
-				case BSON_DATA_ARRAY: break;
-				case BSON_DATA_CODE_W_SCOPE:
-					result = new Code(completedFrame.functionString, completedFrame.holdingDocument);
-					break;
-				default: throw new BSONError("Unexpected element type in frame stack");
-			}
-			assignValue(currentDest, completedFrame.propertyName, result);
-			continue;
-		} else {
-			if (currentFrame.elementType === BSON_DATA_ARRAY) throw new BSONError("corrupted array bson");
-			throw new BSONError("Bad BSON Document: object not properly terminated");
+		if (elementType === 0) {
+			if (currentFrame) {
+				if (index === currentFrame.lastIndex) {
+					const completedFrame = currentFrame;
+					currentFrame = completedFrame.prev;
+					if (currentFrame === null) {
+						currentDest = rootObject;
+						currentIsArray = isArray;
+					} else {
+						currentDest = currentFrame.holdingDocument;
+						currentIsArray = currentFrame.isArray;
+					}
+					let result = completedFrame.holdingDocument;
+					switch (completedFrame.elementType) {
+						case BSON_DATA_OBJECT:
+							if (completedFrame.isPossibleDBRef) result = toPotentialDbRef(result);
+							break;
+						case BSON_DATA_ARRAY: break;
+						case BSON_DATA_CODE_W_SCOPE:
+							result = new Code(completedFrame.functionString, completedFrame.holdingDocument);
+							break;
+						default: throw new BSONError("Unexpected element type in frame stack");
+					}
+					assignValue(currentDest, completedFrame.propertyName, result);
+					continue;
+				} else {
+					if (currentFrame.elementType === BSON_DATA_ARRAY) throw new BSONError("corrupted array bson");
+					throw new BSONError("Bad BSON Document: object not properly terminated");
+				}
+			} else break;
 		}
-		else break;
 		let i = index;
 		while (buffer[i] !== 0 && i < buffer.length) i++;
 		if (i >= buffer.byteLength) throw new BSONError("Bad BSON Document: illegal CString");
@@ -145376,9 +145409,7 @@ function deserializeObject(buffer, index, options, isArray = false) {
 			value = ByteUtils.toUTF8(buffer, index, index + stringSize - 1, shouldValidateKey);
 			index = index + stringSize;
 		} else if (elementType === BSON_DATA_OID) {
-			const oid = ByteUtils.allocateUnsafe(12);
-			for (let i = 0; i < 12; i++) oid[i] = buffer[index + i];
-			value = new ObjectId(oid);
+			value = new ObjectId(buffer, index);
 			index = index + 12;
 		} else if (elementType === BSON_DATA_INT && promoteValues === false) {
 			value = new Int32(NumberUtils.getInt32LE(buffer, index));
@@ -145449,18 +145480,19 @@ function deserializeObject(buffer, index, options, isArray = false) {
 			index = index + 4;
 		} else if (elementType === BSON_DATA_UNDEFINED) value = void 0;
 		else if (elementType === BSON_DATA_NULL) value = null;
-		else if (elementType === BSON_DATA_LONG) if (useBigInt64) {
-			value = NumberUtils.getBigInt64LE(buffer, index);
-			index += 8;
-		} else {
-			const lowBits = NumberUtils.getInt32LE(buffer, index);
-			const highBits = NumberUtils.getInt32LE(buffer, index + 4);
-			index += 8;
-			const long = new Long(lowBits, highBits);
-			if (promoteLongs && promoteValues === true) value = long.lessThanOrEqual(JS_INT_MAX_LONG) && long.greaterThanOrEqual(JS_INT_MIN_LONG) ? long.toNumber() : long;
-			else value = long;
-		}
-		else if (elementType === BSON_DATA_DECIMAL128) {
+		else if (elementType === BSON_DATA_LONG) {
+			if (useBigInt64) {
+				value = NumberUtils.getBigInt64LE(buffer, index);
+				index += 8;
+			} else {
+				const lowBits = NumberUtils.getInt32LE(buffer, index);
+				const highBits = NumberUtils.getInt32LE(buffer, index + 4);
+				index += 8;
+				const long = new Long(lowBits, highBits);
+				if (promoteLongs && promoteValues === true) value = long.lessThanOrEqual(JS_INT_MAX_LONG) && long.greaterThanOrEqual(JS_INT_MIN_LONG) ? long.toNumber() : long;
+				else value = long;
+			}
+		} else if (elementType === BSON_DATA_DECIMAL128) {
 			const bytes = ByteUtils.allocateUnsafe(16);
 			for (let i = 0; i < 16; i++) bytes[i] = buffer[index + i];
 			index = index + 16;
@@ -145504,9 +145536,7 @@ function deserializeObject(buffer, index, options, isArray = false) {
 				case "s":
 					optionsArray[i] = "g";
 					break;
-				case "i":
-					optionsArray[i] = "i";
-					break;
+				case "i": optionsArray[i] = "i";
 			}
 			value = new RegExp(source, optionsArray.join(""));
 		} else if (elementType === BSON_DATA_REGEXP && bsonRegExp === true) {
@@ -145912,21 +145942,22 @@ function serializeInto(buffer, object, checkKeys, startingIndex, serializeFuncti
 		else if (type === "number") index = serializeNumber(buffer, key, value, index);
 		else if (type === "bigint") index = serializeBigInt(buffer, key, value, index);
 		else if (type === "boolean") index = serializeBoolean(buffer, key, value, index);
-		else if (type === "object" && value._bsontype == null) if (value instanceof Date || isDate$1(value)) index = serializeDate(buffer, key, value, index);
-		else if (value instanceof Uint8Array || isUint8Array(value)) index = serializeBuffer(buffer, key, value, index);
-		else if (value instanceof RegExp || isRegExp$1(value)) index = serializeRegExp(buffer, key, value, index);
-		else {
-			if (path.has(value)) throw new BSONError("Cannot convert circular structure to BSON");
-			const nestedIsArray = Array.isArray(value);
-			buffer[index++] = nestedIsArray ? BSON_DATA_ARRAY : BSON_DATA_OBJECT;
-			index += ByteUtils.encodeUTF8Into(buffer, key, index);
-			buffer[index++] = 0;
-			const nestedStartIndex = index;
-			path.add(value);
-			currentFrame = makeFrame(value, nestedStartIndex, null, frame, frame.checkKeys, frame.ignoreUndefined);
-			index += 4;
-		}
-		else if (type === "object") {
+		else if (type === "object" && value._bsontype == null) {
+			if (value instanceof Date || isDate$1(value)) index = serializeDate(buffer, key, value, index);
+			else if (value instanceof Uint8Array || isUint8Array(value)) index = serializeBuffer(buffer, key, value, index);
+			else if (value instanceof RegExp || isRegExp$1(value)) index = serializeRegExp(buffer, key, value, index);
+			else {
+				if (path.has(value)) throw new BSONError("Cannot convert circular structure to BSON");
+				const nestedIsArray = Array.isArray(value);
+				buffer[index++] = nestedIsArray ? BSON_DATA_ARRAY : BSON_DATA_OBJECT;
+				index += ByteUtils.encodeUTF8Into(buffer, key, index);
+				buffer[index++] = 0;
+				const nestedStartIndex = index;
+				path.add(value);
+				currentFrame = makeFrame(value, nestedStartIndex, null, frame, frame.checkKeys, frame.ignoreUndefined);
+				index += 4;
+			}
+		} else if (type === "object") {
 			if (value[BSON_VERSION_SYMBOL] !== BSON_MAJOR_VERSION) throw new BSONVersionError();
 			const tag = value[bsonType];
 			if (tag === "ObjectId") index = serializeObjectId(buffer, key, value, index);
@@ -146010,11 +146041,12 @@ function deserializeValue(value, options = {}) {
 	if (value.$date != null) {
 		const d = value.$date;
 		const date = /* @__PURE__ */ new Date();
-		if (options.legacy) if (typeof d === "number") date.setTime(d);
-		else if (typeof d === "string") date.setTime(Date.parse(d));
-		else if (typeof d === "bigint") date.setTime(Number(d));
-		else throw new BSONRuntimeError(`Unrecognized type for EJSON date: ${typeof d}`);
-		else if (typeof d === "string") date.setTime(Date.parse(d));
+		if (options.legacy) {
+			if (typeof d === "number") date.setTime(d);
+			else if (typeof d === "string") date.setTime(Date.parse(d));
+			else if (typeof d === "bigint") date.setTime(Number(d));
+			else throw new BSONRuntimeError(`Unrecognized type for EJSON date: ${typeof d}`);
+		} else if (typeof d === "string") date.setTime(Date.parse(d));
 		else if (Long.isLong(d)) date.setTime(d.toNumber());
 		else if (typeof d === "number" && options.relaxed) date.setTime(d);
 		else if (typeof d === "bigint") date.setTime(Number(d));
@@ -146086,7 +146118,7 @@ function serializeValue(value, options) {
 	if (Array.isArray(value)) return serializeArray(value, options);
 	if (value === void 0) return options.ignoreUndefined ? void 0 : null;
 	if (value instanceof Date || isDate$1(value)) {
-		const dateNum = value.getTime(), inRange = dateNum > -1 && dateNum < 0xe677d3328480;
+		const dateNum = value.getTime(), inRange = dateNum > -1 && dateNum < 0xe677d21fdc00;
 		if (options.legacy) return options.relaxed && inRange ? { $date: value.getTime() } : { $date: getISOString(value) };
 		return options.relaxed && inRange ? { $date: getISOString(value) } : { $date: { $numberLong: value.getTime().toString() } };
 	}
@@ -146288,7 +146320,7 @@ function deserializeStream(data, startIndex, numberOfDocuments, documents, docSt
 	}
 	return index;
 }
-var TypedArrayPrototypeGetSymbolToStringTag, BSON_MAJOR_VERSION, BSON_VERSION_SYMBOL, BSON_INT32_MAX, BSON_INT32_MIN, BSON_INT64_MAX, BSON_INT64_MIN, JS_INT_MAX, JS_INT_MIN, BSON_DATA_NUMBER, BSON_DATA_STRING, BSON_DATA_OBJECT, BSON_DATA_ARRAY, BSON_DATA_BINARY, BSON_DATA_UNDEFINED, BSON_DATA_OID, BSON_DATA_BOOLEAN, BSON_DATA_DATE, BSON_DATA_NULL, BSON_DATA_REGEXP, BSON_DATA_DBPOINTER, BSON_DATA_CODE, BSON_DATA_SYMBOL, BSON_DATA_CODE_W_SCOPE, BSON_DATA_INT, BSON_DATA_TIMESTAMP, BSON_DATA_LONG, BSON_DATA_DECIMAL128, BSON_DATA_MIN_KEY, BSON_DATA_MAX_KEY, BSON_BINARY_SUBTYPE_DEFAULT, BSON_BINARY_SUBTYPE_UUID_NEW, BSONType, BSONError, BSONVersionError, BSONRuntimeError, BSONOffsetError, TextDecoderFatal, TextDecoderNonFatal, nodeJsByteUtils, webRandomBytes, HEX_DIGIT, webByteUtils, ByteUtils, bsonType, BSONValue, FLOAT, FLOAT_BYTES, isBigEndian, NumberUtils, Binary, UUID_BYTE_LENGTH, UUID_WITHOUT_DASHES, UUID_WITH_DASHES, UUID, Code, DBRef, wasm, TWO_PWR_16_DBL, TWO_PWR_24_DBL, TWO_PWR_32_DBL, TWO_PWR_64_DBL, TWO_PWR_63_DBL, INT_CACHE, UINT_CACHE, MAX_INT64_STRING_LENGTH, DECIMAL_REG_EX, Long, PARSE_STRING_REGEXP, PARSE_INF_REGEXP, PARSE_NAN_REGEXP, EXPONENT_MAX, EXPONENT_MIN, EXPONENT_BIAS, MAX_DIGITS, NAN_BUFFER, INF_NEGATIVE_BUFFER, INF_POSITIVE_BUFFER, EXPONENT_REGEX, COMBINATION_MASK, EXPONENT_MASK, COMBINATION_INFINITY, COMBINATION_NAN, Decimal128, Double, Int32, MaxKey, MinKey, __idCache, ObjectId, BSONRegExp, BSONSymbol, LongWithoutOverridesClass, Timestamp, JS_INT_MAX_LONG, JS_INT_MIN_LONG, allowedDBRefKeys, regexp, ignoreKeys, keysToCodecs, BSON_TYPE_MAPPINGS, EJSON, BSONElementType, onDemand, MAXSIZE, buffer, bson;
+var TypedArrayPrototypeGetSymbolToStringTag, BSON_MAJOR_VERSION, BSON_VERSION_SYMBOL, BSON_INT32_MAX, BSON_INT32_MIN, BSON_INT64_MAX, BSON_INT64_MIN, JS_INT_MAX, JS_INT_MIN, BSON_DATA_NUMBER, BSON_DATA_STRING, BSON_DATA_OBJECT, BSON_DATA_ARRAY, BSON_DATA_BINARY, BSON_DATA_UNDEFINED, BSON_DATA_OID, BSON_DATA_BOOLEAN, BSON_DATA_DATE, BSON_DATA_NULL, BSON_DATA_REGEXP, BSON_DATA_DBPOINTER, BSON_DATA_CODE, BSON_DATA_SYMBOL, BSON_DATA_CODE_W_SCOPE, BSON_DATA_INT, BSON_DATA_TIMESTAMP, BSON_DATA_LONG, BSON_DATA_DECIMAL128, BSON_DATA_MIN_KEY, BSON_DATA_MAX_KEY, BSON_BINARY_SUBTYPE_DEFAULT, BSON_BINARY_SUBTYPE_UUID_NEW, BSONType, BSONError, BSONVersionError, BSONRuntimeError, BSONOffsetError, TextDecoderFatal, TextDecoderNonFatal, nodeJsByteUtils, webRandomBytes, HEX_DIGIT, webByteUtils, ByteUtils, bsonType, BSONValue, FLOAT, FLOAT_BYTES, isBigEndian, NumberUtils, Binary, UUID_BYTE_LENGTH, UUID_WITHOUT_DASHES, UUID_WITH_DASHES, UUID, Code, DBRef, wasm, TWO_PWR_16_DBL, TWO_PWR_24_DBL, TWO_PWR_32_DBL, TWO_PWR_64_DBL, TWO_PWR_63_DBL, INT_CACHE, UINT_CACHE, MAX_INT64_STRING_LENGTH, DECIMAL_REG_EX, Long, PARSE_STRING_REGEXP, PARSE_INF_REGEXP, PARSE_NAN_REGEXP, EXPONENT_MAX, EXPONENT_MIN, EXPONENT_BIAS, MAX_DIGITS, NAN_BUFFER, INF_NEGATIVE_BUFFER, INF_POSITIVE_BUFFER, EXPONENT_REGEX, COMBINATION_MASK, EXPONENT_MASK, COMBINATION_INFINITY, COMBINATION_NAN, Decimal128, Double, Int32, MaxKey, MinKey, __idCache, byteToHex, hexCharCodeToNibble, ObjectId, BSONRegExp, BSONSymbol, LongWithoutOverridesClass, Timestamp, JS_INT_MAX_LONG, JS_INT_MIN_LONG, allowedDBRefKeys, regexp, ignoreKeys, keysToCodecs, BSON_TYPE_MAPPINGS, EJSON, BSONElementType, onDemand, MAXSIZE, buffer, bson;
 var init_bson = __esmMin((() => {
 	TypedArrayPrototypeGetSymbolToStringTag = (() => {
 		const g = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(Uint8Array.prototype), Symbol.toStringTag).get;
@@ -146593,7 +146625,8 @@ var init_bson = __esmMin((() => {
 				const byte0 = buffer[i];
 				const byte1 = buffer[i + 1];
 				const byte2 = buffer[i + 2];
-				buffer[i] = buffer[i + 3];
+				const byte3 = buffer[i + 3];
+				buffer[i] = byte3;
 				buffer[i + 1] = byte2;
 				buffer[i + 2] = byte1;
 				buffer[i + 3] = byte0;
@@ -146884,7 +146917,8 @@ var init_bson = __esmMin((() => {
 			const bits = new Int8Array(bitCount);
 			for (let bitOffset = 0; bitOffset < bits.length; bitOffset++) {
 				const byteOffset = bitOffset / 8 | 0;
-				bits[bitOffset] = this.buffer[byteOffset + 2] >> 7 - bitOffset % 8 & 1;
+				const bit = this.buffer[byteOffset + 2] >> 7 - bitOffset % 8 & 1;
+				bits[bitOffset] = bit;
 			}
 			return bits;
 		}
@@ -147599,18 +147633,19 @@ var init_bson = __esmMin((() => {
 			if (this.isZero()) return this.unsigned ? Long.UZERO : Long.ZERO;
 			let approx, rem, res;
 			if (!this.unsigned) {
-				if (this.eq(Long.MIN_VALUE)) if (divisor.eq(Long.ONE) || divisor.eq(Long.NEG_ONE)) return Long.MIN_VALUE;
-				else if (divisor.eq(Long.MIN_VALUE)) return Long.ONE;
-				else {
-					approx = this.shr(1).div(divisor).shl(1);
-					if (approx.eq(Long.ZERO)) return divisor.isNegative() ? Long.ONE : Long.NEG_ONE;
+				if (this.eq(Long.MIN_VALUE)) {
+					if (divisor.eq(Long.ONE) || divisor.eq(Long.NEG_ONE)) return Long.MIN_VALUE;
+					else if (divisor.eq(Long.MIN_VALUE)) return Long.ONE;
 					else {
-						rem = this.sub(divisor.mul(approx));
-						res = approx.add(rem.div(divisor));
-						return res;
+						approx = this.shr(1).div(divisor).shl(1);
+						if (approx.eq(Long.ZERO)) return divisor.isNegative() ? Long.ONE : Long.NEG_ONE;
+						else {
+							rem = this.sub(divisor.mul(approx));
+							res = approx.add(rem.div(divisor));
+							return res;
+						}
 					}
-				}
-				else if (divisor.eq(Long.MIN_VALUE)) return this.unsigned ? Long.UZERO : Long.ZERO;
+				} else if (divisor.eq(Long.MIN_VALUE)) return this.unsigned ? Long.UZERO : Long.ZERO;
 				if (this.isNegative()) {
 					if (divisor.isNegative()) return this.neg().div(divisor.neg());
 					return this.neg().div(divisor).neg();
@@ -147736,9 +147771,10 @@ var init_bson = __esmMin((() => {
 			if (multiplier.isZero()) return Long.ZERO;
 			if (this.eq(Long.MIN_VALUE)) return multiplier.isOdd() ? Long.MIN_VALUE : Long.ZERO;
 			if (multiplier.eq(Long.MIN_VALUE)) return this.isOdd() ? Long.MIN_VALUE : Long.ZERO;
-			if (this.isNegative()) if (multiplier.isNegative()) return this.neg().mul(multiplier.neg());
-			else return this.neg().mul(multiplier).neg();
-			else if (multiplier.isNegative()) return this.mul(multiplier.neg()).neg();
+			if (this.isNegative()) {
+				if (multiplier.isNegative()) return this.neg().mul(multiplier.neg());
+				else return this.neg().mul(multiplier).neg();
+			} else if (multiplier.isNegative()) return this.mul(multiplier.neg()).neg();
 			if (this.lt(Long.TWO_PWR_24) && multiplier.lt(Long.TWO_PWR_24)) return Long.fromNumber(this.toNumber() * multiplier.toNumber(), this.unsigned);
 			const a48 = this.high >>> 16;
 			const a32 = this.high & 65535;
@@ -147888,10 +147924,12 @@ var init_bson = __esmMin((() => {
 			radix = radix || 10;
 			if (radix < 2 || 36 < radix) throw new BSONError("radix");
 			if (this.isZero()) return "0";
-			if (this.isNegative()) if (this.eq(Long.MIN_VALUE)) {
-				const radixLong = Long.fromNumber(radix), div = this.div(radixLong), rem1 = div.mul(radixLong).sub(this);
-				return div.toString(radix) + rem1.toInt().toString(radix);
-			} else return "-" + this.neg().toString(radix);
+			if (this.isNegative()) {
+				if (this.eq(Long.MIN_VALUE)) {
+					const radixLong = Long.fromNumber(radix), div = this.div(radixLong), rem1 = div.mul(radixLong).sub(this);
+					return div.toString(radix) + rem1.toInt().toString(radix);
+				} else return "-" + this.neg().toString(radix);
+			}
 			const radixToPower = Long.fromNumber(Math.pow(radix, 6), this.unsigned);
 			let rem = this;
 			let result = "";
@@ -148162,10 +148200,12 @@ var init_bson = __esmMin((() => {
 						let dIdx = lastDigit;
 						for (; dIdx >= 0; dIdx--) if (++digits[dIdx] > 9) {
 							digits[dIdx] = 0;
-							if (dIdx === 0) if (exponent < EXPONENT_MAX) {
-								exponent = exponent + 1;
-								digits[dIdx] = 1;
-							} else return new Decimal128(isNegative ? INF_NEGATIVE_BUFFER : INF_POSITIVE_BUFFER);
+							if (dIdx === 0) {
+								if (exponent < EXPONENT_MAX) {
+									exponent = exponent + 1;
+									digits[dIdx] = 1;
+								} else return new Decimal128(isNegative ? INF_NEGATIVE_BUFFER : INF_POSITIVE_BUFFER);
+							}
 						} else break;
 					}
 				}
@@ -148286,13 +148326,14 @@ var init_bson = __esmMin((() => {
 				high: new Long(midh, high)
 			}.high.lessThan(Long.ZERO)) string.push("-");
 			const combination = high >> 26 & COMBINATION_MASK;
-			if (combination >> 3 === 3) if (combination === COMBINATION_INFINITY) return string.join("") + "Infinity";
-			else if (combination === COMBINATION_NAN) return "NaN";
-			else {
-				biased_exponent = high >> 15 & EXPONENT_MASK;
-				significand_msb = 8 + (high >> 14 & 1);
-			}
-			else {
+			if (combination >> 3 === 3) {
+				if (combination === COMBINATION_INFINITY) return string.join("") + "Infinity";
+				else if (combination === COMBINATION_NAN) return "NaN";
+				else {
+					biased_exponent = high >> 15 & EXPONENT_MASK;
+					significand_msb = 8 + (high >> 14 & 1);
+				}
+			} else {
 				significand_msb = high >> 14 & 7;
 				biased_exponent = high >> 17 & EXPONENT_MASK;
 			}
@@ -148476,6 +148517,12 @@ var init_bson = __esmMin((() => {
 		}
 	};
 	__idCache = /* @__PURE__ */ new WeakMap();
+	byteToHex = [];
+	for (let n = 0; n < 256; n++) byteToHex.push(n.toString(16).padStart(2, "0"));
+	hexCharCodeToNibble = /* @__PURE__ */ new Int8Array(103);
+	for (let c = 48; c <= 57; c++) hexCharCodeToNibble[c] = c - 48;
+	for (let c = 65; c <= 70; c++) hexCharCodeToNibble[c] = c - 55;
+	for (let c = 97; c <= 102; c++) hexCharCodeToNibble[c] = c - 87;
 	ObjectId = class ObjectId extends BSONValue {
 		get _bsontype() {
 			return "ObjectId";
@@ -148484,7 +148531,7 @@ var init_bson = __esmMin((() => {
 		static PROCESS_UNIQUE = null;
 		static resetState = () => {
 			this.index = Math.floor(Math.random() * 16777216);
-			this.PROCESS_UNIQUE = ByteUtils.randomBytes(5);
+			this.PROCESS_UNIQUE = null;
 		};
 		static {
 			this.resetState();
@@ -148492,29 +148539,78 @@ var init_bson = __esmMin((() => {
 			if (startupSnapshot?.isBuildingSnapshot?.()) startupSnapshot?.addDeserializeCallback?.(this.resetState);
 		}
 		static cacheHexString;
-		buffer;
-		constructor(inputId) {
+		i0;
+		i1;
+		i2;
+		i3;
+		setFromBytes(b, offset = 0) {
+			this.i0 = b[offset] << 16 | b[offset + 1] << 8 | b[offset + 2];
+			this.i1 = b[offset + 3] << 16 | b[offset + 4] << 8 | b[offset + 5];
+			this.i2 = b[offset + 6] << 16 | b[offset + 7] << 8 | b[offset + 8];
+			this.i3 = b[offset + 9] << 16 | b[offset + 10] << 8 | b[offset + 11];
+		}
+		setFromHex(s) {
+			const t = hexCharCodeToNibble;
+			this.i0 = t[s.charCodeAt(0)] << 20 | t[s.charCodeAt(1)] << 16 | t[s.charCodeAt(2)] << 12 | t[s.charCodeAt(3)] << 8 | t[s.charCodeAt(4)] << 4 | t[s.charCodeAt(5)];
+			this.i1 = t[s.charCodeAt(6)] << 20 | t[s.charCodeAt(7)] << 16 | t[s.charCodeAt(8)] << 12 | t[s.charCodeAt(9)] << 8 | t[s.charCodeAt(10)] << 4 | t[s.charCodeAt(11)];
+			this.i2 = t[s.charCodeAt(12)] << 20 | t[s.charCodeAt(13)] << 16 | t[s.charCodeAt(14)] << 12 | t[s.charCodeAt(15)] << 8 | t[s.charCodeAt(16)] << 4 | t[s.charCodeAt(17)];
+			this.i3 = t[s.charCodeAt(18)] << 20 | t[s.charCodeAt(19)] << 16 | t[s.charCodeAt(20)] << 12 | t[s.charCodeAt(21)] << 8 | t[s.charCodeAt(22)] << 4 | t[s.charCodeAt(23)];
+		}
+		constructor(inputId, offset) {
 			super();
+			if (typeof offset === "number") {
+				this.setFromBytes(inputId, offset);
+				return;
+			}
 			let workingId;
 			if (typeof inputId === "object" && inputId && "id" in inputId) {
+				if (ObjectId.is(inputId) && typeof inputId.i0 === "number" && typeof inputId.i1 === "number" && typeof inputId.i2 === "number" && typeof inputId.i3 === "number") {
+					this.i0 = inputId.i0;
+					this.i1 = inputId.i1;
+					this.i2 = inputId.i2;
+					this.i3 = inputId.i3;
+					return;
+				}
 				if (typeof inputId.id !== "string" && !ArrayBuffer.isView(inputId.id)) throw new BSONError("Argument passed in must have an id that is of type string or Buffer");
 				if ("toHexString" in inputId && typeof inputId.toHexString === "function") workingId = ByteUtils.fromHex(inputId.toHexString());
 				else workingId = inputId.id;
 			} else workingId = inputId;
-			if (workingId == null) this.buffer = ObjectId.generate();
-			else if (ArrayBuffer.isView(workingId) && workingId.byteLength === 12) this.buffer = ByteUtils.toLocalBufferType(workingId);
-			else if (typeof workingId === "string") if (ObjectId.validateHexString(workingId)) {
-				this.buffer = ByteUtils.fromHex(workingId);
-				if (ObjectId.cacheHexString) __idCache.set(this, workingId);
-			} else throw new BSONError("input must be a 24 character hex string, 12 byte Uint8Array, or an integer");
-			else throw new BSONError("Argument passed in does not match the accepted types");
+			if (workingId == null) {
+				const time = Math.floor(Date.now() / 1e3);
+				const inc = ObjectId.getInc();
+				const pu = ObjectId.PROCESS_UNIQUE ??= ByteUtils.randomBytes(5);
+				this.i0 = time >>> 8 & 16777215;
+				this.i1 = (time & 255) << 16 | pu[0] << 8 | pu[1];
+				this.i2 = pu[2] << 16 | pu[3] << 8 | pu[4];
+				this.i3 = inc & 16777215;
+			} else if (ArrayBuffer.isView(workingId) && workingId.byteLength === 12) this.setFromBytes(workingId instanceof Uint8Array ? workingId : ByteUtils.toLocalBufferType(workingId));
+			else if (typeof workingId === "string") {
+				if (ObjectId.validateHexString(workingId)) {
+					this.setFromHex(workingId);
+					if (ObjectId.cacheHexString) __idCache.set(this, workingId);
+				} else throw new BSONError("input must be a 24 character hex string, 12 byte Uint8Array, or an integer");
+			} else throw new BSONError("Argument passed in does not match the accepted types");
 		}
 		get id() {
-			return this.buffer;
+			const b = ByteUtils.allocateUnsafe(12);
+			b[0] = this.i0 >>> 16 & 255;
+			b[1] = this.i0 >>> 8 & 255;
+			b[2] = this.i0 & 255;
+			b[3] = this.i1 >>> 16 & 255;
+			b[4] = this.i1 >>> 8 & 255;
+			b[5] = this.i1 & 255;
+			b[6] = this.i2 >>> 16 & 255;
+			b[7] = this.i2 >>> 8 & 255;
+			b[8] = this.i2 & 255;
+			b[9] = this.i3 >>> 16 & 255;
+			b[10] = this.i3 >>> 8 & 255;
+			b[11] = this.i3 & 255;
+			return b;
 		}
 		set id(value) {
-			this.buffer = value;
-			if (ObjectId.cacheHexString) __idCache.set(this, ByteUtils.toHex(value));
+			const bytes = value instanceof Uint8Array ? value : ByteUtils.toLocalBufferType(value);
+			this.setFromBytes(bytes);
+			if (ObjectId.cacheHexString) __idCache.set(this, ByteUtils.toHex(bytes));
 		}
 		static validateHexString(string) {
 			if (string?.length !== 24) return false;
@@ -148530,7 +148626,11 @@ var init_bson = __esmMin((() => {
 				const __id = __idCache.get(this);
 				if (__id) return __id;
 			}
-			const hexString = ByteUtils.toHex(this.id);
+			const i0 = this.i0;
+			const i1 = this.i1;
+			const i2 = this.i2;
+			const i3 = this.i3;
+			const hexString = byteToHex[i0 >>> 16 & 255] + byteToHex[i0 >>> 8 & 255] + byteToHex[i0 & 255] + byteToHex[i1 >>> 16 & 255] + byteToHex[i1 >>> 8 & 255] + byteToHex[i1 & 255] + byteToHex[i2 >>> 16 & 255] + byteToHex[i2 >>> 8 & 255] + byteToHex[i2 & 255] + byteToHex[i3 >>> 16 & 255] + byteToHex[i3 >>> 8 & 255] + byteToHex[i3 & 255];
 			if (ObjectId.cacheHexString) __idCache.set(this, hexString);
 			return hexString;
 		}
@@ -148542,15 +148642,15 @@ var init_bson = __esmMin((() => {
 			const inc = ObjectId.getInc();
 			const buffer = ByteUtils.allocateUnsafe(12);
 			NumberUtils.setInt32BE(buffer, 0, time);
-			const PROCESS_UNIQUE = this.PROCESS_UNIQUE;
+			const PROCESS_UNIQUE = this.PROCESS_UNIQUE ??= ByteUtils.randomBytes(5);
 			buffer[4] = PROCESS_UNIQUE[0];
 			buffer[5] = PROCESS_UNIQUE[1];
 			buffer[6] = PROCESS_UNIQUE[2];
 			buffer[7] = PROCESS_UNIQUE[3];
 			buffer[8] = PROCESS_UNIQUE[4];
 			buffer[11] = inc & 255;
-			buffer[10] = inc >> 8 & 255;
-			buffer[9] = inc >> 16 & 255;
+			buffer[10] = inc >>> 8 & 255;
+			buffer[9] = inc >>> 16 & 255;
 			return buffer;
 		}
 		toString(encoding) {
@@ -148566,7 +148666,7 @@ var init_bson = __esmMin((() => {
 		}
 		equals(otherId) {
 			if (otherId === void 0 || otherId === null) return false;
-			if (ObjectId.is(otherId)) return this.buffer[11] === otherId.buffer[11] && ByteUtils.equals(this.buffer, otherId.buffer);
+			if (ObjectId.is(otherId) && typeof otherId.i0 === "number" && typeof otherId.i1 === "number" && typeof otherId.i2 === "number" && typeof otherId.i3 === "number") return this.i3 === otherId.i3 && this.i0 === otherId.i0 && this.i1 === otherId.i1 && this.i2 === otherId.i2;
 			if (typeof otherId === "string") return otherId.toLowerCase() === this.toHexString();
 			if (typeof otherId === "object" && typeof otherId.toHexString === "function") {
 				const otherIdString = otherId.toHexString();
@@ -148577,26 +148677,26 @@ var init_bson = __esmMin((() => {
 		}
 		getTimestamp() {
 			const timestamp = /* @__PURE__ */ new Date();
-			const time = NumberUtils.getUint32BE(this.buffer, 0);
-			timestamp.setTime(Math.floor(time) * 1e3);
+			const time = this.i0 * 256 + (this.i1 >>> 16);
+			timestamp.setTime(time * 1e3);
 			return timestamp;
 		}
 		static createPk() {
 			return new ObjectId();
 		}
 		serializeInto(uint8array, index) {
-			uint8array[index] = this.buffer[0];
-			uint8array[index + 1] = this.buffer[1];
-			uint8array[index + 2] = this.buffer[2];
-			uint8array[index + 3] = this.buffer[3];
-			uint8array[index + 4] = this.buffer[4];
-			uint8array[index + 5] = this.buffer[5];
-			uint8array[index + 6] = this.buffer[6];
-			uint8array[index + 7] = this.buffer[7];
-			uint8array[index + 8] = this.buffer[8];
-			uint8array[index + 9] = this.buffer[9];
-			uint8array[index + 10] = this.buffer[10];
-			uint8array[index + 11] = this.buffer[11];
+			uint8array[index] = this.i0 >>> 16 & 255;
+			uint8array[index + 1] = this.i0 >>> 8 & 255;
+			uint8array[index + 2] = this.i0 & 255;
+			uint8array[index + 3] = this.i1 >>> 16 & 255;
+			uint8array[index + 4] = this.i1 >>> 8 & 255;
+			uint8array[index + 5] = this.i1 & 255;
+			uint8array[index + 6] = this.i2 >>> 16 & 255;
+			uint8array[index + 7] = this.i2 >>> 8 & 255;
+			uint8array[index + 8] = this.i2 & 255;
+			uint8array[index + 9] = this.i3 >>> 16 & 255;
+			uint8array[index + 10] = this.i3 >>> 8 & 255;
+			uint8array[index + 11] = this.i3 & 255;
 			return 12;
 		}
 		static createFromTime(time) {
@@ -148667,9 +148767,11 @@ var init_bson = __esmMin((() => {
 			} };
 		}
 		static fromExtendedJSON(doc) {
-			if ("$regex" in doc) if (typeof doc.$regex !== "string") {
-				if (doc.$regex._bsontype === "BSONRegExp") return doc;
-			} else return new BSONRegExp(doc.$regex, BSONRegExp.parseOptions(doc.$options));
+			if ("$regex" in doc) {
+				if (typeof doc.$regex !== "string") {
+					if (doc.$regex._bsontype === "BSONRegExp") return doc;
+				} else return new BSONRegExp(doc.$regex, BSONRegExp.parseOptions(doc.$options));
+			}
 			if ("$regularExpression" in doc) return new BSONRegExp(doc.$regularExpression.pattern, BSONRegExp.parseOptions(doc.$regularExpression.options));
 			throw new BSONError(`Unexpected BSONRegExp EJSON object form: ${JSON.stringify(doc)}`);
 		}
@@ -148850,7 +148952,7 @@ var init_bson = __esmMin((() => {
 	onDemand.ByteUtils = ByteUtils;
 	onDemand.NumberUtils = NumberUtils;
 	Object.freeze(onDemand);
-	MAXSIZE = 1024 * 1024 * 17;
+	MAXSIZE = 17825792;
 	buffer = ByteUtils.allocate(MAXSIZE);
 	bson = /*#__PURE__*/ Object.freeze({
 		__proto__: null,
@@ -156424,6 +156526,16 @@ var init_BinaryWriter = __esmMin((() => {
 }));
 //#endregion
 //#region src/Network/PacketStructure.js
+/**
+* Reads the trailing name field of a variable length packet, honoring NAME_LENGTH.
+*
+* @param {object} fp - BinaryReader
+* @param {number} end - packet end offset
+* @returns {string}
+*/
+function readTrailingName(fp, end) {
+	return fp.readString(NAME_LENGTH);
+}
 var NAME_LENGTH, MAP_NAME_LENGTH_EXT, PACKET, RENEWAL, CLASSIC, UNUSED_PACKET;
 var init_PacketStructure = __esmMin((() => {
 	init_BinaryWriter();
@@ -161183,6 +161295,17 @@ var init_PacketStructure = __esmMin((() => {
 		this.GName = fp.readString(NAME_LENGTH);
 	};
 	PACKET.ZC.UPDATE_GDID.size = 43;
+	PACKET.ZC.UPDATE_GDID2 = function PACKET_ZC_UPDATE_GDID2(fp, end) {
+		if (end - fp.tell() < 45) return;
+		this.GDID = fp.readULong();
+		this.emblemVersion = fp.readLong();
+		this.right = fp.readLong();
+		this.isMaster = fp.readUChar();
+		this.InterSID = fp.readLong();
+		this.GName = fp.readString(NAME_LENGTH);
+		this.masterGID = fp.readULong();
+	};
+	PACKET.ZC.UPDATE_GDID2.size = 47;
 	PACKET.ZC.UPDATE_CHARSTAT = function PACKET_ZC_UPDATE_CHARSTAT(fp, end) {
 		this.AID = fp.readULong();
 		this.GID = fp.readULong();
@@ -164239,6 +164362,7 @@ var init_PacketStructure = __esmMin((() => {
 		this.job = fp.readShort();
 		this.head = fp.readShort();
 		this.weapon = fp.readLong();
+		if (PacketVerManager_default.value >= 20181121) this.shield = fp.readLong();
 		this.accessory = fp.readShort();
 		this.moveStartTime = fp.readULong();
 		this.accessory2 = fp.readShort();
@@ -164258,7 +164382,7 @@ var init_PacketStructure = __esmMin((() => {
 		this.ySize = fp.readUChar();
 		this.clevel = fp.readShort();
 		this.font = fp.readShort();
-		this.name = fp.readString(NAME_LENGTH);
+		this.name = readTrailingName(fp, end);
 	};
 	PACKET.ZC.NOTIFY_MOVEENTRY6.size = -1;
 	PACKET.ZC.NOTIFY_STANDENTRY6 = function PACKET_ZC_NOTIFY_STANDENTRY6(fp, end) {
@@ -164271,6 +164395,7 @@ var init_PacketStructure = __esmMin((() => {
 		this.job = fp.readShort();
 		this.head = fp.readShort();
 		this.weapon = fp.readLong();
+		if (PacketVerManager_default.value >= 20181121) this.shield = fp.readLong();
 		this.accessory = fp.readShort();
 		this.accessory2 = fp.readShort();
 		this.accessory3 = fp.readShort();
@@ -164302,6 +164427,7 @@ var init_PacketStructure = __esmMin((() => {
 		this.job = fp.readShort();
 		this.head = fp.readShort();
 		this.weapon = fp.readLong();
+		if (PacketVerManager_default.value >= 20181121) this.shield = fp.readLong();
 		this.accessory = fp.readShort();
 		this.accessory2 = fp.readShort();
 		this.accessory3 = fp.readShort();
@@ -202457,6 +202583,7 @@ var init_PacketRegister = __esmMin((() => {
 		751: PACKET.ZC.NOTIFY_FONT,
 		752: PACKET.ZC.PROGRESS,
 		754: PACKET.ZC.PROGRESS_CANCEL,
+		759: PACKET.ZC.UPDATE_GDID2,
 		861: PACKET.ZC.SIMPLE_CASHSHOP_POINT_ITEMLIST,
 		863: PACKET.CZ.REQUEST_MOVE2,
 		864: PACKET.CZ.REQUEST_TIME2,
@@ -205771,10 +205898,12 @@ function sanitizeHtml(text) {
 	container.innerHTML = text;
 	const walk = (node) => {
 		const children = Array.from(node.childNodes);
-		for (const child of children) if (child.nodeType === 1) if (_allowedTags$1.has(child.tagName.toLowerCase())) walk(child);
-		else {
-			while (child.firstChild) node.insertBefore(child.firstChild, child);
-			node.removeChild(child);
+		for (const child of children) if (child.nodeType === 1) {
+			if (_allowedTags$1.has(child.tagName.toLowerCase())) walk(child);
+			else {
+				while (child.firstChild) node.insertBefore(child.firstChild, child);
+				node.removeChild(child);
+			}
 		}
 	};
 	walk(container);
@@ -206063,9 +206192,9 @@ var init_Background = __esmMin((() => {
 			_ctx$6.fillStyle = "rgb(0,255,255)";
 			_ctx$6.fillRect(x, y, width, height);
 			_ctx$6.fillStyle = "rgb(140,140,140)";
-			_ctx$6.fillRect(x + 1, y + 1, width - 2, height - 2);
+			_ctx$6.fillRect(x + 1, y + 1, 238, 13);
 			_ctx$6.fillStyle = "rgb(66,99,165)";
-			_ctx$6.fillRect(x + 2, y + 2, Math.floor(percent * (width - 4) * .01), height - 4);
+			_ctx$6.fillRect(x + 2, y + 2, Math.floor(percent * 236 * .01), 11);
 			_ctx$6.fillStyle = "rgb(255,255,0)";
 			_ctx$6.fillText(percent + "%", Math.floor((_canvas.width - _ctx$6.measureText(percent + "%").width) * .5), y + 11);
 		}
@@ -207209,7 +207338,7 @@ var init_SpriteRenderer = __esmMin((() => {
 			scale_x = 1;
 			scale_y = 1;
 			const _x = _pos$8[0] + this.offset[0];
-			const _y = _pos$8[1] + this.offset[1] - .5 * 35;
+			const _y = _pos$8[1] + this.offset[1] - 17.5;
 			const pal = this.palette;
 			const frame = this.sprite;
 			const width = frame.width;
@@ -210935,7 +211064,7 @@ var init_granny_ro_wasm_esm = __esmMin((() => {
 			return this.uniq_offset_and_byte >>> 9;
 		}
 		length_unique(e) {
-			let t = Math.min(e / (64 / 4) | 0, 3);
+			let t = Math.min(e / 16 | 0, 3);
 			return this.uniq_lens >>> (3 - t) * 8 & 255;
 		}
 	};
@@ -211224,7 +211353,7 @@ var init_granny_ro_wasm_esm = __esmMin((() => {
 	Qt = null;
 	q = null;
 	$t = null;
-	cn = 4096 * 4096;
+	cn = 16777216;
 	ln = 4096;
 	Q = /* @__PURE__ */ new Float32Array();
 	vn = Object.freeze({
@@ -211268,21 +211397,21 @@ var init_granny_ro_wasm_esm = __esmMin((() => {
 	$ = .707106781;
 	bn = [
 		[$ * 2, -.707106781],
-		[$ * 1, -.707106781 * .5],
-		[$ * .5, -.707106781 * .75],
-		[$ * .5, -.707106781 * .25],
+		[$ * 1, -.3535533905],
+		[$ * .5, -.53033008575],
+		[$ * .5, -.17677669525],
 		[$ * .5, $ * .25],
-		[$ * .25, -.707106781 * .25],
-		[$ * .25, -.707106781 * .125],
-		[$ * .25, $ * 0],
-		[-.707106781 * 2, $],
-		[-.707106781 * 1, $ * .5],
-		[-.707106781 * .5, $ * .75],
-		[-.707106781 * .5, $ * .25],
-		[-.707106781 * .5, -.707106781 * .25],
-		[-.707106781 * .25, $ * .25],
-		[-.707106781 * .25, $ * .125],
-		[-.707106781 * .25, -0]
+		[$ * .25, -.17677669525],
+		[$ * .25, -.088388347625],
+		[$ * .25, 0],
+		[-1.414213562, $],
+		[-.707106781, $ * .5],
+		[-.3535533905, $ * .75],
+		[-.3535533905, $ * .25],
+		[-.3535533905, -.17677669525],
+		[-.17677669525, $ * .25],
+		[-.17677669525, $ * .125],
+		[-.17677669525, -0]
 	];
 	new TextDecoder(`utf-8`, { fatal: !1 });
 	Qn = Object.freeze([
@@ -212608,7 +212737,7 @@ function spawnMany(path, n, opts) {
 			action: o.action,
 			standbyIdx: o.standbyIdx
 		});
-		if (o.decorrelate) inst.actor.startT = -i * (1e3 / 40);
+		if (o.decorrelate) inst.actor.startT = -i * 25;
 		out.push(inst);
 	}
 	return out;
@@ -212622,7 +212751,7 @@ function clear() {
 	for (let i = 0; i < insts.length; i++) detach(insts[i]);
 	_poseCache = {};
 }
-var mat3$3, mat4$18, ALPHA_REF, _phaseDiffuse, _phaseAmbient, _phaseEnv, _gr2FlagDiffuse, _gr2EmpDiffuse, _gr2EmpAmbient, _gr2FlagAmbient, GR2_ROSTER, _program$20, _gl$1, _types, _missing, _instances, _poseCache, _dbgCellTile, _dbgTileInst, _dbgCellInited, _debugCell, BASE_SPHERE_RADIUS, BASE_SPHERE_HALF_EXTENT, _readyPromise, _mv, _mvp, _nmat, _lightView, _clip, CULL_MARGIN, CLIP_W_EPS, DIR_STEP_DEG, FADE, TEX_MISSING_PX, TEX_GREY_PX, A4_NIBBLE_EXPAND, _emblemCanvas, GR2_VERTEX_STRIDE, GR2_VERTEX_LAYOUT, GR2ModelRenderer_default;
+var mat3$3, mat4$18, ALPHA_REF, _phaseDiffuse, _phaseAmbient, _phaseEnv, _gr2FlagDiffuse, _gr2EmpDiffuse, _gr2EmpAmbient, _gr2FlagAmbient, GR2_ROSTER, _program$20, _gl$1, _types, _missing, _instances, _poseCache, _dbgCellTile, _dbgTileInst, _dbgCellInited, _debugCell, BASE_SPHERE_HALF_EXTENT, _readyPromise, _mv, _mvp, _nmat, _lightView, _clip, CULL_MARGIN, CLIP_W_EPS, DIR_STEP_DEG, FADE, TEX_MISSING_PX, TEX_GREY_PX, A4_NIBBLE_EXPAND, _emblemCanvas, GR2_VERTEX_STRIDE, GR2_VERTEX_LAYOUT, GR2ModelRenderer_default;
 var init_GR2ModelRenderer = __esmMin((() => {
 	init_Client();
 	init_gl_matrix();
@@ -212700,8 +212829,7 @@ var init_GR2ModelRenderer = __esmMin((() => {
 	]);
 	_dbgCellInited = false;
 	_debugCell = false;
-	BASE_SPHERE_RADIUS = 2;
-	BASE_SPHERE_HALF_EXTENT = Math.sqrt(BASE_SPHERE_RADIUS * BASE_SPHERE_RADIUS * .5);
+	BASE_SPHERE_HALF_EXTENT = Math.sqrt(2);
 	_readyPromise = null;
 	_mv = mat4$18.create();
 	_mvp = mat4$18.create();
@@ -217012,7 +217140,7 @@ var init_Announce = __esmMin((() => {
 	*/
 	Announce.needFocus = false;
 	_timer$2 = 0;
-	_life$1 = 20 * 1e3;
+	_life$1 = 2e4;
 	Announce.render = () => Announce_default$2;
 	/**
 	* Initialize component
@@ -218059,6 +218187,7 @@ var init_BattleMode = __esmMin((() => {
 		* @return {boolean} is shortcut found ?
 		*/
 		static process(keyId) {
+			if (UIManager.getComponent("ShortCutOption").isCapturing) return false;
 			const keyName = BattleMode.getKeyName(keyId);
 			const key = KeyTable[keyName];
 			if (key) {
@@ -218654,7 +218783,7 @@ function makeResizableDiv() {
 	const fixHeight = (height) => Math.floor(height / MAGIC_NUMBER) * MAGIC_NUMBER;
 	const resize = (e) => {
 		let height = fixHeight(originalHeight - (e.pageY - originalMouseY));
-		height = Math.max(MAGIC_NUMBER, Math.min(MAGIC_NUMBER * 5, height));
+		height = Math.max(MAGIC_NUMBER, Math.min(210, height));
 		ChatBox._host.style.top = `${originalAnchorY - height}px`;
 		const contentWrapper = root.querySelector(".contentwrapper");
 		if (contentWrapper) contentWrapper.style.height = `${height}px`;
@@ -219496,10 +219625,10 @@ var init_ChatBox = __esmMin((() => {
 			0,
 			0,
 			MAGIC_NUMBER,
-			MAGIC_NUMBER * 2,
-			MAGIC_NUMBER * 3,
-			MAGIC_NUMBER * 4,
-			MAGIC_NUMBER * 5
+			84,
+			126,
+			168,
+			210
 		];
 		const content = root.querySelector(".contentwrapper");
 		const bottomBefore = getChatBottomAnchorPx(root, this.__lastBottomY);
@@ -219524,7 +219653,6 @@ var init_ChatBox = __esmMin((() => {
 				if (inputEl) inputEl.classList.remove("fix");
 				if (header) header.style.display = "";
 				if (body) body.style.display = "";
-				break;
 		}
 		if (_heightIndex !== 0 && isFinite(bottomBefore)) {
 			const bottomAfter = getChatBottomAnchorPx(root, bottomBefore);
@@ -220042,9 +220170,7 @@ function addEvent$1(item) {
 			});
 			break;
 		}
-		default:
-			if (viewBtn) viewBtn.style.display = "none";
-			break;
+		default: if (viewBtn) viewBtn.style.display = "none";
 	}
 }
 function eventsBooks$1() {
@@ -220219,14 +220345,10 @@ var init_ItemCompare = __esmMin((() => {
 			switch (item.slot["card1"]) {
 				case 255:
 				case 254:
-				case 65280:
-					hideslots = true;
-					break;
+				case 65280: hideslots = true;
 			}
 			switch (item.slot["card4"]) {
-				case 1:
-					hideslots = true;
-					break;
+				case 1: hideslots = true;
 			}
 		}
 		const cardListParent = cardList ? cardList.parentElement : null;
@@ -220248,9 +220370,7 @@ var init_ItemCompare = __esmMin((() => {
 				if (!item.IsIdentified && cardListParent) cardListParent.style.display = "none";
 				break;
 			}
-			case ItemType_default.PETEGG:
-				if (cardListParent) cardListParent.style.display = "none";
-				break;
+			case ItemType_default.PETEGG: if (cardListParent) cardListParent.style.display = "none";
 		}
 		if (descInner) resize$4(descInner.offsetHeight + 45);
 	};
@@ -220554,20 +220674,26 @@ var init_UIVersionManager = __esmMin((() => {
 			return UIController;
 		}
 		static getEquipmentVersion() {
-			if (Configs.get("clientVersionMode") === "PacketVer") if (PacketVerManager_default.value >= 20090601) return 1;
-			else return 0;
+			if (Configs.get("clientVersionMode") === "PacketVer") {
+				if (PacketVerManager_default.value >= 20090601) return 1;
+				else return 0;
+			}
 			if (Configs.get("clientVersionMode") === "PreRenewal") return 0;
 			return 1;
 		}
 		static getWinStatsVersion() {
-			if (Configs.get("clientVersionMode") === "PacketVer") if (PacketVerManager_default.value >= 20090601) return 1;
-			else return 0;
+			if (Configs.get("clientVersionMode") === "PacketVer") {
+				if (PacketVerManager_default.value >= 20090601) return 1;
+				else return 0;
+			}
 			if (Configs.get("clientVersionMode") === "PreRenewal") return 0;
 			return 1;
 		}
 		static getInventoryVersion() {
-			if (Configs.get("clientVersionMode") === "PacketVer") if (PacketVerManager_default.value >= 20090601) return 1;
-			else return 0;
+			if (Configs.get("clientVersionMode") === "PacketVer") {
+				if (PacketVerManager_default.value >= 20090601) return 1;
+				else return 0;
+			}
 			if (Configs.get("clientVersionMode") === "PreRenewal") return 0;
 			return 1;
 		}
@@ -220744,7 +220870,6 @@ var init_InputBox = __esmMin((() => {
 				if (textEl) textEl.textContent = DB.getItemInfo(itemId).identifiedDisplayName;
 				if (input) input.type = "text";
 				defaultVal = defaultVal || 0;
-				break;
 		}
 		if (typeof defaultVal !== "undefined" && input) {
 			input.value = defaultVal;
@@ -220891,11 +221016,13 @@ function onDrop$12(event) {
 function onSwitchEquipInfo(event) {
 	const index = parseInt(this.getAttribute("data-index"), 10);
 	const item = SwitchEquip._list[index];
-	if (item) if (ItemInfo_default.uid === item.ITID) ItemInfo_default.remove();
-	else {
-		ItemInfo_default.append();
-		ItemInfo_default.uid = item.ITID;
-		ItemInfo_default.setItem(item);
+	if (item) {
+		if (ItemInfo_default.uid === item.ITID) ItemInfo_default.remove();
+		else {
+			ItemInfo_default.append();
+			ItemInfo_default.uid = item.ITID;
+			ItemInfo_default.setItem(item);
+		}
 	}
 	event.stopImmediatePropagation();
 	event.preventDefault();
@@ -221024,8 +221151,10 @@ var init_SwitchEquip = __esmMin((() => {
 			swapgeneral: root.querySelector("#swapgeneral"),
 			swapcostume: root.querySelector("#swapcostume")
 		};
-		for (const id in swapContentDivs) if (swapContentDivs[id]) if (id === swapTabId) swapContentDivs[id].classList.remove("hide");
-		else swapContentDivs[id].classList.add("hide");
+		for (const id in swapContentDivs) if (swapContentDivs[id]) {
+			if (id === swapTabId) swapContentDivs[id].classList.remove("hide");
+			else swapContentDivs[id].classList.add("hide");
+		}
 	};
 	/**
 	* Append to body
@@ -221054,9 +221183,7 @@ var init_SwitchEquip = __esmMin((() => {
 	*/
 	SwitchEquip.onShortCut = function onShurtCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				this.toggle();
-				break;
+			case "TOGGLE": this.toggle();
 		}
 	};
 	/**
@@ -221615,7 +221742,6 @@ function createMiniMap({ name, htmlText, cssText, worldMap = null, townInfoToggl
 			case 2:
 				_ctx.globalAlpha = 1;
 				this.ui.show();
-				break;
 		}
 	};
 	/**
@@ -221647,8 +221773,10 @@ function createMiniMap({ name, htmlText, cssText, worldMap = null, townInfoToggl
 			start_y = (height - max) / 2 * f;
 			if (coordinates) MiniMap.updateCoordinates(pos[0], pos[1]);
 			_ctx.clearRect(0, 0, 128, 128);
-			if (_map.complete && _map.width) if (zoom === 1) _ctx.drawImage(_map, 0, 0, 128, 128);
-			else _ctx.drawImage(_map, (start_x + pos[0] * f) * 4 - ZOOM_SIZE * zoom | 0, (start_y + 128 - pos[1] * f) * 4 - ZOOM_SIZE * zoom | 0, ZOOM_SIZE * zoom * 2, ZOOM_SIZE * zoom * 2, 0, 0, 128, 128);
+			if (_map.complete && _map.width) {
+				if (zoom === 1) _ctx.drawImage(_map, 0, 0, 128, 128);
+				else _ctx.drawImage(_map, (start_x + pos[0] * f) * 4 - ZOOM_SIZE * zoom | 0, (start_y + 128 - pos[1] * f) * 4 - ZOOM_SIZE * zoom | 0, ZOOM_SIZE * zoom * 2, ZOOM_SIZE * zoom * 2, 0, 0, 128, 128);
+			}
 			if (_towninfo && (townInfoToggle ? _preferences.townInfoShow : _towninfo.length)) {
 				count = _towninfo.length;
 				for (i = 0; i < count; ++i) {
@@ -221673,9 +221801,7 @@ function createMiniMap({ name, htmlText, cssText, worldMap = null, townInfoToggl
 						case 5:
 							img = _inn;
 							break;
-						case 6:
-							img = _kafra;
-							break;
+						case 6: img = _kafra;
 					}
 					if (img.complete && img.width) {
 						_ctx.save();
@@ -222087,7 +222213,6 @@ function initializePathFindingWorker() {
 							this.setLocationTitle(mapName, null);
 						}
 					}
-					break;
 			}
 		}.bind(Navigation);
 	}
@@ -222874,8 +222999,10 @@ function onSelect() {
 * @param {string} name eg. `"worldmap_localizing1"`
 */
 function selectMap(name = null) {
-	if (!name || name === null || name === "") if (WorldMap_default$3.length > 0 && WorldMap_default$3[0].id !== null && WorldMap_default$3[0].id !== "") name = WorldMap_default$3[0].id;
-	else name = "worldmap.jpg";
+	if (!name || name === null || name === "") {
+		if (WorldMap_default$3.length > 0 && WorldMap_default$3[0].id !== null && WorldMap_default$3[0].id !== "") name = WorldMap_default$3[0].id;
+		else name = "worldmap.jpg";
+	}
 	Client.loadFile(DB.INTERFACE_PATH + name, (data) => {
 		for (const map of WorldMap_default$3) if (map.id === name) {
 			createWorldMapView(map, data);
@@ -223135,8 +223262,10 @@ function onShowLVL() {
 		if (btn) btn.style.backgroundImage = "url(" + data + ")";
 	});
 	const worldmapEl = root.querySelector(".worldmap");
-	if (worldmapEl) if (!WorldMap.showLVLMode) worldmapEl.classList.remove("show-lvls");
-	else worldmapEl.classList.add("show-lvls");
+	if (worldmapEl) {
+		if (!WorldMap.showLVLMode) worldmapEl.classList.remove("show-lvls");
+		else worldmapEl.classList.add("show-lvls");
+	}
 }
 /**
 * Stop event propagation
@@ -223273,9 +223402,7 @@ var init_WorldMap = __esmMin((() => {
 	*/
 	WorldMap.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				this.toggle();
-				break;
+			case "TOGGLE": this.toggle();
 		}
 	};
 	/**
@@ -223426,7 +223553,7 @@ function cancel$1() {
 * Select an index, change background color
 */
 function selectIndex(div) {
-	NpcMenu.getRoot().querySelector(".content").querySelectorAll("div").forEach((d) => d.classList.remove("selected"));
+	NpcMenu.getRoot().querySelector(".content").querySelectorAll("div[data-index]").forEach((d) => d.classList.remove("selected"));
 	div.classList.add("selected");
 	_index = parseInt(div.dataset.index, 10);
 }
@@ -223497,22 +223624,23 @@ var init_NpcMenu = __esmMin((() => {
 				cancel$1();
 				break;
 			case KEYS.UP: {
-				const divs = content.querySelectorAll("div");
+				const divs = content.querySelectorAll("div[data-index]");
 				_index = Math.max(_index - 1, 0);
 				divs.forEach((d) => d.classList.remove("selected"));
-				if (divs[_index]) divs[_index].classList.add("selected");
-				const top = _index * 20;
-				if (top < content.scrollTop) content.scrollTop = top;
+				if (divs[_index]) {
+					divs[_index].classList.add("selected");
+					divs[_index].scrollIntoView({ block: "nearest" });
+				}
 				break;
 			}
 			case KEYS.DOWN: {
-				const divs = content.querySelectorAll("div");
-				const count = divs.length;
-				_index = Math.min(_index + 1, count - 1);
+				const divs = content.querySelectorAll("div[data-index]");
+				_index = Math.min(_index + 1, divs.length - 1);
 				divs.forEach((d) => d.classList.remove("selected"));
-				if (divs[_index]) divs[_index].classList.add("selected");
-				const top = _index * 20;
-				if (top >= content.scrollTop + 80) content.scrollTop = top - 60;
+				if (divs[_index]) {
+					divs[_index].classList.add("selected");
+					divs[_index].scrollIntoView({ block: "nearest" });
+				}
 				break;
 			}
 			default: return true;
@@ -223539,7 +223667,7 @@ var init_NpcMenu = __esmMin((() => {
 			div.dataset.index = j++;
 			content.appendChild(div);
 		}
-		const first = content.querySelector("div");
+		const first = content.querySelector("div[data-index]");
 		if (first) first.classList.add("selected");
 	};
 	/**
@@ -223612,9 +223740,7 @@ function onFriendAdded(pkt) {
 		case 2:
 			ChatBox_default.addText(DB.getMessage(819), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			break;
-		case 3:
-			ChatBox_default.addText(DB.getMessage(820).replace("%s", pkt.Name), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
+		case 3: ChatBox_default.addText(DB.getMessage(820).replace("%s", pkt.Name), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	}
 }
 /**
@@ -224312,7 +224438,6 @@ var init_PartyHelper = __esmMin((() => {
 				footerBtns.forEach((el) => {
 					el.style.display = "none";
 				});
-				break;
 		}
 		_type$6 = type;
 	};
@@ -224417,6 +224542,17 @@ var init_SkillTargetSelection$1 = __esmMin((() => {
 //#endregion
 //#region src/UI/Components/SkillTargetSelection/SkillTargetSelection.js
 /**
+* Move the skill level indicator next to the pointer.
+* Uses Mouse.screen so it also follows the finger on touch devices.
+*/
+function updateSkillLevelPosition() {
+	if (_skillLevelPosition.x === Mouse.screen.x && _skillLevelPosition.y === Mouse.screen.y) return;
+	_skillLevelPosition.x = Mouse.screen.x;
+	_skillLevelPosition.y = Mouse.screen.y;
+	_skillLevel.style.left = `${Mouse.screen.x + 20}px`;
+	_skillLevel.style.top = `${Mouse.screen.y - 18}px`;
+}
+/**
 * Render text into the canvas
 *
 * @param {string} text to render
@@ -224458,17 +224594,18 @@ function renderLevel(text, canvas) {
 }
 /**
 * Intersect entity when clicking
+*
+* @param {MouseEvent} [event] undefined on touch devices
+* @return {boolean} true when the click still has to be processed by the map controls
 */
 function intersectEntities(event) {
-	if (_mousedownHandler) {
-		window.removeEventListener("mousedown", _mousedownHandler, true);
-		_mousedownHandler = null;
-	}
 	SkillTargetSelection.remove();
 	if (!Mouse.intersect) return false;
-	if (event.which !== 1) return true;
-	event.stopImmediatePropagation();
-	event.preventDefault();
+	if (event && event.which !== 1) return true;
+	if (event) {
+		event.stopImmediatePropagation();
+		event.preventDefault();
+	}
 	if (_flag & SkillTargetSelection.TYPE.PLACE) {
 		SkillTargetSelection.onUseSkillToPos(_skill.SKID, _skill.useLevel ? _skill.useLevel : _skill.level, Mouse.world.x, Mouse.world.y);
 		return false;
@@ -224512,7 +224649,7 @@ function intersectEntity(entity) {
 	if (_flag & SkillTargetSelection.TYPE.ENEMY && entity === SessionStorage_default.Entity) return;
 	SkillTargetSelection.onUseSkillToId(_skill.SKID, _skill.useLevel ? _skill.useLevel : _skill.level, entity.GID);
 }
-var SkillTargetSelection, _flag, _skill, _skillName, _description, _skillLevel, _mousedownHandler, SkillTargetSelection_default;
+var SkillTargetSelection, _flag, _skill, _skillName, _description, _skillLevel, _skillLevelPosition, SkillTargetSelection_default;
 var init_SkillTargetSelection = __esmMin((() => {
 	init_DBManager();
 	init_SkillInfo();
@@ -224557,7 +224694,10 @@ var init_SkillTargetSelection = __esmMin((() => {
 		HOMUN: 128
 	};
 	_flag = 0;
-	_mousedownHandler = null;
+	_skillLevelPosition = {
+		x: NaN,
+		y: NaN
+	};
 	/**
 	* Initialize component
 	*/
@@ -224569,10 +224709,6 @@ var init_SkillTargetSelection = __esmMin((() => {
 		_skillName.style.display = "none";
 		_description.style.display = "none";
 		_skillLevel.style.display = "none";
-		window.addEventListener("mousemove", (event) => {
-			_skillLevel.style.left = `${event.pageX + 20}px`;
-			_skillLevel.style.top = `${event.pageY - 18}px`;
-		});
 		renderText(DB.getMessage(234), _description);
 	};
 	/**
@@ -224582,10 +224718,9 @@ var init_SkillTargetSelection = __esmMin((() => {
 		_skillName.style.display = "block";
 		_description.style.display = "block";
 		_skillLevel.style.display = "block";
-		_mousedownHandler = (event) => {
-			intersectEntities(event);
-		};
-		window.addEventListener("mousedown", _mousedownHandler, true);
+		updateSkillLevelPosition();
+		Renderer.stop(updateSkillLevelPosition);
+		Renderer.render(updateSkillLevelPosition);
 	};
 	/**
 	* Possible to exit using ESCAPE
@@ -224602,10 +224737,7 @@ var init_SkillTargetSelection = __esmMin((() => {
 	* Remove from body
 	*/
 	SkillTargetSelection.onRemove = function onRemove() {
-		if (_mousedownHandler) {
-			window.removeEventListener("mousedown", _mousedownHandler, true);
-			_mousedownHandler = null;
-		}
+		Renderer.stop(updateSkillLevelPosition);
 		Cursor.blockMagnetism = false;
 		Cursor.freeze = false;
 		Cursor.setType(Cursor.ACTION.DEFAULT);
@@ -224626,11 +224758,10 @@ var init_SkillTargetSelection = __esmMin((() => {
 		_flag = target;
 		_skill = skill;
 		if (!_flag) return;
-		if (SessionStorage_default.TouchTargeting) {
+		if (SessionStorage_default.TouchTargeting && !(_flag & SkillTargetSelection.TYPE.PLACE)) {
 			const entityFocus = EntityManager.getFocusEntity();
 			if (entityFocus) {
-				if (_flag & SkillTargetSelection.TYPE.PLACE) SkillTargetSelection.onUseSkillToPos(_skill.SKID, _skill.useLevel ? _skill.useLevel : _skill.level, entityFocus.position[0], entityFocus.position[1]);
-				else SkillTargetSelection.onUseSkillToId(_skill.SKID, _skill.useLevel ? _skill.useLevel : _skill.level, entityFocus.GID);
+				SkillTargetSelection.onUseSkillToId(_skill.SKID, _skill.useLevel ? _skill.useLevel : _skill.level, entityFocus.GID);
 				SkillTargetSelection.remove();
 				return;
 			}
@@ -224651,6 +224782,16 @@ var init_SkillTargetSelection = __esmMin((() => {
 		if (_skill.useLevel < 1) _skill.useLevel = 1;
 		if (_skill.useLevel > _skill.level) _skill.useLevel = _skill.level;
 		renderLevel(_skill.useLevel, _skillLevel);
+	};
+	/**
+	* Handle a click/tap on the map while selecting a target.
+	* Called from Controls/MapControl.js, the single entrypoint for mouse and touch input.
+	*
+	* @param {MouseEvent} [event] undefined on touch devices
+	* @return {boolean} true when the click was consumed by the target selection
+	*/
+	SkillTargetSelection.onMapMouseDown = function onMapMouseDown(event) {
+		return !intersectEntities(event);
 	};
 	/**
 	* Intersect with an entity ID
@@ -225259,8 +225400,10 @@ var init_PartyMemberExternal = __esmMin((() => {
 			levelEl.style.color = memberColor;
 		}
 		const innerRoot = root.querySelector("#PartyMemberExternal");
-		if (innerRoot) if (isOnline) innerRoot.classList.add("online");
-		else innerRoot.classList.remove("online");
+		if (innerRoot) {
+			if (isOnline) innerRoot.classList.add("online");
+			else innerRoot.classList.remove("online");
+		}
 	};
 	/**
 	* Update HP bar
@@ -226096,39 +226239,41 @@ function createPartyFriends(config) {
 			if (sortBtn) sortBtn.addEventListener("mousedown", sortDetachedMembers);
 		}
 		const content = root.querySelector(".content");
-		if (content) if (renewalParty) {
-			content.addEventListener("contextmenu", (event) => {
-				const node = event.target.closest(".node");
-				if (node) onRightClickInfoRenewal.call(node, event);
-			});
-			content.addEventListener("mousedown", (event) => {
-				const node = event.target.closest(".node");
-				if (node) onMemberMouseDown.call(node, event);
-			});
-			content.addEventListener("mouseover", (event) => {
-				const el = event.target.closest("[data-tooltip]");
-				if (el) onTooltipShow.call(el, event);
-			});
-			content.addEventListener("mousemove", (event) => {
-				const el = event.target.closest("[data-tooltip]");
-				if (el) onTooltipMove.call(el, event);
-			});
-			content.addEventListener("mouseout", (event) => {
-				const el = event.target.closest("[data-tooltip]");
-				if (el) onTooltipHide.call(el, event);
-			});
-		} else {
-			content.addEventListener("contextmenu", (e) => {
-				if (e.target.closest(".node")) {
-					e.preventDefault();
-					e.stopImmediatePropagation();
-					onRightClickInfoClassic();
-				}
-			});
-			content.addEventListener("mousedown", (e) => {
-				const node = e.target.closest(".node");
-				if (node) onSelectionChangeClassic(node);
-			});
+		if (content) {
+			if (renewalParty) {
+				content.addEventListener("contextmenu", (event) => {
+					const node = event.target.closest(".node");
+					if (node) onRightClickInfoRenewal.call(node, event);
+				});
+				content.addEventListener("mousedown", (event) => {
+					const node = event.target.closest(".node");
+					if (node) onMemberMouseDown.call(node, event);
+				});
+				content.addEventListener("mouseover", (event) => {
+					const el = event.target.closest("[data-tooltip]");
+					if (el) onTooltipShow.call(el, event);
+				});
+				content.addEventListener("mousemove", (event) => {
+					const el = event.target.closest("[data-tooltip]");
+					if (el) onTooltipMove.call(el, event);
+				});
+				content.addEventListener("mouseout", (event) => {
+					const el = event.target.closest("[data-tooltip]");
+					if (el) onTooltipHide.call(el, event);
+				});
+			} else {
+				content.addEventListener("contextmenu", (e) => {
+					if (e.target.closest(".node")) {
+						e.preventDefault();
+						e.stopImmediatePropagation();
+						onRightClickInfoClassic();
+					}
+				});
+				content.addEventListener("mousedown", (e) => {
+					const node = e.target.closest(".node");
+					if (node) onSelectionChangeClassic(node);
+				});
+			}
 		}
 		this.draggable(".titlebar");
 		if (renewalParty) PartyMemberExternal_default.onDragEnd = function(movedComponent) {
@@ -226255,7 +226400,6 @@ function createPartyFriends(config) {
 					_showWindow();
 				}
 				if (_isVisible()) this.focus();
-				break;
 		}
 	};
 	/**
@@ -226573,8 +226717,8 @@ function createPartyFriends(config) {
 		* Save the current positions of all detached member windows to character-specific localStorage.
 		*/
 		Component.saveDetachedMembers = function() {
-			if (!SessionStorage_default.Character || !SessionStorage_default.Character.name) return;
-			const key = `PartyFriends_${SessionStorage_default.Character.name}_Detached`;
+			if (!SessionStorage_default.Entity?.display?.name) return;
+			const key = `PartyFriends_${SessionStorage_default.Entity.display.name}_Detached`;
 			const saved = {};
 			let count = 0;
 			for (const aid in _detachedMembers) {
@@ -226588,7 +226732,7 @@ function createPartyFriends(config) {
 				}
 			}
 			localStorage.setItem(key, JSON.stringify(saved));
-			if (count > 0) console.log(`[PartyFriendsV1] Saved ${count} detached windows for ${SessionStorage_default.Character.name}`);
+			if (count > 0) console.log(`[PartyFriendsV1] Saved ${count} detached windows for ${SessionStorage_default.Entity.display.name}`);
 		};
 	} else {
 		/**
@@ -226942,9 +227086,9 @@ function createPartyFriends(config) {
 	*/
 	function restoreDetachedMember(player) {
 		if (_detachedMembers[player.AID]) return;
-		if (!SessionStorage_default.Character || !SessionStorage_default.Character.name) return;
+		if (!SessionStorage_default.Entity?.display?.name) return;
 		if (_savedPositions === null) {
-			const key = `PartyFriends_${SessionStorage_default.Character.name}_Detached`;
+			const key = `PartyFriends_${SessionStorage_default.Entity.display.name}_Detached`;
 			const savedStr = localStorage.getItem(key);
 			_savedPositions = {};
 			try {
@@ -227480,6 +227624,143 @@ var init_PartyFriends = __esmMin((() => {
 	};
 }));
 //#endregion
+//#region src/UI/Components/GuildCompanion/GuildCompanion.html?raw
+var GuildCompanion_default$2;
+var init_GuildCompanion$2 = __esmMin((() => {
+	GuildCompanion_default$2 = "<div id=\"GuildCompanion\">\r\n	<div class=\"win companion\">\r\n		<div class=\"titlebar\">\r\n			<ui-image src=\"basic_interface/titlebar_mid.bmp\"></ui-image>\r\n			<span class=\"title\">Guild Companion</span>\r\n			<div class=\"right\">\r\n				<ui-button\r\n					class=\"base btn_x\"\r\n					bg=\"basic_interface/sys_close_off.bmp\"\r\n					hover=\"basic_interface/sys_close_on.bmp\"\r\n				></ui-button>\r\n			</div>\r\n			<div class=\"clear\"></div>\r\n		</div>\r\n		<div class=\"body\">\r\n			<div class=\"msg\">Join a guild or start your own!</div>\r\n			<div class=\"btns\">\r\n				<button class=\"btn btn_create\" type=\"button\">create guild</button>\r\n				<button class=\"btn btn_close\" type=\"button\">OK</button>\r\n			</div>\r\n		</div>\r\n	</div>\r\n	<div class=\"win namebox\">\r\n		<div class=\"titlebar\">\r\n			<ui-image src=\"basic_interface/titlebar_mid.bmp\"></ui-image>\r\n			<span class=\"title name_title\">Create Guild</span>\r\n			<div class=\"right\">\r\n				<ui-button\r\n					class=\"base btn_x2\"\r\n					bg=\"basic_interface/sys_close_off.bmp\"\r\n					hover=\"basic_interface/sys_close_on.bmp\"\r\n				></ui-button>\r\n			</div>\r\n			<div class=\"clear\"></div>\r\n		</div>\r\n		<div class=\"body\">\r\n			<div class=\"label name_label\">Guild Name</div>\r\n			<input type=\"text\" class=\"guildname\" maxlength=\"23\" />\r\n			<div class=\"btns\">\r\n				<button class=\"btn btn_ok\" type=\"button\">OK</button>\r\n				<button class=\"btn btn_cancel\" type=\"button\">cancel</button>\r\n			</div>\r\n		</div>\r\n	</div>\r\n</div>\r\n";
+}));
+//#endregion
+//#region src/UI/Components/GuildCompanion/GuildCompanion.css?raw
+var GuildCompanion_default$1;
+var init_GuildCompanion$1 = __esmMin((() => {
+	GuildCompanion_default$1 = ":host {\r\n	top: 160px;\r\n	left: 260px;\r\n	z-index: 100;\r\n}\r\n\r\n#GuildCompanion {\r\n	position: relative;\r\n	font-family: Arial, sans-serif;\r\n	font-size: 12px;\r\n	white-space: nowrap;\r\n}\r\n\r\n#GuildCompanion .win {\r\n	display: inline-block;\r\n	vertical-align: top;\r\n	background-color: white;\r\n	border: 1px solid #a5a5a5;\r\n	border-radius: 3px;\r\n	margin-right: 6px;\r\n}\r\n\r\n#GuildCompanion .win.namebox {\r\n	display: none;\r\n}\r\n#GuildCompanion .win.namebox.visible {\r\n	display: inline-block;\r\n}\r\n\r\n#GuildCompanion .win.companion.hidden {\r\n	display: none;\r\n}\r\n\r\n#GuildCompanion .titlebar {\r\n	height: 17px;\r\n	line-height: 17px;\r\n	background-color: white;\r\n	background-repeat: repeat-x;\r\n	border-radius: 3px 3px 0 0;\r\n	font-size: 11px;\r\n	font-weight: bold;\r\n	padding-left: 6px;\r\n}\r\n#GuildCompanion .titlebar .title {\r\n	vertical-align: middle;\r\n}\r\n#GuildCompanion .titlebar .base {\r\n	width: 11px;\r\n	height: 11px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	vertical-align: middle;\r\n}\r\n#GuildCompanion .titlebar .right {\r\n	float: right;\r\n	margin-right: 3px;\r\n}\r\n#GuildCompanion .titlebar .clear {\r\n	clear: both;\r\n}\r\n\r\n#GuildCompanion .body {\r\n	padding: 10px 12px 8px 12px;\r\n}\r\n\r\n#GuildCompanion .companion .msg {\r\n	margin-bottom: 12px;\r\n}\r\n\r\n#GuildCompanion .namebox .label {\r\n	margin-bottom: 4px;\r\n}\r\n#GuildCompanion .namebox input {\r\n	border: 1px solid #c1c6c2;\r\n	background-color: #efefef;\r\n	width: 150px;\r\n	height: 16px;\r\n	margin-bottom: 12px;\r\n}\r\n\r\n#GuildCompanion .btns {\r\n	text-align: center;\r\n}\r\n#GuildCompanion .namebox .btns {\r\n	text-align: right;\r\n}\r\n\r\n#GuildCompanion .btn {\r\n	font-family: Arial, sans-serif;\r\n	font-size: 11px;\r\n	padding: 2px 10px;\r\n	margin: 0 3px;\r\n	cursor: pointer;\r\n}\r\n";
+}));
+//#endregion
+//#region src/UI/Components/GuildCompanion/GuildCompanion.js
+function open(mode) {
+	_mode = mode;
+	if (!GuildCompanion.__active) GuildCompanion.append();
+	const root = GuildCompanion._shadow;
+	const companion = root.querySelector(".win.companion");
+	const nameWin = root.querySelector(".win.namebox");
+	const input = root.querySelector(".guildname");
+	if (mode === "disband") {
+		companion.classList.add("hidden");
+		nameWin.classList.add("visible");
+		root.querySelector(".name_title").textContent = "Disband the Guild";
+		root.querySelector(".name_label").textContent = "Enter Guild Name";
+		input.value = "";
+		input.focus();
+	} else {
+		companion.classList.remove("hidden");
+		nameWin.classList.remove("visible");
+		root.querySelector(".name_title").textContent = "Create Guild";
+		root.querySelector(".name_label").textContent = "Guild Name";
+		input.value = "";
+	}
+	center();
+}
+function center() {
+	const host = GuildCompanion._host;
+	if (!host) return;
+	const rect = host.getBoundingClientRect();
+	const w = Renderer.width || window.innerWidth;
+	const h = Renderer.height || window.innerHeight;
+	host.style.left = `${Math.max(0, Math.round((w - rect.width) / 2))}px`;
+	host.style.top = `${Math.max(0, Math.round((h - rect.height) / 2))}px`;
+}
+var GuildCompanion, _mode, GuildCompanion_default;
+var init_GuildCompanion = __esmMin((() => {
+	init_Renderer();
+	init_SessionStorage();
+	init_DBManager();
+	init_UIManager();
+	init_GUIComponent();
+	init_KeyEventHandler();
+	init_Elements();
+	init_GuildCompanion$2();
+	init_GuildCompanion$1();
+	GuildCompanion = new GUIComponent("GuildCompanion", GuildCompanion_default$1);
+	GuildCompanion.render = () => GuildCompanion_default$2;
+	_mode = "create";
+	GuildCompanion.onRequestCreateGuild = function onRequestCreateGuild() {};
+	GuildCompanion.onRequestBreakGuild = function onRequestBreakGuild() {};
+	GuildCompanion.init = function init() {
+		const root = this._shadow;
+		this.draggable(root.querySelector(".companion .titlebar"));
+		const nameWin = root.querySelector(".win.namebox");
+		const input = root.querySelector(".guildname");
+		const closeAll = () => {
+			GuildCompanion.remove();
+		};
+		root.querySelector(".btn_create").addEventListener("click", () => {
+			nameWin.classList.add("visible");
+			input.value = "";
+			input.focus();
+		});
+		root.querySelector(".btn_close").addEventListener("click", closeAll);
+		root.querySelector(".btn_x").addEventListener("click", closeAll);
+		root.querySelector(".btn_x2").addEventListener("click", closeAll);
+		const submit = () => {
+			const name = input.value.trim();
+			if (!name.length) {
+				input.focus();
+				return;
+			}
+			if (_mode === "disband") {
+				if (SessionStorage_default.guildName && name !== SessionStorage_default.guildName) {
+					UIManager.showMessageBox(DB.getMessage(401, "You have failed to disband the guild."), "ok", () => {
+						input.value = "";
+						input.focus();
+					});
+					return;
+				}
+				GuildCompanion.onRequestBreakGuild(name);
+				return;
+			}
+			GuildCompanion.onRequestCreateGuild(name);
+			closeAll();
+		};
+		const cancel = () => {
+			if (_mode === "disband") {
+				closeAll();
+				return;
+			}
+			nameWin.classList.remove("visible");
+		};
+		root.querySelector(".btn_ok").addEventListener("click", submit);
+		root.querySelector(".btn_cancel").addEventListener("click", cancel);
+		input.addEventListener("keydown", (event) => {
+			if (event.which === KEYS.ENTER) {
+				event.stopImmediatePropagation();
+				submit();
+			} else if (event.which === KEYS.ESCAPE) {
+				event.stopImmediatePropagation();
+				cancel();
+			}
+		});
+	};
+	GuildCompanion.openCreate = function openCreate() {
+		open("create");
+	};
+	GuildCompanion.openDisband = function openDisband() {
+		open("disband");
+	};
+	GuildCompanion.closeDisband = function closeDisband() {
+		if (_mode === "disband" && GuildCompanion.__active) GuildCompanion.remove();
+	};
+	GuildCompanion.toggleCreate = function toggleCreate() {
+		if (GuildCompanion.__active) {
+			GuildCompanion.remove();
+			return;
+		}
+		GuildCompanion.openCreate();
+	};
+	GuildCompanion.mouseMode = GUIComponent.MouseMode.STOP;
+	GuildCompanion.needFocus = true;
+	GuildCompanion_default = UIManager.addComponent(GuildCompanion);
+}));
+//#endregion
 //#region src/UI/Components/SkillDescription/SkillDescription.html?raw
 var SkillDescription_default$2;
 var init_SkillDescription$2 = __esmMin((() => {
@@ -227579,13 +227860,13 @@ var init_SkillDescription = __esmMin((() => {
 //#region src/UI/Components/Guild/Guild.html?raw
 var Guild_default$2;
 var init_Guild$3 = __esmMin((() => {
-	Guild_default$2 = "<div id=\"Guild\">\r\n	<div class=\"titlebar\">\r\n		<ui-image src=\"basic_interface/titlebar_mid.bmp\"></ui-image>\r\n		<div class=\"right\">\r\n			<ui-button\r\n				class=\"base close\"\r\n				bg=\"basic_interface/sys_close_off.bmp\"\r\n				hover=\"basic_interface/sys_close_on.bmp\"\r\n			></ui-button>\r\n		</div>\r\n		<div class=\"clear\"></div>\r\n	</div>\r\n\r\n	<div class=\"tabs\">\r\n		<!--\r\n		--><button data-flag=\"0\" class=\"info\"><ui-text msg=\"340\">Guild Info</ui-text></button><!--\r\n		--><button data-flag=\"1\" class=\"members\"><ui-text msg=\"341\">Guildsmen Info</ui-text></button><!--\r\n		--><button data-flag=\"2\" class=\"positions\"><ui-text msg=\"342\">Position</ui-text></button><!--\r\n		--><button data-flag=\"3\" class=\"skills\"><ui-text msg=\"343\">Guild Skill</ui-text></button><!--\r\n		--><button data-flag=\"4\" class=\"history\"><ui-text msg=\"344\">Expel History</ui-text></button><!--\r\n		--><button data-flag=\"6\" class=\"notice\"><ui-text msg=\"345\">Guild Notice</ui-text></button>\r\n	</div>\r\n\r\n	<div class=\"panel\">\r\n		<!-- INFO TAB -->\r\n		<div class=\"content info\">\r\n			<div class=\"name\"><ui-text msg=\"328\">Guild Name</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"level\"><ui-text msg=\"329\">Guild lvl</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"master\"><ui-text msg=\"330\">Guild Master</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"members\">\r\n				<ui-text msg=\"331\">Guildsmen</ui-text> : <span class=\"numMember\">0</span> /\r\n				<span class=\"maxMember\">0</span> <ui-button bg=\"basic_interface/grp_online.bmp\"></ui-button>\r\n				<span class=\"online\"></span>\r\n			</div>\r\n			<div class=\"avglevel\"><ui-text msg=\"332\">Avg.lvl of Guildsmen</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"territory\"><ui-text msg=\"333\">Territory</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"tendency\">\r\n				<div class=\"title\"><ui-text msg=\"334\">Tendency</ui-text> : <span class=\"value\"></span></div>\r\n				<div class=\"righteous\">R</div>\r\n				<div class=\"wiked\">W</div>\r\n				<div class=\"vulgar\">V</div>\r\n				<div class=\"famed\">F</div>\r\n				<canvas width=\"90\" height=\"90\"></canvas>\r\n			</div>\r\n			<div class=\"exp\"><ui-text msg=\"335\">EXP</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"emblem\"><ui-text msg=\"336\">Emblem</ui-text></div>\r\n			<div class=\"emblem_container\"></div>\r\n			<ui-button class=\"emblem_edit\" bg=\"btn_edit.bmp\" hover=\"btn_edit_a.bmp\" down=\"btn_edit_b.bmp\">\r\n				<input type=\"file\" />\r\n			</ui-button>\r\n\r\n			<div class=\"tax\"><ui-text msg=\"337\">Tax Point</ui-text> : <span class=\"value\">0</span></div>\r\n			<div class=\"ally\"><ui-text msg=\"338\">Alliance</ui-text></div>\r\n			<div class=\"ally_list\"></div>\r\n			<div class=\"hostile\"><ui-text msg=\"339\">Antagonist</ui-text></div>\r\n			<div class=\"hostile_list\"></div>\r\n		</div>\r\n\r\n		<!-- MEMBERS TAB -->\r\n		<div class=\"content members\">\r\n			<table>\r\n				<thead>\r\n					<tr>\r\n						<th class=\"name\"><ui-text msg=\"407\">Name</ui-text></th>\r\n						<th class=\"position\"><ui-text msg=\"503\">Position</ui-text></th>\r\n						<th class=\"job\"><ui-text msg=\"504\">Job</ui-text></th>\r\n						<th class=\"level\"><ui-text msg=\"408\">Level</ui-text></th>\r\n						<th class=\"note\"><ui-text msg=\"505\">Note</ui-text></th>\r\n						<th class=\"devotion\"><ui-text msg=\"506\">Devotion</ui-text></th>\r\n						<th class=\"tax\"><ui-text msg=\"507\">Tax Point</ui-text></th>\r\n					</tr>\r\n				</thead>\r\n				<tbody>\r\n					<tr class=\"MemberView\">\r\n						<td class=\"name\">\r\n							<canvas width=\"30\" height=\"30\"></canvas>\r\n							<span class=\"value\"></span>\r\n						</td>\r\n						<td class=\"position\"></td>\r\n						<td class=\"job\"></td>\r\n						<td class=\"level\"></td>\r\n						<td class=\"note\"></td>\r\n						<td class=\"devotion\"></td>\r\n						<td class=\"tax\"></td>\r\n					</tr>\r\n				</tbody>\r\n			</table>\r\n		</div>\r\n\r\n		<!-- POSITIONS TAB -->\r\n		<div class=\"content positions\">\r\n			<table>\r\n				<thead>\r\n					<tr>\r\n						<th class=\"id\"><ui-text msg=\"510\">Rank</ui-text></th>\r\n						<th class=\"title\"><ui-text msg=\"511\">Position Title</ui-text></th>\r\n						<th class=\"invite\"><ui-text msg=\"512\">Invitation</ui-text></th>\r\n						<th class=\"punish\"><ui-text msg=\"513\">Punish</ui-text></th>\r\n						<th class=\"tax\"><ui-text msg=\"514\">Tax</ui-text></th>\r\n					</tr>\r\n				</thead>\r\n				<tbody>\r\n					<tr class=\"PositionView\">\r\n						<td class=\"id\"></td>\r\n						<td class=\"title\">\r\n							<input type=\"text\" value=\"\" />\r\n						</td>\r\n						<td class=\"invite\">\r\n							<ui-button bg=\"checkbox_0.bmp\" class=\"off\"></ui-button>\r\n						</td>\r\n						<td class=\"punish\">\r\n							<ui-button bg=\"checkbox_0.bmp\" class=\"off\"></ui-button>\r\n						</td>\r\n						<td class=\"tax\"><input type=\"text\" value=\"0\" /> %</td>\r\n					</tr>\r\n				</tbody>\r\n			</table>\r\n		</div>\r\n\r\n		<!-- SKILLS TAB -->\r\n		<div class=\"content skills\">\r\n			<div class=\"skill_list\">\r\n				<table>\r\n					<!-- Just to get reference, will be removed -->\r\n					<ui-button\r\n						class=\"btn levelup\"\r\n						bg=\"basic_interface/skill_up_a.bmp\"\r\n						hover=\"basic_interface/skill_up_b.bmp\"\r\n						down=\"basic_interface/skill_up_c.bmp\"\r\n					></ui-button>\r\n				</table>\r\n			</div>\r\n\r\n			<div class=\"footer\">\r\n				<ui-image src=\"basic_interface/btnbar_mid2.bmp\"></ui-image>\r\n				<div class=\"text\">Skill Points: <span class=\"skpoints_count\">0</span></div>\r\n				<ui-button\r\n					class=\"btn apply\"\r\n					bg=\"btn_apply.bmp\"\r\n					hover=\"btn_apply_a.bmp\"\r\n					down=\"btn_apply_b.bmp\"\r\n				></ui-button>\r\n				<ui-button\r\n					class=\"btn reset\"\r\n					bg=\"btn_reset.bmp\"\r\n					hover=\"btn_reset_a.bmp\"\r\n					down=\"btn_reset_b.bmp\"\r\n				></ui-button>\r\n			</div>\r\n		</div>\r\n\r\n		<!-- HISTORY BAN TAB -->\r\n		<div class=\"content history\">\r\n			<table>\r\n				<thead>\r\n					<tr>\r\n						<th class=\"name\"><ui-text msg=\"407\">Name</ui-text></th>\r\n						<th class=\"reason\"><ui-text msg=\"462\">The Reason of Expulsion</ui-text></th>\r\n					</tr>\r\n				</thead>\r\n				<tbody>\r\n					<tr class=\"ExpelView\">\r\n						<td class=\"name\"></td>\r\n						<td class=\"reason\"></td>\r\n					</tr>\r\n				</tbody>\r\n			</table>\r\n		</div>\r\n\r\n		<!-- NOTICE TAB -->\r\n		<div class=\"content notice\">\r\n			<div class=\"subjectTitle\"><ui-text msg=\"515\">Title</ui-text></div>\r\n			<input type=\"text\" class=\"subject\" />\r\n\r\n			<div class=\"noticeTitle\"><ui-text msg=\"516\">Contents</ui-text></div>\r\n			<textarea class=\"notice\"></textarea>\r\n		</div>\r\n	</div>\r\n\r\n	<div class=\"footer\">\r\n		<ui-image src=\"basic_interface/btnbar_mid2.bmp\"></ui-image>\r\n		<ui-button class=\"btn_ok\" bg=\"btn_ok.bmp\" hover=\"btn_ok_a.bmp\" down=\"btn_ok_b.bmp\"></ui-button>\r\n	</div>\r\n</div>\r\n";
+	Guild_default$2 = "<div id=\"Guild\">\r\n	<div class=\"titlebar\">\r\n		<ui-image src=\"basic_interface/titlebar_mid.bmp\"></ui-image>\r\n		<div class=\"right\">\r\n			<ui-button\r\n				class=\"base close\"\r\n				bg=\"basic_interface/sys_close_off.bmp\"\r\n				hover=\"basic_interface/sys_close_on.bmp\"\r\n			></ui-button>\r\n		</div>\r\n		<div class=\"clear\"></div>\r\n	</div>\r\n\r\n	<div class=\"tabs\">\r\n		<!--\r\n		--><button data-flag=\"0\" class=\"info\"><ui-text msg=\"340\">Guild Info</ui-text></button><!--\r\n		--><button data-flag=\"1\" class=\"members\"><ui-text msg=\"341\">Guildsmen Info</ui-text></button><!--\r\n		--><button data-flag=\"2\" class=\"positions\"><ui-text msg=\"342\">Position</ui-text></button><!--\r\n		--><button data-flag=\"3\" class=\"skills\"><ui-text msg=\"343\">Guild Skill</ui-text></button><!--\r\n		--><button data-flag=\"4\" class=\"history\"><ui-text msg=\"344\">Expel History</ui-text></button><!--\r\n		--><button data-flag=\"6\" class=\"notice\"><ui-text msg=\"345\">Guild Notice</ui-text></button>\r\n	</div>\r\n\r\n	<div class=\"panel\">\r\n		<!-- INFO TAB -->\r\n		<div class=\"content info\">\r\n			<div class=\"name\"><ui-text msg=\"328\">Guild Name</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"level\"><ui-text msg=\"329\">Guild lvl</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"master\"><ui-text msg=\"330\">Guild Master</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"members\">\r\n				<ui-text msg=\"331\">Guildsmen</ui-text> : <span class=\"numMember\">0</span> /\r\n				<span class=\"maxMember\">0</span> <ui-button bg=\"basic_interface/grp_online.bmp\"></ui-button>\r\n				<span class=\"online\"></span>\r\n			</div>\r\n			<div class=\"avglevel\"><ui-text msg=\"332\">Avg.lvl of Guildsmen</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"territory\"><ui-text msg=\"333\">Territory</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"tendency\">\r\n				<div class=\"title\"><ui-text msg=\"334\">Tendency</ui-text> : <span class=\"value\"></span></div>\r\n				<div class=\"righteous\">R</div>\r\n				<div class=\"wiked\">W</div>\r\n				<div class=\"vulgar\">V</div>\r\n				<div class=\"famed\">F</div>\r\n				<canvas width=\"90\" height=\"90\"></canvas>\r\n			</div>\r\n			<div class=\"exp\"><ui-text msg=\"335\">EXP</ui-text> : <span class=\"value\"></span></div>\r\n			<div class=\"emblem\"><ui-text msg=\"336\">Emblem</ui-text></div>\r\n			<div class=\"emblem_container\"></div>\r\n			<ui-button class=\"emblem_edit\" bg=\"btn_edit.bmp\" hover=\"btn_edit_a.bmp\" down=\"btn_edit_b.bmp\">\r\n				<input type=\"file\" />\r\n			</ui-button>\r\n\r\n			<div class=\"tax\"><ui-text msg=\"337\">Tax Point</ui-text> : <span class=\"value\">0</span></div>\r\n			<div class=\"ally\"><ui-text msg=\"338\">Alliance</ui-text></div>\r\n			<div class=\"ally_list\"></div>\r\n			<div class=\"hostile\"><ui-text msg=\"339\">Antagonist</ui-text></div>\r\n			<div class=\"hostile_list\"></div>\r\n		</div>\r\n\r\n		<!-- MEMBERS TAB -->\r\n		<div class=\"content members\">\r\n			<table>\r\n				<thead>\r\n					<tr>\r\n						<th class=\"name\"><ui-text msg=\"407\">Name</ui-text></th>\r\n						<th class=\"position\"><ui-text msg=\"503\">Position</ui-text></th>\r\n						<th class=\"job\"><ui-text msg=\"504\">Job</ui-text></th>\r\n						<th class=\"level\"><ui-text msg=\"408\">Level</ui-text></th>\r\n						<th class=\"note\"><ui-text msg=\"505\">Note</ui-text></th>\r\n						<th class=\"devotion\"><ui-text msg=\"506\">Devotion</ui-text></th>\r\n						<th class=\"tax\"><ui-text msg=\"507\">Tax Point</ui-text></th>\r\n					</tr>\r\n				</thead>\r\n				<tbody>\r\n					<tr class=\"MemberView\">\r\n						<td class=\"name\">\r\n							<canvas width=\"30\" height=\"30\"></canvas>\r\n							<span class=\"value\"></span>\r\n						</td>\r\n						<td class=\"position\"></td>\r\n						<td class=\"job\"></td>\r\n						<td class=\"level\"></td>\r\n						<td class=\"note\"></td>\r\n						<td class=\"devotion\"></td>\r\n						<td class=\"tax\"></td>\r\n					</tr>\r\n				</tbody>\r\n			</table>\r\n		</div>\r\n\r\n		<!-- POSITIONS TAB -->\r\n		<div class=\"content positions\">\r\n			<table>\r\n				<thead>\r\n					<tr>\r\n						<th class=\"id\"><ui-text msg=\"510\">Rank</ui-text></th>\r\n						<th class=\"title\"><ui-text msg=\"511\">Position Title</ui-text></th>\r\n						<th class=\"invite\"><ui-text msg=\"512\">Invitation</ui-text></th>\r\n						<th class=\"punish\"><ui-text msg=\"513\">Punish</ui-text></th>\r\n						<th class=\"tax\"><ui-text msg=\"514\">Tax</ui-text></th>\r\n					</tr>\r\n				</thead>\r\n				<tbody>\r\n					<tr class=\"PositionView\">\r\n						<td class=\"id\"></td>\r\n						<td class=\"title\">\r\n							<input type=\"text\" value=\"\" />\r\n						</td>\r\n						<td class=\"invite\">\r\n							<ui-button bg=\"checkbox_0.bmp\" class=\"off\"></ui-button>\r\n						</td>\r\n						<td class=\"punish\">\r\n							<ui-button bg=\"checkbox_0.bmp\" class=\"off\"></ui-button>\r\n						</td>\r\n						<td class=\"tax\"><input type=\"text\" value=\"0\" /> %</td>\r\n					</tr>\r\n				</tbody>\r\n			</table>\r\n		</div>\r\n\r\n		<!-- SKILLS TAB -->\r\n		<div class=\"content skills\">\r\n			<div class=\"skill_list\">\r\n				<table>\r\n					<!-- Just to get reference, will be removed -->\r\n					<ui-button\r\n						class=\"btn levelup\"\r\n						bg=\"basic_interface/skill_up_a.bmp\"\r\n						hover=\"basic_interface/skill_up_b.bmp\"\r\n						down=\"basic_interface/skill_up_c.bmp\"\r\n					></ui-button>\r\n				</table>\r\n			</div>\r\n\r\n			<div class=\"footer\">\r\n				<ui-image src=\"basic_interface/btnbar_mid2.bmp\"></ui-image>\r\n				<div class=\"text\">Skill Points: <span class=\"skpoints_count\">0</span></div>\r\n				<ui-button\r\n					class=\"btn apply\"\r\n					bg=\"btn_apply.bmp\"\r\n					hover=\"btn_apply_a.bmp\"\r\n					down=\"btn_apply_b.bmp\"\r\n				></ui-button>\r\n				<ui-button\r\n					class=\"btn reset\"\r\n					bg=\"btn_reset.bmp\"\r\n					hover=\"btn_reset_a.bmp\"\r\n					down=\"btn_reset_b.bmp\"\r\n				></ui-button>\r\n			</div>\r\n		</div>\r\n\r\n		<!-- HISTORY BAN TAB -->\r\n		<div class=\"content history\">\r\n			<table>\r\n				<thead>\r\n					<tr>\r\n						<th class=\"name\"><ui-text msg=\"407\">Name</ui-text></th>\r\n						<th class=\"reason\"><ui-text msg=\"462\">The Reason of Expulsion</ui-text></th>\r\n					</tr>\r\n				</thead>\r\n				<tbody>\r\n					<tr class=\"ExpelView\">\r\n						<td class=\"name\"></td>\r\n						<td class=\"reason\"></td>\r\n					</tr>\r\n				</tbody>\r\n			</table>\r\n		</div>\r\n\r\n		<!-- NOTICE TAB -->\r\n		<div class=\"content notice\">\r\n			<div class=\"subjectTitle\"><ui-text msg=\"515\">Title</ui-text></div>\r\n			<input type=\"text\" class=\"subject\" />\r\n\r\n			<div class=\"noticeTitle\"><ui-text msg=\"516\">Contents</ui-text></div>\r\n			<textarea class=\"notice\"></textarea>\r\n		</div>\r\n	</div>\r\n\r\n	<div class=\"footer\">\r\n		<ui-image src=\"basic_interface/btnbar_mid2.bmp\"></ui-image>\r\n		<button class=\"btn_disband\" type=\"button\">Disband</button>\r\n		<ui-button class=\"btn_ok\" bg=\"btn_ok.bmp\" hover=\"btn_ok_a.bmp\" down=\"btn_ok_b.bmp\"></ui-button>\r\n	</div>\r\n</div>\r\n";
 }));
 //#endregion
 //#region src/UI/Components/Guild/Guild.css?raw
 var Guild_default$1;
 var init_Guild$2 = __esmMin((() => {
-	Guild_default$1 = ":host {\r\n	top: 100px;\r\n	left: 100px;\r\n	width: 400px;\r\n	height: 317px;\r\n}\r\n\r\n#Guild {\r\n	position: absolute;\r\n}\r\n\r\n#Guild .titlebar {\r\n	width: 100%;\r\n	height: 17px;\r\n	background-color: white;\r\n	background-repeat: repeat-x;\r\n	border-radius: 3px 3px 0px 0px;\r\n	font-size: 11px;\r\n	font-weight: bold;\r\n}\r\n#Guild .titlebar .base {\r\n	width: 11px;\r\n	height: 11px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	vertical-align: middle;\r\n}\r\n#Guild .titlebar .right {\r\n	float: right;\r\n	margin-right: 3px;\r\n}\r\n#Guild .titlebar .clear {\r\n	clear: both;\r\n}\r\n\r\n#Guild .panel {\r\n	background-color: white;\r\n	padding-right: 2px;\r\n}\r\n#Guild .content {\r\n	overflow-y: auto;\r\n	padding: 2px;\r\n	border-top: 1px solid #c6c6c6;\r\n	height: 238px;\r\n}\r\n\r\n#Guild .tabs {\r\n	height: 23px;\r\n	background-color: #b5b6b5;\r\n	white-space: nowrap;\r\n}\r\n#Guild .tabs button.active {\r\n	background-color: #fff;\r\n}\r\n#Guild .tabs button {\r\n	width: 64px;\r\n	height: 23px;\r\n	margin-left: 1px;\r\n	margin-right: 1px;\r\n	margin-top: 1px;\r\n	padding: 0;\r\n	overflow: hidden;\r\n	text-overflow: ellipsis;\r\n	white-space: nowrap;\r\n	background-color: #cecece;\r\n	border: 0px;\r\n	padding: 3px;\r\n}\r\n#Guild .footer {\r\n	width: 100%;\r\n	height: 27px;\r\n	background-repeat: repeat-x;\r\n	background-color: transparent;\r\n	position: relative;\r\n	border-radius: 0px 0px 3px 3px;\r\n}\r\n#Guild .footer .btn_ok {\r\n	display: none;\r\n	position: absolute;\r\n	bottom: 4px;\r\n	right: 4px;\r\n	width: 42px;\r\n	height: 20px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n	border: none;\r\n}\r\n\r\n#Guild .content.members,\r\n#Guild .content.positions,\r\n#Guild .content.skills,\r\n#Guild .content.history,\r\n#Guild .content.notice {\r\n	display: none;\r\n}\r\n\r\n/*\r\n * Guild Info CSS\r\n */\r\n#Guild .content.info .exp,\r\n#Guild .content.info .emblem,\r\n#Guild .content.info .tax,\r\n#Guild .content.info .ally,\r\n#Guild .content.info .ally_list,\r\n#Guild .content.info .hostile,\r\n#Guild .content.info .hostile_list {\r\n	position: absolute;\r\n	left: 201px;\r\n}\r\n\r\n#Guild .content.info .name {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 13px;\r\n}\r\n#Guild .content.info .level {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 28px;\r\n}\r\n#Guild .content.info .master {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 45px;\r\n}\r\n#Guild .content.info .members {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 61px;\r\n}\r\n#Guild .content.info .avglevel {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 77px;\r\n}\r\n#Guild .content.info .territory {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 93px;\r\n}\r\n#Guild .content.info .tendency {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 114px;\r\n}\r\n#Guild .content.info .tendency .title {\r\n	position: absolute;\r\n	top: 0px;\r\n	left: 0px;\r\n}\r\n#Guild .content.info .tendency .righteous {\r\n	position: absolute;\r\n	left: 50px;\r\n	top: 16px;\r\n	text-align: center;\r\n}\r\n#Guild .content.info .tendency .wiked {\r\n	position: absolute;\r\n	left: 50px;\r\n	top: 120px;\r\n	text-align: center;\r\n}\r\n#Guild .content.info .tendency .vulgar {\r\n	position: absolute;\r\n	left: 0px;\r\n	top: 68px;\r\n}\r\n#Guild .content.info .tendency .famed {\r\n	position: absolute;\r\n	left: 102px;\r\n	top: 68px;\r\n}\r\n#Guild .content.info .tendency canvas {\r\n	position: absolute;\r\n	top: 30px;\r\n	left: 10px;\r\n}\r\n\r\n#Guild .content.info .members ui-button {\r\n	margin-left: 5px;\r\n	vertical-align: -4px;\r\n	border: none;\r\n	width: 15px;\r\n	height: 15px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n}\r\n\r\n#Guild .content.info .exp {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 13px;\r\n}\r\n#Guild .content.info .emblem {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 37px;\r\n}\r\n#Guild .content.info .tax {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 61px;\r\n}\r\n#Guild .content.info .ally {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 103px;\r\n}\r\n#Guild .content.info .ally_list {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 118px;\r\n	white-space: pre;\r\n	width: 168px;\r\n	height: 48px;\r\n	background: #cecece;\r\n}\r\n#Guild .content.info .hostile {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 177px;\r\n}\r\n#Guild .content.info .hostile_list {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 193px;\r\n	white-space: pre;\r\n	width: 168px;\r\n	height: 48px;\r\n	background: #cecece;\r\n}\r\n\r\n#Guild .content.info .ally_list div,\r\n#Guild .content.info .hostile_list div {\r\n	padding: 2px;\r\n}\r\n#Guild .content.info .ally_list div.active,\r\n#Guild .content.info .hostile_list div.active {\r\n	background-color: #739eef;\r\n	padding: 2px;\r\n}\r\n\r\n#Guild .content.info .emblem_container {\r\n	width: 24px;\r\n	height: 24px;\r\n	position: absolute;\r\n	top: 29px;\r\n	left: 300px;\r\n	background-color: #709ce7;\r\n	background-repeat: no-repeat;\r\n}\r\n#Guild .content.info .emblem_edit {\r\n	position: absolute;\r\n	top: 30px;\r\n	left: 330px;\r\n	width: 42px;\r\n	height: 20px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	overflow: hidden;\r\n}\r\n#Guild .content.info .emblem_edit input {\r\n	opacity: 0;\r\n}\r\n\r\n/*\r\n * Guild Members\r\n */\r\n#Guild .content.members table {\r\n	border-spacing: 0;\r\n	border-collapse: collapse;\r\n}\r\n#Guild .content.members tbody tr {\r\n	border-left: 1px solid #c2c2c2;\r\n	border-right: 1px solid #c2c2c2;\r\n}\r\n#Guild .content.members td {\r\n	border-bottom: 1px solid #c2c2c2;\r\n}\r\n#Guild .content.members tr.active td {\r\n	background-color: #739eef !important;\r\n}\r\n#Guild .content.members th {\r\n	border: 1px solid #c2c2c2;\r\n}\r\n#Guild .content.members td,\r\n#Guild .content.members th {\r\n	text-align: left;\r\n	font-weight: normal;\r\n	padding-left: 2px;\r\n	height: 35px;\r\n	overflow: hidden;\r\n	text-overflow: ellipsis;\r\n	white-space: nowrap;\r\n}\r\n#Guild .content.members tr.online td {\r\n	background-color: #efe;\r\n}\r\n#Guild .content.members tr canvas {\r\n	display: inline;\r\n}\r\n#Guild .content.members .name {\r\n	width: 85px;\r\n	max-width: 85px;\r\n	text-overflow: ellipsis;\r\n	overflow: hidden;\r\n}\r\n#Guild .content.members .name canvas {\r\n	vertical-align: -11px;\r\n}\r\n#Guild .content.members .position {\r\n	width: 70px;\r\n	max-width: 70px;\r\n	text-overflow: ellipsis;\r\n	overflow: hidden;\r\n}\r\n#Guild .content.members .position select {\r\n	width: 65px;\r\n	max-width: 65px;\r\n	text-overflow: ellipsis;\r\n	overflow: hidden;\r\n}\r\n#Guild .content.members .job {\r\n	width: 43px;\r\n	max-width: 43px;\r\n	text-overflow: ellipsis;\r\n	overflow: hidden;\r\n}\r\n#Guild .content.members .level {\r\n	width: 30px;\r\n}\r\n#Guild .content.members .note {\r\n	width: 41px;\r\n}\r\n#Guild .content.members .devotion {\r\n	width: 42px;\r\n}\r\n#Guild .content.members .tax {\r\n	width: 63px;\r\n	max-width: 63px;\r\n	text-overflow: ellipsis;\r\n	overflow: hidden;\r\n}\r\n\r\n/*\r\n * Guild Positions\r\n */\r\n#Guild .content.positions table {\r\n	border-spacing: 0;\r\n	border-collapse: collapse;\r\n}\r\n#Guild .content.positions tr.active {\r\n	border: none;\r\n}\r\n#Guild .content.positions tr.active td {\r\n	background-color: #739eef;\r\n}\r\n#Guild .content.positions th,\r\n#Guild .content.positions td {\r\n	height: 20px;\r\n	font-weight: normal;\r\n	text-align: left;\r\n	padding: 2px 2px 0px 3px;\r\n	border: 1px solid #c2c2c2;\r\n}\r\n#Guild .content.positions .id {\r\n	width: 57px;\r\n}\r\n#Guild .content.positions .title {\r\n	width: 158px;\r\n	padding: 0px;\r\n}\r\n#Guild .content.positions .invite {\r\n	width: 68px;\r\n}\r\n#Guild .content.positions .punish {\r\n	width: 68px;\r\n}\r\n#Guild .content.positions .tax {\r\n	width: 68px;\r\n	padding: 0;\r\n}\r\n#Guild .content.positions input {\r\n	border: none;\r\n	background-color: white;\r\n	padding: 0;\r\n	height: 18px;\r\n}\r\n#Guild .content.positions .title input {\r\n	padding-left: 2px;\r\n	width: 140px;\r\n	margin-left: 4px;\r\n}\r\n#Guild .content.positions .tax input {\r\n	width: 28px;\r\n	padding-left: 2px;\r\n	margin-left: 3px;\r\n}\r\n#Guild .content.positions ui-button {\r\n	border: none;\r\n	width: 10px;\r\n	height: 10px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n}\r\n\r\n/*\r\n * Guild Skills\r\n */\r\n#Guild .content.skills {\r\n	overflow-y: hidden;\r\n}\r\n#Guild .content.skills .skill_list {\r\n	overflow-y: auto;\r\n	padding: 5px;\r\n	border-top: 1px solid #c6c6c6;\r\n	width: 394px;\r\n	height: 215px;\r\n}\r\n#Guild .content.skills .skill_list table {\r\n	border: none;\r\n	border-spacing: 0px;\r\n	padding-top: 5px;\r\n	width: 100%;\r\n}\r\n#Guild .content.skills .skill_list td,\r\n#Guild .content.skills .skill_list .name {\r\n	padding: 0px;\r\n}\r\n\r\n#Guild .content.skills .levelup {\r\n	border: 0;\r\n	width: 24px;\r\n	height: 24px;\r\n	padding: 0;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n}\r\n#Guild .content.skills td.type {\r\n	vertical-align: bottom;\r\n}\r\n\r\n#Guild .content.skills .skill_list .icon {\r\n	padding-left: 15px;\r\n}\r\n#Guild .content.skills .skill_list .levelupcontainer {\r\n	padding-left: 5px;\r\n	padding-right: 5px;\r\n	width: 24px;\r\n}\r\n#Guild .content.skills .skill_list div.name {\r\n	line-height: 12px;\r\n	white-space: nowrap;\r\n	padding-left: 5px;\r\n	white-space: nowrap;\r\n	width: 120px;\r\n	padding-top: 4px;\r\n	height: 28px;\r\n}\r\n#Guild .content.skills .disabled .icon,\r\n#Guild .content.skills .disabled .name {\r\n	opacity: 0.5;\r\n}\r\n#Guild .content.skills .disabled .consume,\r\n#Guild .content.skills .disabled .level {\r\n	display: none;\r\n}\r\n#Guild .content.skills .currentDown,\r\n#Guild .content.skills .currentUp {\r\n	width: 11px;\r\n	height: 11px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	vertical-align: middle;\r\n}\r\n\r\n#Guild .content.skills .selected.disabled .selectable {\r\n	background-color: #b5b5b5;\r\n}\r\n#Guild .content.skills .selected.passive .selectable {\r\n	background-color: #73d5ee;\r\n}\r\n#Guild .content.skills .selected.active .selectable {\r\n	background-color: #739cee;\r\n}\r\n\r\n#Guild .content.skills .footer {\r\n	width: 100%;\r\n	height: 27px;\r\n	background-repeat: repeat-x;\r\n	background-color: transparent;\r\n	position: relative;\r\n}\r\n#Guild .content.skills .footer .text {\r\n	padding-top: 7px;\r\n	margin-left: 10px;\r\n}\r\n#Guild .content.skills .footer .btn {\r\n	position: absolute;\r\n	top: 5px;\r\n	border: 0;\r\n	width: 42px;\r\n	height: 20px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n	display: none;\r\n}\r\n#Guild .content.skills .footer .apply {\r\n	right: 70px;\r\n}\r\n#Guild .content.skills .footer .reset {\r\n	right: 20px;\r\n}\r\n\r\n/*\r\n * Guild History\r\n */\r\n#Guild .content.history table {\r\n	border-spacing: 0;\r\n	border-collapse: collapse;\r\n}\r\n#Guild .content.history th,\r\n#Guild .content.history td {\r\n	font-weight: normal;\r\n	text-align: left;\r\n	padding: 5px 5px 0px 5px;\r\n	border: 1px solid #c2c2c2;\r\n}\r\n#Guild .content.history .name {\r\n	width: 90px;\r\n}\r\n#Guild .content.history .reason {\r\n	width: 275px;\r\n}\r\n\r\n/*\r\n * Guild Notice\r\n */\r\n#Guild .notice .subjectTitle {\r\n	position: absolute;\r\n	top: 13px;\r\n	left: 9px;\r\n}\r\n#Guild .notice .subject {\r\n	position: absolute;\r\n	top: 11px;\r\n	left: 50px;\r\n	padding-left: 5px;\r\n	height: 14px;\r\n	border: none;\r\n	width: 333px;\r\n	background-color: #eee;\r\n}\r\n#Guild .notice .noticeTitle {\r\n	position: absolute;\r\n	top: 36px;\r\n	left: 9px;\r\n}\r\n#Guild .notice .notice {\r\n	position: absolute;\r\n	top: 52px;\r\n	left: 9px;\r\n	padding-left: 5px;\r\n	margin: 0px;\r\n	width: 372px;\r\n	height: 168px;\r\n	background-color: #eee;\r\n	border: none;\r\n	resize: none;\r\n}\r\n";
+	Guild_default$1 = ":host {\r\n	top: 100px;\r\n	left: 100px;\r\n	width: 400px;\r\n	height: 317px;\r\n}\r\n\r\n#Guild {\r\n	position: absolute;\r\n}\r\n\r\n#Guild .titlebar {\r\n	width: 100%;\r\n	height: 17px;\r\n	background-color: white;\r\n	background-repeat: repeat-x;\r\n	border-radius: 3px 3px 0px 0px;\r\n	font-size: 11px;\r\n	font-weight: bold;\r\n}\r\n#Guild .titlebar .base {\r\n	width: 11px;\r\n	height: 11px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	vertical-align: middle;\r\n}\r\n#Guild .titlebar .right {\r\n	float: right;\r\n	margin-right: 3px;\r\n}\r\n#Guild .titlebar .clear {\r\n	clear: both;\r\n}\r\n\r\n#Guild .panel {\r\n	background-color: white;\r\n	padding-right: 2px;\r\n}\r\n#Guild .content {\r\n	position: relative;\r\n	box-sizing: border-box;\r\n	overflow-y: auto;\r\n	padding: 2px;\r\n	border-top: 1px solid #c6c6c6;\r\n	height: 250px;\r\n}\r\n\r\n#Guild .tabs {\r\n	height: 23px;\r\n	background-color: #b5b6b5;\r\n	white-space: nowrap;\r\n}\r\n#Guild .tabs button.active {\r\n	background-color: #fff;\r\n}\r\n#Guild .tabs button {\r\n	width: 64px;\r\n	height: 23px;\r\n	margin-left: 1px;\r\n	margin-right: 1px;\r\n	margin-top: 1px;\r\n	padding: 0;\r\n	overflow: hidden;\r\n	text-overflow: ellipsis;\r\n	white-space: nowrap;\r\n	background-color: #cecece;\r\n	border: 0px;\r\n	padding: 3px;\r\n}\r\n#Guild .footer {\r\n	width: 100%;\r\n	height: 27px;\r\n	background-repeat: repeat-x;\r\n	background-color: transparent;\r\n	position: relative;\r\n	border-radius: 0px 0px 3px 3px;\r\n}\r\n#Guild .footer .btn_ok {\r\n	display: none;\r\n	position: absolute;\r\n	bottom: 4px;\r\n	right: 4px;\r\n	width: 42px;\r\n	height: 20px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n	border: none;\r\n}\r\n\r\n#Guild .content.members,\r\n#Guild .content.positions,\r\n#Guild .content.skills,\r\n#Guild .content.history,\r\n#Guild .content.notice {\r\n	display: none;\r\n}\r\n\r\n/*\r\n * Guild Info CSS\r\n */\r\n#Guild .content.info .exp,\r\n#Guild .content.info .emblem,\r\n#Guild .content.info .tax,\r\n#Guild .content.info .ally,\r\n#Guild .content.info .ally_list,\r\n#Guild .content.info .hostile,\r\n#Guild .content.info .hostile_list {\r\n	position: absolute;\r\n	left: 201px;\r\n}\r\n\r\n#Guild .content.info .name {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 13px;\r\n}\r\n#Guild .content.info .level {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 28px;\r\n}\r\n#Guild .content.info .master {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 45px;\r\n}\r\n#Guild .content.info .members {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 61px;\r\n}\r\n#Guild .content.info .avglevel {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 77px;\r\n}\r\n#Guild .content.info .territory {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 93px;\r\n}\r\n#Guild .content.info .tendency {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 114px;\r\n}\r\n#Guild .content.info .tendency .title {\r\n	position: absolute;\r\n	top: 0px;\r\n	left: 0px;\r\n}\r\n#Guild .content.info .tendency .righteous {\r\n	position: absolute;\r\n	left: 50px;\r\n	top: 16px;\r\n	text-align: center;\r\n}\r\n#Guild .content.info .tendency .wiked {\r\n	position: absolute;\r\n	left: 50px;\r\n	top: 120px;\r\n	text-align: center;\r\n}\r\n#Guild .content.info .tendency .vulgar {\r\n	position: absolute;\r\n	left: 0px;\r\n	top: 68px;\r\n}\r\n#Guild .content.info .tendency .famed {\r\n	position: absolute;\r\n	left: 102px;\r\n	top: 68px;\r\n}\r\n#Guild .content.info .tendency canvas {\r\n	position: absolute;\r\n	top: 30px;\r\n	left: 10px;\r\n}\r\n\r\n#Guild .content.info .members ui-button {\r\n	margin-left: 5px;\r\n	vertical-align: -4px;\r\n	border: none;\r\n	width: 15px;\r\n	height: 15px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n}\r\n\r\n#Guild .content.info .exp {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 13px;\r\n}\r\n#Guild .content.info .emblem {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 37px;\r\n}\r\n#Guild .content.info .tax {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 61px;\r\n}\r\n#Guild .content.info .ally {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 103px;\r\n}\r\n#Guild .content.info .ally_list {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 118px;\r\n	white-space: pre;\r\n	width: 168px;\r\n	height: 48px;\r\n	background: #cecece;\r\n}\r\n#Guild .content.info .hostile {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 177px;\r\n}\r\n#Guild .content.info .hostile_list {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 193px;\r\n	white-space: pre;\r\n	width: 168px;\r\n	height: 48px;\r\n	background: #cecece;\r\n}\r\n\r\n#Guild .content.info .ally_list div,\r\n#Guild .content.info .hostile_list div {\r\n	padding: 2px;\r\n}\r\n#Guild .content.info .ally_list div.active,\r\n#Guild .content.info .hostile_list div.active {\r\n	background-color: #739eef;\r\n	padding: 2px;\r\n}\r\n\r\n#Guild .content.info .emblem_container {\r\n	width: 24px;\r\n	height: 24px;\r\n	position: absolute;\r\n	top: 29px;\r\n	left: 300px;\r\n	background-color: #709ce7;\r\n	background-repeat: no-repeat;\r\n}\r\n#Guild .content.info .emblem_edit {\r\n	position: absolute;\r\n	top: 30px;\r\n	left: 330px;\r\n	width: 42px;\r\n	height: 20px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	overflow: hidden;\r\n}\r\n#Guild .content.info .emblem_edit input {\r\n	opacity: 0;\r\n}\r\n\r\n/*\r\n * Guild Members\r\n */\r\n#Guild .content.members table {\r\n	border-spacing: 0;\r\n	border-collapse: collapse;\r\n}\r\n#Guild .content.members tbody tr {\r\n	border-left: 1px solid #c2c2c2;\r\n	border-right: 1px solid #c2c2c2;\r\n}\r\n#Guild .content.members td {\r\n	border-bottom: 1px solid #c2c2c2;\r\n}\r\n#Guild .content.members tr.active td {\r\n	background-color: #739eef !important;\r\n}\r\n#Guild .content.members th {\r\n	border: 1px solid #c2c2c2;\r\n}\r\n#Guild .content.members td,\r\n#Guild .content.members th {\r\n	text-align: left;\r\n	font-weight: normal;\r\n	padding-left: 2px;\r\n	height: 35px;\r\n	overflow: hidden;\r\n	text-overflow: ellipsis;\r\n	white-space: nowrap;\r\n}\r\n#Guild .content.members tr.online td {\r\n	background-color: #efe;\r\n}\r\n#Guild .content.members tr canvas {\r\n	display: inline;\r\n}\r\n#Guild .content.members .name {\r\n	width: 85px;\r\n	max-width: 85px;\r\n	text-overflow: ellipsis;\r\n	overflow: hidden;\r\n}\r\n#Guild .content.members .name canvas {\r\n	vertical-align: -11px;\r\n}\r\n#Guild .content.members .position {\r\n	width: 70px;\r\n	max-width: 70px;\r\n	text-overflow: ellipsis;\r\n	overflow: hidden;\r\n}\r\n#Guild .content.members .position select {\r\n	width: 65px;\r\n	max-width: 65px;\r\n	text-overflow: ellipsis;\r\n	overflow: hidden;\r\n}\r\n#Guild .content.members .job {\r\n	width: 43px;\r\n	max-width: 43px;\r\n	text-overflow: ellipsis;\r\n	overflow: hidden;\r\n}\r\n#Guild .content.members .level {\r\n	width: 30px;\r\n}\r\n#Guild .content.members .note {\r\n	width: 41px;\r\n}\r\n#Guild .content.members .devotion {\r\n	width: 42px;\r\n}\r\n#Guild .content.members .tax {\r\n	width: 63px;\r\n	max-width: 63px;\r\n	text-overflow: ellipsis;\r\n	overflow: hidden;\r\n}\r\n\r\n/*\r\n * Guild Positions\r\n */\r\n#Guild .content.positions table {\r\n	border-spacing: 0;\r\n	border-collapse: collapse;\r\n}\r\n#Guild .content.positions tr.active {\r\n	border: none;\r\n}\r\n#Guild .content.positions tr.active td {\r\n	background-color: #739eef;\r\n}\r\n#Guild .content.positions th,\r\n#Guild .content.positions td {\r\n	height: 20px;\r\n	font-weight: normal;\r\n	text-align: left;\r\n	padding: 2px 2px 0px 3px;\r\n	border: 1px solid #c2c2c2;\r\n}\r\n#Guild .content.positions .id {\r\n	width: 57px;\r\n}\r\n#Guild .content.positions .title {\r\n	width: 158px;\r\n	padding: 0px;\r\n}\r\n#Guild .content.positions .invite {\r\n	width: 68px;\r\n}\r\n#Guild .content.positions .punish {\r\n	width: 68px;\r\n}\r\n#Guild .content.positions .tax {\r\n	width: 68px;\r\n	padding: 0;\r\n}\r\n#Guild .content.positions input {\r\n	border: none;\r\n	background-color: white;\r\n	padding: 0;\r\n	height: 18px;\r\n}\r\n#Guild .content.positions .title input {\r\n	padding-left: 2px;\r\n	width: 140px;\r\n	margin-left: 4px;\r\n}\r\n#Guild .content.positions .tax input {\r\n	width: 28px;\r\n	padding-left: 2px;\r\n	margin-left: 3px;\r\n}\r\n#Guild .content.positions ui-button {\r\n	border: none;\r\n	width: 10px;\r\n	height: 10px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n}\r\n\r\n/*\r\n * Guild Skills\r\n */\r\n#Guild .content.skills {\r\n	overflow-y: hidden;\r\n}\r\n#Guild .content.skills .skill_list {\r\n	overflow-y: auto;\r\n	padding: 5px;\r\n	border-top: 1px solid #c6c6c6;\r\n	width: 394px;\r\n	height: 215px;\r\n}\r\n#Guild .content.skills .skill_list table {\r\n	border: none;\r\n	border-spacing: 0px;\r\n	padding-top: 5px;\r\n	width: 100%;\r\n}\r\n#Guild .content.skills .skill_list td,\r\n#Guild .content.skills .skill_list .name {\r\n	padding: 0px;\r\n}\r\n\r\n#Guild .content.skills .levelup {\r\n	border: 0;\r\n	width: 24px;\r\n	height: 24px;\r\n	padding: 0;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n}\r\n#Guild .content.skills td.type {\r\n	vertical-align: bottom;\r\n}\r\n\r\n#Guild .content.skills .skill_list .icon {\r\n	padding-left: 15px;\r\n}\r\n#Guild .content.skills .skill_list .levelupcontainer {\r\n	padding-left: 5px;\r\n	padding-right: 5px;\r\n	width: 24px;\r\n}\r\n#Guild .content.skills .skill_list div.name {\r\n	line-height: 12px;\r\n	white-space: nowrap;\r\n	padding-left: 5px;\r\n	white-space: nowrap;\r\n	width: 120px;\r\n	padding-top: 4px;\r\n	height: 28px;\r\n}\r\n#Guild .content.skills .disabled .icon,\r\n#Guild .content.skills .disabled .name {\r\n	opacity: 0.5;\r\n}\r\n#Guild .content.skills .disabled .consume,\r\n#Guild .content.skills .disabled .level {\r\n	display: none;\r\n}\r\n#Guild .content.skills .currentDown,\r\n#Guild .content.skills .currentUp {\r\n	width: 11px;\r\n	height: 11px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	vertical-align: middle;\r\n}\r\n\r\n#Guild .content.skills .selected.disabled .selectable {\r\n	background-color: #b5b5b5;\r\n}\r\n#Guild .content.skills .selected.passive .selectable {\r\n	background-color: #73d5ee;\r\n}\r\n#Guild .content.skills .selected.active .selectable {\r\n	background-color: #739cee;\r\n}\r\n\r\n#Guild .content.skills .footer {\r\n	width: 100%;\r\n	height: 27px;\r\n	background-repeat: repeat-x;\r\n	background-color: transparent;\r\n	position: relative;\r\n}\r\n#Guild .content.skills .footer .text {\r\n	padding-top: 7px;\r\n	margin-left: 10px;\r\n}\r\n\r\n#Guild .footer .btn_disband {\r\n	display: none;\r\n	position: absolute;\r\n	bottom: 4px;\r\n	right: 4px;\r\n	padding: 2px 10px;\r\n	font-family: Arial, sans-serif;\r\n	font-size: 11px;\r\n	cursor: pointer;\r\n}\r\n\r\n#Guild .content.skills .footer .btn {\r\n	position: absolute;\r\n	top: 5px;\r\n	border: 0;\r\n	width: 42px;\r\n	height: 20px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n	display: none;\r\n}\r\n#Guild .content.skills .footer .apply {\r\n	right: 70px;\r\n}\r\n#Guild .content.skills .footer .reset {\r\n	right: 20px;\r\n}\r\n\r\n/*\r\n * Guild History\r\n */\r\n#Guild .content.history table {\r\n	border-spacing: 0;\r\n	border-collapse: collapse;\r\n}\r\n#Guild .content.history th,\r\n#Guild .content.history td {\r\n	font-weight: normal;\r\n	text-align: left;\r\n	padding: 5px 5px 0px 5px;\r\n	border: 1px solid #c2c2c2;\r\n}\r\n#Guild .content.history .name {\r\n	width: 90px;\r\n}\r\n#Guild .content.history .reason {\r\n	width: 275px;\r\n}\r\n\r\n/*\r\n * Guild Notice\r\n */\r\n#Guild .notice .subjectTitle {\r\n	position: absolute;\r\n	top: 13px;\r\n	left: 9px;\r\n}\r\n#Guild .notice .subject {\r\n	position: absolute;\r\n	top: 11px;\r\n	left: 50px;\r\n	padding-left: 5px;\r\n	height: 14px;\r\n	border: none;\r\n	width: 333px;\r\n	background-color: #eee;\r\n}\r\n#Guild .notice .noticeTitle {\r\n	position: absolute;\r\n	top: 36px;\r\n	left: 9px;\r\n}\r\n#Guild .notice .notice {\r\n	position: absolute;\r\n	top: 52px;\r\n	left: 9px;\r\n	padding-left: 5px;\r\n	margin: 0px;\r\n	width: 372px;\r\n	height: 168px;\r\n	background-color: #eee;\r\n	border: none;\r\n	resize: none;\r\n}\r\n";
 }));
 //#endregion
 //#region src/UI/Components/WinStats/WinStats/WinStats.html?raw
@@ -227854,7 +228135,6 @@ function createWinStats({ name, htmlText, cssText, hasTraits }) {
 			case "crt3":
 				setText(".t_requirements ." + type.replace("3", ""), val);
 				setUpVisibility(".t_up ." + type.replace("3", ""), val > 0 && val <= this.t_statuspoint);
-				break;
 		}
 	};
 	function toggleTraits() {
@@ -227870,9 +228150,7 @@ function createWinStats({ name, htmlText, cssText, hasTraits }) {
 	}
 	Component.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				this.toggle();
-				break;
+			case "TOGGLE": this.toggle();
 		}
 	};
 	Component.onRemove = function onRemove() {
@@ -228097,6 +228375,7 @@ function onChangeTab(event) {
 	if (targetContent) targetContent.style.display = "block";
 	const btnOk = root.querySelector(".footer .btn_ok");
 	if (btnOk) btnOk.style.display = "none";
+	updateDisbandButton(root, targetClass);
 	if (targetClass === "members") Renderer.render(renderMemberFaces);
 	else Renderer.stop(renderMemberFaces);
 	this.classList.add("active");
@@ -228174,6 +228453,22 @@ function onValidate() {
 	const btnOk = root.querySelector(".footer .btn_ok");
 	if (btnOk) btnOk.style.display = "none";
 }
+function getActiveTab(root) {
+	const btn = root ? root.querySelector(".tabs button.active") : null;
+	return btn ? btn.className.replace(/\s*active\s*/g, "").trim() : "";
+}
+function updateDisbandButton(root, activeTab) {
+	if (!root) return;
+	const btn = root.querySelector(".footer .btn_disband");
+	if (!btn) return;
+	btn.style.display = activeTab === "info" && SessionStorage_default.isGuildMaster ? "block" : "none";
+	if (!btn.dataset.bound) {
+		btn.dataset.bound = "1";
+		btn.addEventListener("click", () => {
+			Guild.promptDisbandGuild();
+		});
+	}
+}
 var AccessTypeBit, Guild, _memberViewTemplate, _positionViewTemplate, _expelViewTemplate, _positions, _members, _skills, _btnIncSkillTemplate, _skpoints, _btnLevelUp, lArrow, rArrow, _totalExp, _guildAccess, _checkbox_off, _checkbox_on, renderMemberFaces, Guild_default;
 var init_Guild$1 = __esmMin((() => {
 	init_DBManager();
@@ -228192,6 +228487,7 @@ var init_Guild$1 = __esmMin((() => {
 	init_ContextMenu();
 	init_ChatBox();
 	init_InputBox();
+	init_GuildCompanion();
 	init_SkillTargetSelection();
 	init_SkillDescription();
 	init_Guild$3();
@@ -228411,7 +228707,10 @@ var init_Guild$1 = __esmMin((() => {
 		if (key.cmd === "TOGGLE") this.toggle();
 	};
 	Guild.toggle = function onToggle() {
-		if (!SessionStorage_default.hasGuild) return;
+		if (!SessionStorage_default.hasGuild) {
+			Guild.promptCreateGuild();
+			return;
+		}
 		if (this.ui.is(":visible")) {
 			this.hide();
 			if (_btnLevelUp && _btnLevelUp.parentNode) _btnLevelUp.remove();
@@ -228438,7 +228737,8 @@ var init_Guild$1 = __esmMin((() => {
 		Renderer.stop(renderMemberFaces);
 	};
 	Guild.setGuildInformations = function setGuildInformations(info) {
-		const general = _root$13(this).querySelector(".content.info");
+		const root = _root$13(this);
+		const general = root.querySelector(".content.info");
 		if (!general) return;
 		general.querySelector(".name .value").textContent = info.guildname;
 		general.querySelector(".level .value").textContent = info.level;
@@ -228453,6 +228753,7 @@ var init_Guild$1 = __esmMin((() => {
 		Guild.onRequestGuildEmblem(info.GDID, info.emblemVersion, Guild.setEmblem.bind(this));
 		const emblemEdit = general.querySelector(".emblem_edit");
 		if (emblemEdit) emblemEdit.style.display = SessionStorage_default.isGuildMaster ? "" : "none";
+		updateDisbandButton(root, getActiveTab(root));
 		WinStatsController.getUI().update("guildname", info.guildname);
 		renderTendency(info.honor, info.virtue);
 	};
@@ -228522,7 +228823,7 @@ var init_Guild$1 = __esmMin((() => {
 		}
 		if (_positions[member.GPositionID]) {
 			const positionCell = view.querySelector(".position");
-			if (SessionStorage_default.isGuildMaster && member.GPositionID !== 0) {
+			if (SessionStorage_default.isGuildMaster) {
 				let selectHTML = `<select class="changePosition member_${member.AID}_${member.GID}">`;
 				_positions.forEach((position, key) => {
 					selectHTML += `<option value="${position.positionID}" ${key === member.GPositionID ? "selected" : ""}>${_escapeHTML$3(position.posName)}</option>`;
@@ -228531,7 +228832,7 @@ var init_Guild$1 = __esmMin((() => {
 				positionCell.innerHTML = selectHTML;
 				const selectEl = positionCell.querySelector(`.member_${member.AID}_${member.GID}`);
 				if (selectEl) selectEl.addEventListener("change", (evt) => {
-					Guild.updateMemberPosition(member.AID, member.GID, evt.target.selectedIndex, true);
+					Guild.updateMemberPosition(member.AID, member.GID, parseInt(evt.target.value, 10), true);
 				});
 			} else {
 				positionCell.textContent = _positions[member.GPositionID].posName;
@@ -228576,8 +228877,10 @@ var init_Guild$1 = __esmMin((() => {
 		if (i >= count) return;
 		const view = root.querySelector(`.MemberView[data-index="${i}"]`);
 		_members[i].CurrentState = member.status;
-		if (view) if (_members[i].CurrentState) view.classList.add("online");
-		else view.classList.remove("online");
+		if (view) {
+			if (_members[i].CurrentState) view.classList.add("online");
+			else view.classList.remove("online");
+		}
 		if ("sex" in member) _members[i].entity.sex = member.sex;
 		if ("head" in member) _members[i].entity.head = member.head;
 		if ("headPalette" in member) _members[i].entity.headpalette = member.headPalette;
@@ -228587,13 +228890,13 @@ var init_Guild$1 = __esmMin((() => {
 		const nameValue = view?.querySelector(".name .value");
 		ChatBox_default.addText(DB.getMessage(485 + (member.status ? 0 : 1)).replace("%s", nameValue ? nameValue.textContent : ""), ChatBox_default.TYPE.BLUE, ChatBox_default.FILTER.GUILD);
 	};
-	Guild.updateMemberPosition = function updateMemberPosition(AID, GID, positionID, validate) {
+	Guild.updateMemberPosition = function updateMemberPosition(AID, GID, positionID, fromDropdown) {
 		for (let i = 0, count = _members.length; i < count; ++i) if (_members[i].AID === AID && _members[i].GID === GID) {
 			_members[i].GPositionID = positionID;
-			Guild.setMember(_members[i]);
+			if (!fromDropdown) Guild.setMember(_members[i]);
 			break;
 		}
-		if (validate) onValidate();
+		if (fromDropdown) onValidate();
 	};
 	Guild.setPositions = function setPositions(positions, erase) {
 		let rank;
@@ -228795,7 +229098,18 @@ var init_Guild$1 = __esmMin((() => {
 			}
 		};
 	})();
+	Guild.promptCreateGuild = function promptCreateGuild() {
+		GuildCompanion_default.toggleCreate();
+	};
+	Guild.promptDisbandGuild = function promptDisbandGuild() {
+		if (!SessionStorage_default.isGuildMaster) return;
+		UIManager.showMessageBox("If you are using a guild storage, all items inside it will disappear.", "ok", () => {
+			GuildCompanion_default.openDisband();
+		});
+	};
 	Guild.onGuildInfoRequest = function() {};
+	Guild.onRequestCreateGuild = function() {};
+	Guild.onRequestBreakGuild = function() {};
 	Guild.onPositionUpdateRequest = function() {};
 	Guild.onChangeMemberPosRequest = function() {};
 	Guild.onNoticeUpdateRequest = function() {};
@@ -228806,9 +229120,10 @@ var init_Guild$1 = __esmMin((() => {
 	Guild.onRequestAccess = function() {};
 	Guild.updateSession = function(info) {
 		SessionStorage_default.hasGuild = true;
+		SessionStorage_default.guildName = info.guildname || "";
 		SessionStorage_default.Entity.GUID = info.GDID;
 		SessionStorage_default.Entity.GEmblemVer = info.emblemVersion;
-		if (SessionStorage_default.Character.name === info.masterName) SessionStorage_default.isGuildMaster = true;
+		if (SessionStorage_default.Entity.display.name === info.masterName) SessionStorage_default.isGuildMaster = true;
 	};
 	Guild.onRequestGuildEmblem = function() {};
 	Guild.onSendEmblem = function() {};
@@ -229072,9 +229387,7 @@ var init_Bank$1 = __esmMin((() => {
 	*/
 	Bank.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				this.toggle();
-				break;
+			case "TOGGLE": this.toggle();
 		}
 	};
 	/**
@@ -229770,10 +230083,12 @@ function tempMatch(key) {
 		}
 	});
 	Object.keys(TempState).every(function(SC) {
-		if (TempState[SC]) if (TempState[SC].key == key && TempState[SC].alt == KEYS.ALT && TempState[SC].ctrl == KEYS.CTRL && TempState[SC].shift == KEYS.SHIFT) {
-			matchSC = SC;
-			return false;
-		} else return true;
+		if (TempState[SC]) {
+			if (TempState[SC].key == key && TempState[SC].alt == KEYS.ALT && TempState[SC].ctrl == KEYS.CTRL && TempState[SC].shift == KEYS.SHIFT) {
+				matchSC = SC;
+				return false;
+			} else return true;
+		}
 	});
 	return matchSC;
 }
@@ -229797,8 +230112,10 @@ function resetKeysToDefault() {
 		ShortCutsTemp[SC] = {};
 		ShortCutsTemp[SC].cust = false;
 		const cell = root.querySelector("td[data-button='" + SC + "']");
-		if (cell) if (ShortCuts$1[SC].cust != ShortCutsTemp[SC].cust) cell.classList.add("changed");
-		else cell.classList.remove("changed");
+		if (cell) {
+			if (ShortCuts$1[SC].cust != ShortCutsTemp[SC].cust) cell.classList.add("changed");
+			else cell.classList.remove("changed");
+		}
 	});
 	updateKeyList();
 }
@@ -230197,10 +230514,12 @@ var init_Escape = __esmMin((() => {
 	* @return {boolean}
 	*/
 	Escape.onKeyDown = function onKeyDown(event) {
-		if (event.which === KEYS.ESCAPE || event.key === "Escape") if (this._host.style.display === "none") {
-			this._host.style.display = "";
-			this.focus();
-		} else this._host.style.display = "none";
+		if (event.which === KEYS.ESCAPE || event.key === "Escape") {
+			if (this._host.style.display === "none") {
+				this._host.style.display = "";
+				this.focus();
+			} else this._host.style.display = "none";
+		}
 	};
 	/**
 	* Show death menu (called when player dies)
@@ -230335,12 +230654,10 @@ var init_CheckAttendance = __esmMin((() => {
 	*/
 	CheckAttendance.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				if (this._host.style.display === "none") {
-					this._host.style.display = "";
-					this.focus();
-				} else this._host.style.display = "none";
-				break;
+			case "TOGGLE": if (this._host.style.display === "none") {
+				this._host.style.display = "";
+				this.focus();
+			} else this._host.style.display = "none";
 		}
 	};
 	/**
@@ -230382,7 +230699,7 @@ var init_CheckAttendance = __esmMin((() => {
 				const total_days_string = attendance_count >= 20 || already_requested ? `${attendance_count} Day attendance success` : `Click the item to claim day ${current_day} reward`;
 				const end_date = /* @__PURE__ */ new Date(`${end[1]}-${end[2]}-${end[3]}`);
 				const now_date = /* @__PURE__ */ new Date();
-				const remaining_days = Math.round(Math.abs((end_date.getTime() - now_date.getTime()) / (1e3 * 3600 * 24)));
+				const remaining_days = Math.round(Math.abs((end_date.getTime() - now_date.getTime()) / 864e5));
 				const totalDaysEl = root.querySelector(".total-days");
 				if (totalDaysEl) totalDaysEl.innerHTML = total_days_string;
 				const remainingEl = root.querySelector(".remaining-day-text");
@@ -230672,9 +230989,7 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 	};
 	Component.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				this.toggle();
-				break;
+			case "TOGGLE": this.toggle();
 		}
 		onResetChoice(this);
 	};
@@ -230689,10 +231004,8 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 			return;
 		}
 		root.querySelectorAll(".upgradable").forEach((el) => el.classList.remove("upgradable"));
-		let skillJobId = SessionStorage_default.Character.job;
-		const originalJobId = SessionStorage_default.Entity._job;
-		if (originalJobId && originalJobId !== SessionStorage_default.Character.job) skillJobId = originalJobId;
-		skillPosition = getSkillPosition(skillJobId);
+		const entity = SessionStorage_default.Entity;
+		skillPosition = getSkillPosition(entity ? entity._job || entity.job : 0);
 		createSkillDependencyTree();
 		for (let i = 0, count = _list.length; i < count; ++i) this.onUpdateSkill(_list[i].SKID, 0);
 		_list.length = 0;
@@ -230729,18 +231042,19 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 			Object.entries(items).forEach(([skid, pos]) => {
 				if (!_isNumeric(skid)) return;
 				const sk = SkillInfo[skid];
-				if (hasTabs) if (sk?.MaxLv) {
-					skillDependencyTree[skid] = {
-						dependency: [],
-						position: pos,
-						list,
-						MaxLv: sk.MaxLv
-					};
-					if (sk?.[needSkillListKey] !== void 0) sk[needSkillListKey].forEach((item) => {
-						skillDependencyTree[skid]["dependency"][item[0]] = item[1];
-					});
-				} else console.error("Something wrong with this skill: %d", skid);
-				else {
+				if (hasTabs) {
+					if (sk?.MaxLv) {
+						skillDependencyTree[skid] = {
+							dependency: [],
+							position: pos,
+							list,
+							MaxLv: sk.MaxLv
+						};
+						if (sk?.[needSkillListKey] !== void 0) sk[needSkillListKey].forEach((item) => {
+							skillDependencyTree[skid]["dependency"][item[0]] = item[1];
+						});
+					} else console.error("Something wrong with this skill: %d", skid);
+				} else {
 					skillDependencyTree[skid] = {
 						dependency: [],
 						position: pos,
@@ -231048,12 +231362,14 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 	Component.updateSkill = function updateSkill(skill) {
 		let target = getSkillById(skill.SKID);
 		const root = this.getRoot();
-		if (!target) if (readdSkillOnUpdate && root.querySelector(`.skill.id${skill.SKID}`)) {
-			_list.push(skill);
-			this.onUpdateSkill(skill.SKID, 0);
-			hasSkills[skill.SKID] = skill;
-			target = skill;
-		} else return;
+		if (!target) {
+			if (readdSkillOnUpdate && root.querySelector(`.skill.id${skill.SKID}`)) {
+				_list.push(skill);
+				this.onUpdateSkill(skill.SKID, 0);
+				hasSkills[skill.SKID] = skill;
+				target = skill;
+			} else return;
+		}
 		target.level = skill.level;
 		target.spcost = skill.spcost;
 		target.attackRange = skill.attackRange;
@@ -231358,19 +231674,19 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 	return UIManager.addComponent(Component);
 }
 var init_SkillListCommon = __esmMin((() => {
-	init_DBManager();
-	init_SkillInfo();
-	init_SkillTreeView();
-	init_SessionStorage();
+	init_Elements();
 	init_Client();
+	init_DBManager();
+	init_GUIComponent();
+	init_MouseEventHandler();
 	init_Preferences$1();
 	init_Renderer();
-	init_MouseEventHandler();
-	init_UIManager();
-	init_GUIComponent();
-	init_Elements();
-	init_SkillTargetSelection();
+	init_SessionStorage();
 	init_SkillDescription();
+	init_SkillInfo();
+	init_SkillTargetSelection();
+	init_SkillTreeView();
+	init_UIManager();
 }));
 //#endregion
 //#region src/UI/Components/SkillList/SkillList/SkillList.html?raw
@@ -231586,22 +231902,24 @@ function createQuest(config) {
 		_active_menu = "";
 		_questList = {};
 		const root = Quest.getRoot();
-		if (root) if (renewLayout) {
-			const activeList = root.querySelector("#active-quest-list");
-			if (activeList) activeList.style.display = "";
-			const inactiveList = root.querySelector("#inactive-quest-list");
-			if (inactiveList) inactiveList.style.display = "none";
-			const featureList = root.querySelector("#feature-quest-list");
-			if (featureList) featureList.style.display = "none";
-			const cooldownList = root.querySelector("#cooldown-quest-list");
-			if (cooldownList) cooldownList.style.display = "none";
-		} else {
-			const activeList = root.querySelector("#active-quest-list");
-			if (activeList) activeList.style.display = "none";
-			const inactiveList = root.querySelector("#inactive-quest-list");
-			if (inactiveList) inactiveList.style.display = "none";
-			const allList = root.querySelector("#all-quest-list");
-			if (allList) allList.style.display = "none";
+		if (root) {
+			if (renewLayout) {
+				const activeList = root.querySelector("#active-quest-list");
+				if (activeList) activeList.style.display = "";
+				const inactiveList = root.querySelector("#inactive-quest-list");
+				if (inactiveList) inactiveList.style.display = "none";
+				const featureList = root.querySelector("#feature-quest-list");
+				if (featureList) featureList.style.display = "none";
+				const cooldownList = root.querySelector("#cooldown-quest-list");
+				if (cooldownList) cooldownList.style.display = "none";
+			} else {
+				const activeList = root.querySelector("#active-quest-list");
+				if (activeList) activeList.style.display = "none";
+				const inactiveList = root.querySelector("#inactive-quest-list");
+				if (inactiveList) inactiveList.style.display = "none";
+				const allList = root.querySelector("#all-quest-list");
+				if (allList) allList.style.display = "none";
+			}
 		}
 		Quest.ClearQuestList();
 		questHelper.clearQuestDesc();
@@ -231623,13 +231941,11 @@ function createQuest(config) {
 	*/
 	Quest.onShortCut = function onShurtCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				if ((this._host ? getComputedStyle(this._host).display : "none") !== "none") this.ui.hide();
-				else {
-					this.ui.show();
-					this.focus();
-				}
-				break;
+			case "TOGGLE": if ((this._host ? getComputedStyle(this._host).display : "none") !== "none") this.ui.hide();
+			else {
+				this.ui.show();
+				this.focus();
+			}
 		}
 	};
 	/**
@@ -232741,10 +233057,12 @@ var init_Achievement$1 = __esmMin((() => {
 				});
 				let catName = "";
 				const majorObj = MAJOR_CATEGORIES.find((m) => m.id === this.currentMajor);
-				if (majorObj) if (this.currentMinor !== -1 && majorObj.minorCategories) {
-					const minorObj = majorObj.minorCategories.find((m) => m.id === this.currentMinor);
-					if (minorObj) catName = minorObj.name;
-				} else catName = majorObj.name;
+				if (majorObj) {
+					if (this.currentMinor !== -1 && majorObj.minorCategories) {
+						const minorObj = majorObj.minorCategories.find((m) => m.id === this.currentMinor);
+						if (minorObj) catName = minorObj.name;
+					} else catName = majorObj.name;
+				}
 				root.querySelector(".js-cat-name").textContent = catName;
 				root.querySelector(".js-cat-progress-text").textContent = `(${completed}/${total})`;
 				const catRatio = total > 0 ? completed / total * 100 : 0;
@@ -232894,8 +233212,10 @@ var init_Achievement$1 = __esmMin((() => {
 					const isClaimed = s && s.reward;
 					const d = /* @__PURE__ */ new Date(s.completed_at * 1e3);
 					dtStr = `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
-					if (hasReward) if (!isClaimed) rewardBoxBg = "achievement_re/list_rewardbox_not_receive.bmp";
-					else rewardBoxBg = "";
+					if (hasReward) {
+						if (!isClaimed) rewardBoxBg = "achievement_re/list_rewardbox_not_receive.bmp";
+						else rewardBoxBg = "";
+					}
 					item.innerHTML = `
 					<div class="icon" data-background="achievement_re/icon_${groupName}.bmp"></div>
 					<div class="title">${info.title || "Unknown"}</div>
@@ -232967,9 +233287,11 @@ var init_Achievement$1 = __esmMin((() => {
 				let rewardBoxBg = "";
 				const groupName = info.group ? info.group.toLowerCase() : "";
 				const isClaimed = s && s.reward;
-				if (info.reward && (Array.isArray(info.reward) ? info.reward.length > 0 : Object.keys(info.reward).length > 0)) if (!isCompleted) rewardBoxBg = "achievement_re/list_rewardbox_default.bmp";
-				else if (!isClaimed) rewardBoxBg = "achievement_re/list_rewardbox_not_receive.bmp";
-				else rewardBoxBg = "";
+				if (info.reward && (Array.isArray(info.reward) ? info.reward.length > 0 : Object.keys(info.reward).length > 0)) {
+					if (!isCompleted) rewardBoxBg = "achievement_re/list_rewardbox_default.bmp";
+					else if (!isClaimed) rewardBoxBg = "achievement_re/list_rewardbox_not_receive.bmp";
+					else rewardBoxBg = "";
+				}
 				if (isCompleted) {
 					const d = /* @__PURE__ */ new Date(s.completed_at * 1e3);
 					dtStr = `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
@@ -233198,9 +233520,11 @@ function updateGroupTotalPoints(groupId) {
 	reputeIds.forEach((reputeId) => {
 		totalPoints += Reputation.reputeState?.[reputeId] || 0;
 	});
-	if (indicator) if (totalPoints > 0) indicator.style.backgroundImage = `url(${indicator_blue})`;
-	else if (totalPoints < 0) indicator.style.backgroundImage = `url(${indicator_red})`;
-	else indicator.style.backgroundImage = `url(${indicator_empty})`;
+	if (indicator) {
+		if (totalPoints > 0) indicator.style.backgroundImage = `url(${indicator_blue})`;
+		else if (totalPoints < 0) indicator.style.backgroundImage = `url(${indicator_red})`;
+		else indicator.style.backgroundImage = `url(${indicator_empty})`;
+	}
 	if (pointsValue) pointsValue.textContent = `${totalPoints} P`;
 }
 /**
@@ -233664,9 +233988,7 @@ function createBasicInfo(config) {
 			case "achievment":
 				if (Configs.get("enableAchievements") && PacketVerManager_default.value >= 20150513) Achievement_default.toggle();
 				break;
-			case "repute":
-				Reputation_default.toggle();
-				break;
+			case "repute": Reputation_default.toggle();
 		}
 	}
 	/**
@@ -233780,9 +234102,7 @@ function createBasicInfo(config) {
 	*/
 	Component.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
-			case "EXTEND":
-				this.toggleMode();
-				break;
+			case "EXTEND": this.toggleMode();
 		}
 	};
 	/**
@@ -233898,8 +234218,9 @@ function createBasicInfo(config) {
 				});
 				break;
 			case "zeny": {
-				SessionStorage_default.zeny = val1;
-				const list = val1.toString().split("");
+				const zeny = val1 || 0;
+				SessionStorage_default.zeny = zeny;
+				const list = zeny.toString().split("");
 				const count = list.length;
 				let str = "";
 				for (let i = 0; i < count; i++) str = list[count - i - 1] + (i && i % 3 === 0 ? "," : "") + str;
@@ -233909,7 +234230,6 @@ function createBasicInfo(config) {
 				break;
 			}
 			case "job":
-				SessionStorage_default.Character.job = val1;
 				root.querySelectorAll(".job_value").forEach((el) => {
 					el.textContent = MonsterTable_default[val1];
 				});
@@ -233951,7 +234271,6 @@ function createBasicInfo(config) {
 			case "ap":
 				if (!hasApBar) break;
 				updateBar(root, type, val1, val2, Math.floor(val1 * 100 / val2) === 100 ? "red" : "blue");
-				break;
 		}
 	};
 	/**
@@ -234291,10 +234610,12 @@ function controlPhase$1(phase, shouldLoop, interval, callback) {
 			const container = _root$11().querySelector(".image-container");
 			if (container) container.style.backgroundImage = `url(${data})`;
 			currentImageIndex++;
-			if (currentImageIndex >= imageArray.length) if (shouldLoop) currentImageIndex = 0;
-			else {
-				if (callback && typeof callback === "function") callback();
-				return;
+			if (currentImageIndex >= imageArray.length) {
+				if (shouldLoop) currentImageIndex = 0;
+				else {
+					if (callback && typeof callback === "function") callback();
+					return;
+				}
 			}
 			Refine.imageLoopTimeout = setTimeout(showImages, interval);
 		});
@@ -234405,8 +234726,10 @@ function onPopulateMaterials$1() {
 		});
 		const count = item ? item.count : 0;
 		const countmsg = materialDiv.querySelector(`.item[data-index="${material.itemId}"] .mat_count`);
-		if (countmsg) if (count === 0) countmsg.innerHTML = `<span style="color: #ce1029;">${count}</span>/1`;
-		else countmsg.textContent = `${count}/1`;
+		if (countmsg) {
+			if (count === 0) countmsg.innerHTML = `<span style="color: #ce1029;">${count}</span>/1`;
+			else countmsg.textContent = `${count}/1`;
+		}
 		const iconEl = materialDiv.querySelector(".icon");
 		if (iconEl) iconEl.addEventListener("click", () => {
 			const clickedItemId = material.itemId;
@@ -234456,8 +234779,10 @@ function onPopulateMaterials$1() {
 		});
 		const bsbCountOuter = item ? item.count : 0;
 		const bsbcountmsg = bsbDiv.querySelector(`.item[data-index="${BSB_ITID}"] .mat_count`);
-		if (bsbcountmsg) if (bsbCountOuter === 0) bsbcountmsg.innerHTML = `<span style="color: #ce1029;">${bsbCountOuter}</span>/${blacksmithBlessing}`;
-		else bsbcountmsg.textContent = `${bsbCountOuter}/${blacksmithBlessing}`;
+		if (bsbcountmsg) {
+			if (bsbCountOuter === 0) bsbcountmsg.innerHTML = `<span style="color: #ce1029;">${bsbCountOuter}</span>/${blacksmithBlessing}`;
+			else bsbcountmsg.textContent = `${bsbCountOuter}/${blacksmithBlessing}`;
+		}
 		const bsbIcon = bsbDiv.querySelector(".icon");
 		if (bsbIcon) bsbIcon.addEventListener("click", () => {
 			const bsbInventoryItem = InventoryController.getUI().getItemById(BSB_ITID);
@@ -234659,9 +234984,7 @@ function showMessage$3(messageID, timeout, type) {
 		case "info":
 			messageClass = "blue";
 			break;
-		default:
-			messageClass = "red";
-			break;
+		default: messageClass = "red";
 	}
 	if (Refine.messageTimeOut) clearTimeout(Refine.messageTimeOut);
 	const infoMsg = root.querySelector(".info_msg");
@@ -234742,9 +235065,7 @@ function onAnimateResult(result, callback) {
 		case "fail":
 			runFailSequence();
 			break;
-		default:
-			if (callback) callback();
-			break;
+		default: if (callback) callback();
 	}
 }
 /**
@@ -234808,7 +235129,6 @@ function onUpdateRefineUI(result) {
 			ChatBox_default.addText(DB.getMessage(1537), ChatBox_default.TYPE.BLUE, ChatBox_default.FILTER.PUBLIC_LOG);
 			break;
 		}
-		default: break;
 	}
 	const refineTextCont = root.querySelector(".refine_text_cont");
 	if (refineTextCont) refineTextCont.style.display = "block";
@@ -234964,10 +235284,7 @@ function onBroadcastRefineResult(pkt) {
 			case 0:
 				messageID = 3272;
 				break;
-			case 1:
-				messageID = 3271;
-				break;
-			default: break;
+			case 1: messageID = 3271;
 		}
 		const message = DB.getMessage(messageID).replace("%s", pkt.charName).replace("%d", pkt.refineLevel).replace("%s", itemName);
 		ChatBox_default.addText(message, ChatBox_default.TYPE.ANNOUNCE, ChatBox_default.FILTER.PUBLIC_CHAT, "#FFB563");
@@ -235268,9 +235585,7 @@ var init_Refine = __esmMin((() => {
 				case 3:
 					onShowFailure(pkt.result);
 					break;
-				case 2:
-					onShowFailure(pkt.result);
-					break;
+				case 2: onShowFailure(pkt.result);
 			}
 		}
 	};
@@ -235364,11 +235679,13 @@ function controlPhase(phase, shouldLoop, interval, targetdiv, callback) {
 				target.style.visibility = "visible";
 			}
 			currentImageIndex++;
-			if (currentImageIndex >= imageArray.length) if (shouldLoop) currentImageIndex = 0;
-			else {
-				EnchantGrade.imageLoopTimeout[phase] = null;
-				if (callback && typeof callback === "function") callback();
-				return;
+			if (currentImageIndex >= imageArray.length) {
+				if (shouldLoop) currentImageIndex = 0;
+				else {
+					EnchantGrade.imageLoopTimeout[phase] = null;
+					if (callback && typeof callback === "function") callback();
+					return;
+				}
 			}
 			EnchantGrade.imageLoopTimeout[phase] = setTimeout(showImages, interval);
 		});
@@ -235718,12 +236035,9 @@ function onEnchantGradeResult(pkt) {
 						onRemoveItem();
 					});
 					break;
-				case 1:
-					playEffect$1(EffectConst_default.EF_NEW_FAILURE, 2e3, () => {
-						onRemoveItem();
-					});
-					break;
-				default: break;
+				case 1: playEffect$1(EffectConst_default.EF_NEW_FAILURE, 2e3, () => {
+					onRemoveItem();
+				});
 			}
 		});
 		const item = InventoryController.getUI().removeItem(pkt.index, 1);
@@ -235806,10 +236120,7 @@ function onBroadcastEnchantGradeResult(pkt) {
 			case 0:
 				messageID = 3719;
 				break;
-			case 1:
-				messageID = 3718;
-				break;
-			default: break;
+			case 1: messageID = 3718;
 		}
 		const message = DB.getMessage(messageID).replace("%s", pkt.char_name).replace("%s", GradeMapping[pkt.grade]).replace("%s", itemName);
 		ChatBox_default.addText(message, ChatBox_default.TYPE.ANNOUNCE, ChatBox_default.FILTER.PUBLIC_CHAT, "#FFB563");
@@ -236137,9 +236448,7 @@ function calculateAnimation(layer, keyIndex, result) {
 		case 3:
 			result.aniframe = (from.aniframe + to.delay * delta) % layer.texcnt;
 			break;
-		case 4:
-			result.aniframe = (from.aniframe - to.delay * delta) % layer.texcnt;
-			break;
+		case 4: result.aniframe = (from.aniframe - to.delay * delta) % layer.texcnt;
 	}
 	return true;
 }
@@ -237189,18 +237498,19 @@ function refreshActionContent() {
 						label
 					});
 				});
-				if (perfectList.length) if (EnchantState.selectedPerfect && slotData.perfect[EnchantState.selectedPerfect]) {
-					if (select) select.value = EnchantState.selectedPerfect;
-					const selected = slotData.perfect[EnchantState.selectedPerfect];
-					renderCosts(1e5, selected.zeny, selected.materials);
-					actionReady = availability.perfect && canAffordCost(selected.zeny, selected.materials);
-					selectedKey = EnchantState.selectedPerfect;
-				} else {
-					EnchantState.selectedPerfect = null;
-					if (select) select.selectedIndex = -1;
-					renderCosts(null, 0, []);
-				}
-				else renderCosts(null, 0, []);
+				if (perfectList.length) {
+					if (EnchantState.selectedPerfect && slotData.perfect[EnchantState.selectedPerfect]) {
+						if (select) select.value = EnchantState.selectedPerfect;
+						const selected = slotData.perfect[EnchantState.selectedPerfect];
+						renderCosts(1e5, selected.zeny, selected.materials);
+						actionReady = availability.perfect && canAffordCost(selected.zeny, selected.materials);
+						selectedKey = EnchantState.selectedPerfect;
+					} else {
+						EnchantState.selectedPerfect = null;
+						if (select) select.selectedIndex = -1;
+						renderCosts(null, 0, []);
+					}
+				} else renderCosts(null, 0, []);
 			} else renderCosts(null, 0, []);
 			listEntries = perfectEntries;
 		}
@@ -237900,7 +238210,7 @@ function onClickSend(e) {
 		return;
 	}
 	const receiver = WriteRodex.receiver;
-	const sender = SessionStorage_default.Character.name;
+	const sender = SessionStorage_default.Entity.display.name;
 	let zeny = parseInt(root.querySelector(".value").value, 10);
 	zeny = isNaN(zeny) ? 0 : zeny;
 	zeny = zeny < 0 ? 0 : zeny;
@@ -237955,19 +238265,13 @@ function onDrop$10(event) {
 		InputBox_default.onSubmitRequest = function OnSubmitRequest(count) {
 			InputBox_default.remove();
 			switch (data.from) {
-				case "Inventory":
-					InventoryController.reqMoveItemToWriteRodex(item.index, parseInt(count, 10));
-					break;
-				default:
+				case "Inventory": InventoryController.reqMoveItemToWriteRodex(item.index, parseInt(count, 10));
 			}
 		};
 		return;
 	}
 	switch (data.from) {
-		case "Inventory":
-			InventoryController.reqMoveItemToWriteRodex(item.index, 1);
-			break;
-		default:
+		case "Inventory": InventoryController.reqMoveItemToWriteRodex(item.index, 1);
 	}
 }
 /**
@@ -238458,19 +238762,17 @@ function createInventory(config) {
 	*/
 	Component.onShortCut = function onShurtCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				if (this._host.style.display === "none") {
-					this._host.style.display = "";
-					this.focus();
-				} else {
-					this._host.dispatchEvent(new Event("mouseleave"));
-					this.clearNewItems();
-					Component.getRoot().querySelectorAll(".new_item").forEach((el) => {
-						el.style.backgroundImage = "";
-					});
-					this._host.style.display = "none";
-				}
-				break;
+			case "TOGGLE": if (this._host.style.display === "none") {
+				this._host.style.display = "";
+				this.focus();
+			} else {
+				this._host.dispatchEvent(new Event("mouseleave"));
+				this.clearNewItems();
+				Component.getRoot().querySelectorAll(".new_item").forEach((el) => {
+					el.style.backgroundImage = "";
+				});
+				this._host.style.display = "none";
+			}
 		}
 		const basicInfoUI = BasicInfoController.getUI();
 		if (basicInfoUI._host) {
@@ -238807,9 +239109,7 @@ function createInventory(config) {
 				}
 			}
 			case ItemType_default.PETARMOR:
-			case ItemType_default.AMMO:
-				if (item.IsIdentified && !item.IsDamaged) Component.onEquipItem(item.index, item.location);
-				break;
+			case ItemType_default.AMMO: if (item.IsIdentified && !item.IsDamaged) Component.onEquipItem(item.index, item.location);
 		}
 	};
 	/**
@@ -238936,9 +239236,7 @@ function createInventory(config) {
 					case "Mail":
 						Mail_default.reqRemoveItem(item.index, parseInt(count, 10));
 						break;
-					case "WriteRodex":
-						WriteRodex_default.requestRemoveItemRodex(item.index, parseInt(count, 10));
-						break;
+					case "WriteRodex": WriteRodex_default.requestRemoveItemRodex(item.index, parseInt(count, 10));
 				}
 			};
 			return false;
@@ -238953,9 +239251,7 @@ function createInventory(config) {
 			case "Mail":
 				Mail_default.reqRemoveItem(item.index, 1);
 				break;
-			case "WriteRodex":
-				WriteRodex_default.requestRemoveItemRodex(item.index, 1);
-				break;
+			case "WriteRodex": WriteRodex_default.requestRemoveItemRodex(item.index, 1);
 		}
 		return false;
 	}
@@ -239136,10 +239432,7 @@ function createInventory(config) {
 				case ItemType_default.ARMOR:
 				case ItemType_default.SHADOWGEAR:
 				case ItemType_default.PETEGG:
-				case ItemType_default.PETARMOR:
-					favoriteval = 4;
-					break;
-				default: break;
+				case ItemType_default.PETARMOR: favoriteval = 4;
 			}
 			item.PlaceETCTab = favoriteval;
 		} else item.PlaceETCTab = newValue;
@@ -239290,10 +239583,7 @@ function createInventory(config) {
 				case 3:
 					ChatBox_default.addText(DB.getMessage(3564), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 					break;
-				case 4:
-					ChatBox_default.addText(DB.getMessage(3565), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-					break;
-				default: break;
+				case 4: ChatBox_default.addText(DB.getMessage(3565), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			}
 		};
 		function InventoryExpandReq() {
@@ -239318,10 +239608,7 @@ function createInventory(config) {
 				case 3:
 					ChatBox_default.addText(DB.getMessage(3564), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 					break;
-				case 4:
-					ChatBox_default.addText(DB.getMessage(3565), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-					break;
-				default: break;
+				case 4: ChatBox_default.addText(DB.getMessage(3565), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			}
 		};
 		Network.hookPacket(PACKET.ZC.ACK_OPEN_MSGBOX_EXTEND_BODYITEM_SIZE, onRequestInventoryExpandResult);
@@ -240341,8 +240628,10 @@ function onResize$6() {
 		CartItems.resize(w, h);
 		lastWidth = w;
 		lastHeight = h;
-		if (content && hideEl) if (content.offsetHeight === content.scrollHeight) hideEl.style.display = "block";
-		else hideEl.style.display = "none";
+		if (content && hideEl) {
+			if (content.offsetHeight === content.scrollHeight) hideEl.style.display = "block";
+			else hideEl.style.display = "none";
+		}
 	}
 	const _Interval = setInterval(resizing, 30);
 	const onMouseUp = (event) => {
@@ -240392,9 +240681,7 @@ function onDrop$9(event) {
 				case "Storage":
 					StorageController.reqMoveItemToCart(item.index, parseInt(count, 10));
 					break;
-				case "Inventory":
-					InventoryController.getUI().reqMoveItemToCart(item.index, parseInt(count, 10));
-					break;
+				case "Inventory": InventoryController.getUI().reqMoveItemToCart(item.index, parseInt(count, 10));
 			}
 		};
 		return false;
@@ -240403,9 +240690,7 @@ function onDrop$9(event) {
 		case "Storage":
 			StorageController.reqMoveItemToCart(item.index, 1);
 			break;
-		case "Inventory":
-			InventoryController.getUI().reqMoveItemToCart(item.index, 1);
-			break;
+		case "Inventory": InventoryController.getUI().reqMoveItemToCart(item.index, 1);
 	}
 	return false;
 }
@@ -240656,15 +240941,13 @@ var init_CartItems = __esmMin((() => {
 	CartItems.onShortCut = function onShurtCut(key) {
 		if (SessionStorage_default.Entity.hasCart === false) return;
 		switch (key.cmd) {
-			case "TOGGLE":
-				if (this._host.style.display === "none") {
-					this._host.style.display = "";
-					this.focus();
-				} else {
-					this._host.style.display = "none";
-					this._host.dispatchEvent(new Event("mouseleave"));
-				}
-				break;
+			case "TOGGLE": if (this._host.style.display === "none") {
+				this._host.style.display = "";
+				this.focus();
+			} else {
+				this._host.style.display = "none";
+				this._host.dispatchEvent(new Event("mouseleave"));
+			}
 		}
 	};
 	CartItems.onKeyDown = function onKeyDown(event) {
@@ -240760,8 +241043,10 @@ var init_CartItems = __esmMin((() => {
 		if (!content) return true;
 		content.insertAdjacentHTML("beforeend", `<div class="item" data-index="${item.index}" draggable="true"><div class="icon"></div><div class="grade"></div><div class="amount"><span class="count">${item.count || 1}</span></div></div>`);
 		const hideEl = root.querySelector(".hide");
-		if (hideEl) if (content.offsetHeight < content.scrollHeight) hideEl.style.display = "none";
-		else hideEl.style.display = "block";
+		if (hideEl) {
+			if (content.offsetHeight < content.scrollHeight) hideEl.style.display = "none";
+			else hideEl.style.display = "block";
+		}
 		Client.loadFile(DB.INTERFACE_PATH + "item/" + (item.IsIdentified ? it.identifiedResourceName : it.unidentifiedResourceName) + ".bmp", (data) => {
 			const icon = root.querySelector(`.item[data-index="${item.index}"] .icon`);
 			if (icon) icon.style.backgroundImage = `url(${data})`;
@@ -241064,31 +241349,33 @@ function createEquipment({ name, htmlText, cssText, entityRender = true, enchant
 				const switchBtn = root.querySelector(".switch_equip");
 				if (switchBtn) switchBtn.style.display = "";
 			}
-			if (costumeConfig) if (currentTabId !== "general") {
-				const showEquipEl = root.querySelector(".show_equip");
-				if (showEquipEl) showEquipEl.style.display = "none";
-				const showEquipSpan = showEquipEl ? showEquipEl.nextElementSibling : null;
-				if (showEquipSpan && showEquipSpan.tagName === "SPAN") showEquipSpan.style.display = "none";
-				if (currentTabId === "costume") {
-					const costumeEl = root.querySelector(".show_costume");
-					if (costumeEl) costumeEl.style.display = "";
-					const costumeSpan = costumeEl ? costumeEl.nextElementSibling : null;
-					if (costumeSpan && costumeSpan.tagName === "SPAN") costumeSpan.style.display = "";
+			if (costumeConfig) {
+				if (currentTabId !== "general") {
+					const showEquipEl = root.querySelector(".show_equip");
+					if (showEquipEl) showEquipEl.style.display = "none";
+					const showEquipSpan = showEquipEl ? showEquipEl.nextElementSibling : null;
+					if (showEquipSpan && showEquipSpan.tagName === "SPAN") showEquipSpan.style.display = "none";
+					if (currentTabId === "costume") {
+						const costumeEl = root.querySelector(".show_costume");
+						if (costumeEl) costumeEl.style.display = "";
+						const costumeSpan = costumeEl ? costumeEl.nextElementSibling : null;
+						if (costumeSpan && costumeSpan.tagName === "SPAN") costumeSpan.style.display = "";
+					} else {
+						const costumeEl = root.querySelector(".show_costume");
+						if (costumeEl) costumeEl.style.display = "none";
+						const costumeSpan = costumeEl ? costumeEl.nextElementSibling : null;
+						if (costumeSpan && costumeSpan.tagName === "SPAN") costumeSpan.style.display = "none";
+					}
 				} else {
+					const showEquipEl = root.querySelector(".show_equip");
+					if (showEquipEl) showEquipEl.style.display = "";
+					const showEquipSpan = showEquipEl ? showEquipEl.nextElementSibling : null;
+					if (showEquipSpan && showEquipSpan.tagName === "SPAN") showEquipSpan.style.display = "";
 					const costumeEl = root.querySelector(".show_costume");
 					if (costumeEl) costumeEl.style.display = "none";
 					const costumeSpan = costumeEl ? costumeEl.nextElementSibling : null;
 					if (costumeSpan && costumeSpan.tagName === "SPAN") costumeSpan.style.display = "none";
 				}
-			} else {
-				const showEquipEl = root.querySelector(".show_equip");
-				if (showEquipEl) showEquipEl.style.display = "";
-				const showEquipSpan = showEquipEl ? showEquipEl.nextElementSibling : null;
-				if (showEquipSpan && showEquipSpan.tagName === "SPAN") showEquipSpan.style.display = "";
-				const costumeEl = root.querySelector(".show_costume");
-				if (costumeEl) costumeEl.style.display = "none";
-				const costumeSpan = costumeEl ? costumeEl.nextElementSibling : null;
-				if (costumeSpan && costumeSpan.tagName === "SPAN") costumeSpan.style.display = "none";
 			}
 		}
 		return false;
@@ -241113,11 +241400,13 @@ function createEquipment({ name, htmlText, cssText, entityRender = true, enchant
 			const panel = Component.getRoot().querySelector(".panel");
 			if (panel) panel.style.display = "none";
 		}
-		if (UIVersionManager.getEquipmentVersion() > 0) if (_preferences.stats && _preferences.show) WinStatsController.getUI().embed(Component._host);
-		else Client.loadFile(DB.INTERFACE_PATH + "basic_interface/viewon.bmp", (data) => {
-			const btn = Component.getRoot().querySelector(".view_status");
-			if (btn) btn.style.backgroundImage = `url(${data})`;
-		});
+		if (UIVersionManager.getEquipmentVersion() > 0) {
+			if (_preferences.stats && _preferences.show) WinStatsController.getUI().embed(Component._host);
+			else Client.loadFile(DB.INTERFACE_PATH + "basic_interface/viewon.bmp", (data) => {
+				const btn = Component.getRoot().querySelector(".view_status");
+				if (btn) btn.style.backgroundImage = `url(${data})`;
+			});
+		}
 		if (Component.getRoot().querySelector("canvas") && this._host.style.display !== "none") Renderer.render(renderCharacter);
 		if (switchEquip) {
 			SwitchEquip_default.append(switchappend);
@@ -241162,9 +241451,7 @@ function createEquipment({ name, htmlText, cssText, entityRender = true, enchant
 	};
 	Component.onShortCut = function onShurtCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				this.toggle();
-				break;
+			case "TOGGLE": this.toggle();
 		}
 	};
 	Component.setEquipConfig = function setEquipConfig(on) {
@@ -241433,11 +241720,13 @@ function createEquipment({ name, htmlText, cssText, entityRender = true, enchant
 	function onEquipmentInfo(event) {
 		const index = parseInt(this.getAttribute("data-index"), 10);
 		const item = _list[index];
-		if (item) if (ItemInfo_default.uid === item.ITID) ItemInfo_default.remove();
-		else {
-			ItemInfo_default.append();
-			ItemInfo_default.uid = item.ITID;
-			ItemInfo_default.setItem(item);
+		if (item) {
+			if (ItemInfo_default.uid === item.ITID) ItemInfo_default.remove();
+			else {
+				ItemInfo_default.append();
+				ItemInfo_default.uid = item.ITID;
+				ItemInfo_default.setItem(item);
+			}
 		}
 		event.stopImmediatePropagation();
 		return false;
@@ -241902,9 +242191,7 @@ function addEvent(item) {
 			});
 			break;
 		}
-		default:
-			if (viewBtn) viewBtn.style.display = "none";
-			break;
+		default: if (viewBtn) viewBtn.style.display = "none";
 	}
 }
 function updatePreviewButton(item) {
@@ -242262,14 +242549,10 @@ var init_ItemInfo = __esmMin((() => {
 			switch (item.slot["card1"]) {
 				case 255:
 				case 254:
-				case 65280:
-					hideslots = true;
-					break;
+				case 65280: hideslots = true;
 			}
 			switch (item.slot["card4"]) {
-				case 1:
-					hideslots = true;
-					break;
+				case 1: hideslots = true;
 			}
 		}
 		const cardListParent = cardList ? cardList.parentElement : null;
@@ -242291,9 +242574,7 @@ var init_ItemInfo = __esmMin((() => {
 				if (!item.IsIdentified && cardListParent) cardListParent.style.display = "none";
 				break;
 			}
-			case ItemType_default.PETEGG:
-				if (cardListParent) cardListParent.style.display = "none";
-				break;
+			case ItemType_default.PETEGG: if (cardListParent) cardListParent.style.display = "none";
 		}
 		if (descInner) resize$3(descInner.offsetHeight + 45);
 	};
@@ -242743,9 +243024,7 @@ var init_ChatRoomCreate = __esmMin((() => {
 	*/
 	ChatRoomCreate.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				ChatRoomCreate.toggle();
-				break;
+			case "TOGGLE": ChatRoomCreate.toggle();
 		}
 	};
 	ChatRoomCreate.toggle = function toggle() {
@@ -243155,9 +243434,7 @@ function onPartyCreate(pkt) {
 		case 2:
 			ChatBox_default.addText(DB.getMessage(79), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PARTY_SETUP);
 			break;
-		case 3:
-			ChatBox_default.addText(DB.getMessage(1387), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PARTY_SETUP);
-			break;
+		case 3: ChatBox_default.addText(DB.getMessage(1387), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PARTY_SETUP);
 	}
 }
 /**
@@ -243330,9 +243607,7 @@ function onPartyInvitationAnswer(pkt) {
 		case 8:
 			id = 1388;
 			break;
-		case 9:
-			id = 1871;
-			break;
+		case 9: id = 1871;
 	}
 	ChatBox_default.addText(DB.getMessage(id).replace("%s", pkt.characterName), color, ChatBox_default.FILTER.PARTY_SETUP);
 }
@@ -244365,10 +244640,12 @@ function onGuildAccess(pkt) {
 * @param {object} pkt - PACKET.ZC.UPDATE_GDID
 */
 function onGuildOwnInfo(pkt) {
+	if (pkt.GDID === void 0) return;
 	GuildEngine.guild_id = pkt.GDID;
 	SessionStorage_default.hasGuild = true;
 	SessionStorage_default.guildRight = pkt.right;
 	SessionStorage_default.isGuildMaster = !!pkt.isMaster;
+	if (pkt.GName) SessionStorage_default.guildName = pkt.GName;
 	SessionStorage_default.Entity.GUID = pkt.GDID;
 	SessionStorage_default.Entity.GEmblemVer = pkt.emblemVersion;
 	if (pkt.GDID && pkt.emblemVersion) GuildEngine.requestGuildEmblem(pkt.GDID, pkt.emblemVersion, (image, gif) => {
@@ -244462,6 +244739,10 @@ function onGuildExpelList(pkt) {
 * @param {object} pkt - PACKET.ZC.RESULT_MAKE_GUILD
 */
 function onGuildCreationResult(pkt) {
+	const createFailed = (message) => {
+		ChatBox_default.addText(message, ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
+		UIManager.showMessageBox(message, "ok");
+	};
 	switch (pkt.result) {
 		case 0:
 			SessionStorage_default.hasGuild = true;
@@ -244469,14 +244750,12 @@ function onGuildCreationResult(pkt) {
 			Guild_default.show();
 			break;
 		case 1:
-			ChatBox_default.addText(DB.getMessage(375), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
+			createFailed(DB.getMessage(375, "You are already in a Guild."));
 			break;
 		case 2:
-			ChatBox_default.addText(DB.getMessage(376), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
+			createFailed(DB.getMessage(376, "That Guild Name already exists."));
 			break;
-		case 3:
-			ChatBox_default.addText(DB.getMessage(405), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
-			break;
+		case 3: createFailed(DB.getMessage(405, "You need the necessary item to create a Guild."));
 	}
 }
 /**
@@ -244485,18 +244764,27 @@ function onGuildCreationResult(pkt) {
 * @param {object} pkt - PACKET.ZC.ACK_DISORGANIZE_GUILD_RESULT
 */
 function onGuildDestroy(pkt) {
+	const fail = (message) => {
+		ChatBox_default.addText(message, ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
+		UIManager.showMessageBox(message, "ok", () => {
+			GuildCompanion_default.closeDisband();
+		});
+	};
 	switch (pkt.reason) {
 		case 0:
+			GuildCompanion_default.closeDisband();
 			Guild_default.hide();
 			SessionStorage_default.hasGuild = false;
+			SessionStorage_default.guildName = "";
+			SessionStorage_default.isGuildMaster = false;
+			SessionStorage_default.guildRight = 0;
+			SessionStorage_default.Entity.GUID = 0;
 			ChatBox_default.addText(DB.getMessage(400), ChatBox_default.TYPE.BLUE, ChatBox_default.FILTER.GUILD);
 			break;
 		case 1:
-			ChatBox_default.addText(DB.getMessage(401), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
+			fail(DB.getMessage(401, "You have failed to disband the guild."));
 			break;
-		case 2:
-			ChatBox_default.addText(DB.getMessage(402), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
-			break;
+		case 2: fail(DB.getMessage(402, "There are still members in the guild."));
 	}
 }
 /**
@@ -244532,9 +244820,7 @@ function onGuildInviteResult(pkt) {
 		case 2:
 			ChatBox_default.addText(DB.getMessage(380), ChatBox_default.TYPE.BLUE, ChatBox_default.FILTER.GUILD);
 			break;
-		case 3:
-			ChatBox_default.addText(DB.getMessage(381), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
-			break;
+		case 3: ChatBox_default.addText(DB.getMessage(381), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
 	}
 }
 /**
@@ -244556,6 +244842,7 @@ function onGuildMemberExpulsion(pkt) {
 	if (pkt.charName === SessionStorage_default.Entity.display.name) {
 		Guild_default.hide();
 		SessionStorage_default.hasGuild = false;
+		SessionStorage_default.guildName = "";
 		SessionStorage_default.isGuildMaster = false;
 		SessionStorage_default.guildRight = 0;
 		SessionStorage_default.Entity.GUID = 0;
@@ -244572,6 +244859,7 @@ function onGuildMemberLeave(pkt) {
 	if (pkt.charName === SessionStorage_default.Entity.display.name) {
 		Guild_default.hide();
 		SessionStorage_default.hasGuild = false;
+		SessionStorage_default.guildName = "";
 		SessionStorage_default.isGuildMaster = false;
 		SessionStorage_default.guildRight = 0;
 		SessionStorage_default.Entity.GUID = 0;
@@ -244632,9 +244920,7 @@ function onGuildAllianceResult(pkt) {
 		case 4:
 			ChatBox_default.addText(DB.getMessage(398), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
 			break;
-		case 5:
-			ChatBox_default.addText(DB.getMessage(1717), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
-			break;
+		case 5: ChatBox_default.addText(DB.getMessage(1717), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
 	}
 }
 /**
@@ -244653,9 +244939,7 @@ function onGuildHostilityResult(pkt) {
 		case 2:
 			ChatBox_default.addText(DB.getMessage(497), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
 			break;
-		case 3:
-			ChatBox_default.addText(DB.getMessage(1718), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
-			break;
+		case 3: ChatBox_default.addText(DB.getMessage(1718), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.GUILD);
 	}
 }
 function onGuildCastleInfo(pkt) {}
@@ -244672,6 +244956,7 @@ var init_Guild = __esmMin((() => {
 	init_EntityManager();
 	init_ChatBox();
 	init_Guild$1();
+	init_GuildCompanion();
 	init_UIManager();
 	init_Configs();
 	init_MiniMap();
@@ -244706,6 +244991,7 @@ var init_Guild = __esmMin((() => {
 			Network.hookPacket(PACKET.ZC.ACK_GUILD_MENUINTERFACE, onGuildAccess);
 			Network.hookPacket(PACKET.ZC.RESULT_MAKE_GUILD, onGuildCreationResult);
 			Network.hookPacket(PACKET.ZC.UPDATE_GDID, onGuildOwnInfo);
+			Network.hookPacket(PACKET.ZC.UPDATE_GDID2, onGuildOwnInfo);
 			Network.hookPacket(PACKET.ZC.BAN_LIST, onGuildExpelList);
 			Network.hookPacket(PACKET.ZC.ACK_DISORGANIZE_GUILD_RESULT, onGuildDestroy);
 			Network.hookPacket(PACKET.ZC.REQ_JOIN_GUILD, onGuildInviteRequest);
@@ -244730,6 +245016,10 @@ var init_Guild = __esmMin((() => {
 			Guild_default.onRequestMemberInfo = GuildEngine.requestMemberInfo;
 			Guild_default.onRequestDeleteRelation = GuildEngine.requestDeleteRelatedGuild;
 			Guild_default.onRequestAccess = GuildEngine.requestAccess;
+			Guild_default.onRequestCreateGuild = GuildEngine.createGuild;
+			GuildCompanion_default.onRequestCreateGuild = GuildEngine.createGuild;
+			GuildCompanion_default.onRequestBreakGuild = GuildEngine.breakGuild;
+			Guild_default.onRequestBreakGuild = GuildEngine.breakGuild;
 			Guild_default.onRequestGuildEmblem = GuildEngine.requestGuildEmblem;
 			Guild_default.onSendEmblem = GuildEngine.sendEmblem;
 		}
@@ -245055,7 +245345,7 @@ var init_Guild = __esmMin((() => {
 		}
 	};
 	onGuildEmblem = (function onGuildEmblemClosure() {
-		const data = new Uint8Array(2 * 1024);
+		const data = /* @__PURE__ */ new Uint8Array(2048);
 		return function(pkt) {
 			if (!_emblems[pkt.GDID]) _emblems[pkt.GDID] = {
 				version: -1,
@@ -245169,26 +245459,26 @@ var init_AIDriver = __esmMin((() => {
 					return res[1], res[2]
 				end
 				return res
-			end	
-			function GetMsg(id)  
-				local res = GetMsgJS(id)  
-				local result = {}  
-				local i = 0  
-				while res[i] ~= nil do  
-					result[i + 1] = res[i]  
-					i = i + 1  
-				end  
-				return result  
-			end  
-			function GetResMsg(id)  
-				local res = GetResMsgJS(id)  
-				local result = {}  
-				local i = 0  
-				while res[i] ~= nil do  
-					result[i + 1] = res[i]  
-					i = i + 1  
-				end  
-				return result  
+			end
+			function GetMsg(id)
+				local res = GetMsgJS(id)
+				local result = {}
+				local i = 0
+				while res[i] ~= nil do
+					result[i + 1] = res[i]
+					i = i + 1
+				end
+				return result
+			end
+			function GetResMsg(id)
+				local res = GetResMsgJS(id)
+				local result = {}
+				local i = 0
+				while res[i] ~= nil do
+					result[i + 1] = res[i]
+					i = i + 1
+				end
+				return result
 			end
 		`);
 				ctx.log = (logMessage) => {
@@ -245492,9 +245782,10 @@ var init_AIDriver = __esmMin((() => {
 			try {
 				if (!AIDriver.ready) return;
 				let lua;
-				if (homunculus) if (SessionStorage_default.homCustomAI) lua = AIDriver.HO_AI;
-				else lua = AIDriver.default_HO_AI;
-				else if (SessionStorage_default.merCustomAI) lua = AIDriver.MER_AI;
+				if (homunculus) {
+					if (SessionStorage_default.homCustomAI) lua = AIDriver.HO_AI;
+					else lua = AIDriver.default_HO_AI;
+				} else if (SessionStorage_default.merCustomAI) lua = AIDriver.MER_AI;
 				else lua = AIDriver.default_MER_AI;
 				lua.doStringSync(code);
 			} catch (e) {
@@ -245559,7 +245850,7 @@ var init_HomunInformations = __esmMin((() => {
 	init_Elements();
 	init_HomunInformations$2();
 	init_HomunInformations$1();
-	autoFeedIntervalMs = 1e3 * 60 * 1;
+	autoFeedIntervalMs = 6e4;
 	autoFeedPercent = 30;
 	HomunInformations = new GUIComponent("HomunInformations", HomunInformations_default$1);
 	HomunInformations.render = () => HomunInformations_default$2;
@@ -245618,10 +245909,12 @@ var init_HomunInformations = __esmMin((() => {
 			const el = root.querySelector(".homun_auto_feed");
 			if (el) el.style.backgroundImage = `url(${data})`;
 		});
-		if (PacketVerManager_default.value < 20170920) if (Configs.get("enableHomunAutoFeed", false)) HomunInformations.startAutoFeed();
-		else {
-			const feeding = root.querySelector(".feeding");
-			if (feeding) feeding.style.display = "none";
+		if (PacketVerManager_default.value < 20170920) {
+			if (Configs.get("enableHomunAutoFeed", false)) HomunInformations.startAutoFeed();
+			else {
+				const feeding = root.querySelector(".feeding");
+				if (feeding) feeding.style.display = "none";
+			}
 		}
 		this._host.style.top = `${Math.min(Math.max(0, _preferences$23.y), Renderer.height - this._host.getBoundingClientRect().height)}px`;
 		this._host.style.left = `${Math.min(Math.max(0, _preferences$23.x), Renderer.width - this._host.getBoundingClientRect().width)}px`;
@@ -245653,21 +245946,20 @@ var init_HomunInformations = __esmMin((() => {
 	HomunInformations.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
 			case "TOGGLE":
-				if (SessionStorage_default.homunId) if (this._host.style.display === "none") {
-					this._host.style.display = "";
-					this.focus();
+				if (SessionStorage_default.homunId) {
+					if (this._host.style.display === "none") {
+						this._host.style.display = "";
+						this.focus();
+					} else {
+						this._host.style.display = "none";
+						SkillListMH_default.homunculus.ui.hide();
+					}
 				} else {
-					this._host.style.display = "none";
-					SkillListMH_default.homunculus.ui.hide();
-				}
-				else {
 					SkillListMH_default.homunculus.ui.hide();
 					this._host.style.display = "none";
 				}
 				break;
-			case "AGGRESSIVE":
-				this.toggleAggressive();
-				break;
+			case "AGGRESSIVE": this.toggleAggressive();
 		}
 	};
 	/**
@@ -245833,12 +246125,11 @@ var init_HomunInformations = __esmMin((() => {
 		const canvas = root.querySelector(".block2 canvas.life.title_exp");
 		if (!canvas) return;
 		const ctx = canvas.getContext("2d");
-		const width = 60, height = 5;
 		const exp_per = exp / maxEXP;
 		ctx.fillStyle = "#424242";
-		ctx.fillRect(1, 1, width - 2, height - 2);
+		ctx.fillRect(1, 1, 58, 3);
 		ctx.fillStyle = "#205cc3";
-		ctx.fillRect(1, 1, Math.round((width - 2) * exp_per), 3);
+		ctx.fillRect(1, 1, Math.round(58 * exp_per), 3);
 		const expEl = root.querySelector(".exp");
 		if (expEl) expEl.textContent = `${exp}/${maxEXP}`;
 	};
@@ -245853,12 +246144,11 @@ var init_HomunInformations = __esmMin((() => {
 		const canvas = root.querySelector(".block2 canvas.life.title_hunger");
 		if (!canvas) return;
 		const ctx = canvas.getContext("2d");
-		const width = 60, height = 5;
 		const hunger_per = val / 100;
 		ctx.fillStyle = "#424242";
-		ctx.fillRect(1, 1, width - 2, height - 2);
+		ctx.fillRect(1, 1, 58, 3);
 		ctx.fillStyle = hunger_per < .25 ? "#ff1e00" : "#205cc3";
-		ctx.fillRect(1, 1, Math.round((width - 2) * hunger_per), 3);
+		ctx.fillRect(1, 1, Math.round(58 * hunger_per), 3);
 		const hungerEl = root.querySelector(".hunger");
 		if (hungerEl) hungerEl.textContent = `${val}/100`;
 	};
@@ -246001,21 +246291,20 @@ var init_MercenaryInformations = __esmMin((() => {
 	MercenaryInformations.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
 			case "TOGGLE":
-				if (SessionStorage_default.mercId) if (this._host.style.display === "none") {
-					this._host.style.display = "";
-					this.focus();
+				if (SessionStorage_default.mercId) {
+					if (this._host.style.display === "none") {
+						this._host.style.display = "";
+						this.focus();
+					} else {
+						this._host.style.display = "none";
+						SkillListMH_default.mercenary.ui.hide();
+					}
 				} else {
-					this._host.style.display = "none";
-					SkillListMH_default.mercenary.ui.hide();
-				}
-				else {
 					SkillListMH_default.mercenary.ui.hide();
 					this._host.style.display = "none";
 				}
 				break;
-			case "AGGRESSIVE":
-				this.toggleAggressive();
-				break;
+			case "AGGRESSIVE": this.toggleAggressive();
 		}
 	};
 	/**
@@ -246055,11 +246344,10 @@ var init_MercenaryInformations = __esmMin((() => {
 		const canvas = root.querySelector("canvas.life.title_timeleft");
 		if (canvas) {
 			const ctx = canvas.getContext("2d");
-			const width = 60, height = 5;
 			ctx.fillStyle = "#424242";
-			ctx.fillRect(1, 1, width - 2, height - 2);
+			ctx.fillRect(1, 1, 58, 3);
 			ctx.fillStyle = time_per < .25 ? "#ff1e00" : "#205cc3";
-			ctx.fillRect(1, 1, Math.round((width - 2) * time_per), 3);
+			ctx.fillRect(1, 1, Math.round(58 * time_per), 3);
 		}
 	};
 	/**
@@ -246078,12 +246366,11 @@ var init_MercenaryInformations = __esmMin((() => {
 		const canvas = root.querySelector("canvas.life.title_kills");
 		if (canvas) {
 			const ctx = canvas.getContext("2d");
-			const width = 60, height = 5;
 			const kills_per = kills % 50 / 50;
 			ctx.fillStyle = "#424242";
-			ctx.fillRect(1, 1, width - 2, height - 2);
+			ctx.fillRect(1, 1, 58, 3);
 			ctx.fillStyle = "#205cc3";
-			ctx.fillRect(1, 1, Math.round((width - 2) * kills_per), 3);
+			ctx.fillRect(1, 1, Math.round(58 * kills_per), 3);
 		}
 	};
 	/**
@@ -246569,7 +246856,7 @@ function renderLayer$2(layer, spr, pal, sizeScale, pos, alpha) {
 	SpriteRenderer.image.texture = frame.texture;
 	SpriteRenderer.render(false);
 }
-var RAG_TICK_MS$2, FADEOUT_TAIL_MS$3, EMIT_STOP_BEFORE_END_MS$2, FLAKE_LIFE_MS, FLAKE_FADEIN_MS, FLAKE_FADEOUT_START_MS, SCATTER_RADIUS_CELLS$2, SPAWN_HEIGHT_MIN_CELLS$2, SPAWN_HEIGHT_MAX_CELLS$2, FALL_SPEED_CELLS_PER_MS, _instance$4, _mapName$5, _isStopping$2, SnowWeatherEffect;
+var RAG_TICK_MS$2, FADEOUT_TAIL_MS$3, EMIT_STOP_BEFORE_END_MS$2, FLAKE_LIFE_MS, FLAKE_FADEIN_MS, FLAKE_FADEOUT_START_MS, SCATTER_RADIUS_CELLS$2, SPAWN_HEIGHT_MIN_CELLS$2, FALL_SPEED_CELLS_PER_MS, SPR_PATH, _instance$4, _mapName$5, _isStopping$2, SnowWeatherEffect;
 var init_SnowWeather = __esmMin((() => {
 	init_Client();
 	init_Renderer();
@@ -246579,14 +246866,14 @@ var init_SnowWeather = __esmMin((() => {
 	init_SessionStorage();
 	RAG_TICK_MS$2 = 25;
 	FADEOUT_TAIL_MS$3 = 1e3 * RAG_TICK_MS$2;
-	EMIT_STOP_BEFORE_END_MS$2 = 160 * RAG_TICK_MS$2;
+	EMIT_STOP_BEFORE_END_MS$2 = 4e3;
 	FLAKE_LIFE_MS = 320 * RAG_TICK_MS$2;
-	FLAKE_FADEIN_MS = 10 * RAG_TICK_MS$2;
+	FLAKE_FADEIN_MS = 250;
 	FLAKE_FADEOUT_START_MS = FLAKE_LIFE_MS * 4 / 5;
 	SCATTER_RADIUS_CELLS$2 = 60;
 	SPAWN_HEIGHT_MIN_CELLS$2 = 18;
-	SPAWN_HEIGHT_MAX_CELLS$2 = 22;
 	FALL_SPEED_CELLS_PER_MS = .1 / RAG_TICK_MS$2;
+	SPR_PATH = "data/sprite/ÀÌÆÑÆ®/ef_snow";
 	_instance$4 = null;
 	_mapName$5 = "";
 	_isStopping$2 = false;
@@ -246692,7 +246979,7 @@ var init_SnowWeather = __esmMin((() => {
 			const oy = Math.sin(theta) * radius;
 			const x = px + ox;
 			const y = py + oy;
-			const z = Altitude.getCellHeight(x, y) + (SPAWN_HEIGHT_MIN_CELLS$2 + Math.random() * (SPAWN_HEIGHT_MAX_CELLS$2 - SPAWN_HEIGHT_MIN_CELLS$2));
+			const z = Altitude.getCellHeight(x, y) + (SPAWN_HEIGHT_MIN_CELLS$2 + Math.random() * 4);
 			this.flakes.push({
 				spawnTick,
 				x,
@@ -246703,8 +246990,8 @@ var init_SnowWeather = __esmMin((() => {
 		}
 		render(gl, tick) {
 			if (!SessionStorage_default.Entity) return;
-			const spr = Client.loadFile("data/sprite/ÀÌÆÑÆ®/ef_snow.spr", null, null, { to_rgba: true });
-			const act = Client.loadFile("data/sprite/ÀÌÆÑÆ®/ef_snow.act");
+			const spr = Client.loadFile(SPR_PATH + ".spr", null, null, { to_rgba: true });
+			const act = Client.loadFile(SPR_PATH + ".act");
 			if (!spr || !act) return;
 			this.spr = spr;
 			this.act = act;
@@ -246742,7 +247029,7 @@ var init_SnowWeather = __esmMin((() => {
 				flake._lastTick = tick;
 				let alpha = 1;
 				if (age < FLAKE_FADEIN_MS) alpha = age / FLAKE_FADEIN_MS;
-				else if (age > FLAKE_FADEOUT_START_MS) alpha = Math.max(0, 1 - (age - FLAKE_FADEOUT_START_MS) / (FLAKE_LIFE_MS - FLAKE_FADEOUT_START_MS));
+				else if (age > FLAKE_FADEOUT_START_MS) alpha = Math.max(0, 1 - (age - FLAKE_FADEOUT_START_MS) / 1600);
 				SpriteRenderer.position[0] = flake.x;
 				SpriteRenderer.position[1] = flake.y;
 				SpriteRenderer.position[2] = flake.z;
@@ -246807,7 +247094,7 @@ function renderLayer$1(layer, spr, pal, sizeScale, pos, alpha) {
 	SpriteRenderer.image.texture = frame.texture;
 	SpriteRenderer.render(false);
 }
-var RAG_TICK_MS$1, FADEOUT_TAIL_MS$2, EMIT_INTERVAL_MS, EMIT_STOP_BEFORE_END_MS$1, LEAVE_LIFE_MS, LEAVE_FADEIN_MS, LEAVE_FADEOUT_START_MS, SCATTER_RADIUS_CELLS$1, SPAWN_HEIGHT_MIN_CELLS$1, SPAWN_HEIGHT_MAX_CELLS$1, EF_MAPLE, PATH_SAKURA, PATH_MAPLE, _instance$3, _mapName$4, _isStopping$1, SakuraWeatherEffect;
+var RAG_TICK_MS$1, FADEOUT_TAIL_MS$2, EMIT_INTERVAL_MS, EMIT_STOP_BEFORE_END_MS$1, LEAVE_LIFE_MS, LEAVE_FADEIN_MS, LEAVE_FADEOUT_START_MS, SCATTER_RADIUS_CELLS$1, SPAWN_HEIGHT_MIN_CELLS$1, EF_MAPLE, PATH_SAKURA, PATH_MAPLE, _instance$3, _mapName$4, _isStopping$1, SakuraWeatherEffect;
 var init_SakuraWeatherEffect = __esmMin((() => {
 	init_Client();
 	init_Renderer();
@@ -246818,13 +247105,12 @@ var init_SakuraWeatherEffect = __esmMin((() => {
 	RAG_TICK_MS$1 = 25;
 	FADEOUT_TAIL_MS$2 = 1e3 * RAG_TICK_MS$1;
 	EMIT_INTERVAL_MS = 150;
-	EMIT_STOP_BEFORE_END_MS$1 = 160 * RAG_TICK_MS$1;
+	EMIT_STOP_BEFORE_END_MS$1 = 4e3;
 	LEAVE_LIFE_MS = 600 * RAG_TICK_MS$1;
-	LEAVE_FADEIN_MS = 20 * RAG_TICK_MS$1;
+	LEAVE_FADEIN_MS = 500;
 	LEAVE_FADEOUT_START_MS = LEAVE_LIFE_MS * 4 / 5;
 	SCATTER_RADIUS_CELLS$1 = 70;
 	SPAWN_HEIGHT_MIN_CELLS$1 = 32;
-	SPAWN_HEIGHT_MAX_CELLS$1 = 42;
 	EF_MAPLE = 333;
 	PATH_SAKURA = "data/sprite/ÀÌÆÑÆ®/sakura01";
 	PATH_MAPLE = "data/sprite/ÀÌÆÑÆ®/´ÜÇ³";
@@ -246920,7 +247206,7 @@ var init_SakuraWeatherEffect = __esmMin((() => {
 			const radius = Math.random() * SCATTER_RADIUS_CELLS$1;
 			const x = px + Math.cos(theta) * radius;
 			const y = py + Math.sin(theta) * radius;
-			const z = Altitude.getCellHeight(x, y) + (SPAWN_HEIGHT_MIN_CELLS$1 + Math.random() * (SPAWN_HEIGHT_MAX_CELLS$1 - SPAWN_HEIGHT_MIN_CELLS$1));
+			const z = Altitude.getCellHeight(x, y) + (SPAWN_HEIGHT_MIN_CELLS$1 + Math.random() * 10);
 			const fallSpeed = (this.isMaple ? (2 + Math.random() * 4) * .03 : (2 + Math.random() * 2) * .1) * .5;
 			const swayFactorX = this.isMaple ? .12 : .24;
 			const swayFactorY = this.isMaple ? .15 : .3;
@@ -246991,7 +247277,7 @@ var init_SakuraWeatherEffect = __esmMin((() => {
 				let alphaCap = 1;
 				if (!this.isMaple) alphaCap = .5;
 				if (age < LEAVE_FADEIN_MS) alpha = age / LEAVE_FADEIN_MS * alphaCap;
-				else if (age > LEAVE_FADEOUT_START_MS) alpha = Math.max(0, (1 - (age - LEAVE_FADEOUT_START_MS) / (LEAVE_LIFE_MS - LEAVE_FADEOUT_START_MS)) * alphaCap);
+				else if (age > LEAVE_FADEOUT_START_MS) alpha = Math.max(0, (1 - (age - LEAVE_FADEOUT_START_MS) / 3e3) * alphaCap);
 				SpriteRenderer.position[0] = leave.x;
 				SpriteRenderer.position[1] = leave.y;
 				SpriteRenderer.position[2] = leave.z;
@@ -247060,7 +247346,7 @@ var init_PokJukWeatherEffect = __esmMin((() => {
 			canvas.height = PARTICLE_SIZE;
 			const ctx = canvas.getContext("2d");
 			const center = PARTICLE_SIZE / 2;
-			const radius = center - 1;
+			const radius = 2;
 			ctx.clearRect(0, 0, PARTICLE_SIZE, PARTICLE_SIZE);
 			const gradient = ctx.createRadialGradient(center, center, 0, center, center, radius);
 			gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
@@ -247218,7 +247504,6 @@ var init_PokJukWeatherEffect = __esmMin((() => {
 							r = 255;
 							g = 255;
 							b = 255;
-							break;
 					}
 					this.renderParticle(p.pos, p.alpha, r, g, b, fw.size);
 				}
@@ -248606,15 +248891,17 @@ var init_Cylinder = __esmMin((() => {
 			gl.uniform1f(uniform.uBottomSize, this.bottomSize);
 			gl.uniform1f(uniform.uZindex, this.zIndex);
 			if (this.animation == 1) {
-				if (duration > 1e3) if (renderCount <= 1e3) gl.uniform1f(uniform.uHeight, renderCount / 1e3 * this.height);
-				else gl.uniform1f(uniform.uHeight, this.height);
-				else gl.uniform1f(uniform.uHeight, renderCount / duration * this.height);
+				if (duration > 1e3) {
+					if (renderCount <= 1e3) gl.uniform1f(uniform.uHeight, renderCount / 1e3 * this.height);
+					else gl.uniform1f(uniform.uHeight, this.height);
+				} else gl.uniform1f(uniform.uHeight, renderCount / duration * this.height);
 				gl.uniform1f(uniform.uTopSize, this.topSize);
 			} else if (this.animation == 2) {
 				gl.uniform1f(uniform.uHeight, this.height);
-				if (duration > 1e3) if (renderCount <= 1e3) gl.uniform1f(uniform.uTopSize, renderCount / 1e3 * this.topSize);
-				else gl.uniform1f(uniform.uTopSize, this.topSize);
-				else gl.uniform1f(uniform.uTopSize, renderCount / duration * this.topSize);
+				if (duration > 1e3) {
+					if (renderCount <= 1e3) gl.uniform1f(uniform.uTopSize, renderCount / 1e3 * this.topSize);
+					else gl.uniform1f(uniform.uTopSize, this.topSize);
+				} else gl.uniform1f(uniform.uTopSize, renderCount / duration * this.topSize);
 			} else if (this.animation == 3) {
 				gl.uniform1f(uniform.uHeight, this.height);
 				gl.uniform1f(uniform.uBottomSize, (1 - renderCount / duration) * this.bottomSize);
@@ -249216,7 +249503,6 @@ var init_Model = __esmMin((() => {
 					this.calcNormal_FLAT(face_normal, normalMat, shadeGroupUsed);
 					this.calcNormal_SMOOTH(face_normal, shadeGroupUsed, shadeGroup);
 					this.generate_mesh_SMOOTH(vert, shadeGroup, mesh);
-					break;
 			}
 			return mesh;
 		}
@@ -249290,7 +249576,6 @@ var init_Model = __esmMin((() => {
 					this.calcNormal_FLAT(face_normal, normalMat, shadeGroupUsed);
 					this.calcNormal_SMOOTH(face_normal, shadeGroupUsed, shadeGroup);
 					this.generate_mesh_SMOOTH(vert, shadeGroup, mesh);
-					break;
 			}
 			return mesh;
 		}
@@ -249977,7 +250262,6 @@ function compileNodeAtFrame(node, instanceMatrix, frame, animLen) {
 			calcNormal_FLAT(node, face_normal, normalMat, shadeGroupUsed);
 			calcNormal_SMOOTH(node, face_normal, shadeGroupUsed, shadeGroup);
 			generate_mesh_SMOOTH(node, vert, shadeGroup, mesh);
-			break;
 	}
 	return mesh;
 }
@@ -250539,27 +250823,29 @@ var init_TwoDEffect = __esmMin((() => {
 			SpriteRenderer.zIndex = this.zIndex;
 			const cRad = Camera.angle[1] * Math.PI / 180;
 			let currentX = 0;
-			if (this.posxSmooth) if (this.posxStart != this.posxEnd) {
-				const step = steps * .09 + 1;
-				const smoothStep = Math.log10(step);
-				const distance = this.posxEnd - this.posxStart;
-				const _start = this.posxStart;
-				currentX = smoothStep * distance + _start;
-			} else currentX = this.posxStart;
-			else if (this.posxStart != this.posxEnd) {
+			if (this.posxSmooth) {
+				if (this.posxStart != this.posxEnd) {
+					const step = steps * .09 + 1;
+					const smoothStep = Math.log10(step);
+					const distance = this.posxEnd - this.posxStart;
+					const _start = this.posxStart;
+					currentX = smoothStep * distance + _start;
+				} else currentX = this.posxStart;
+			} else if (this.posxStart != this.posxEnd) {
 				const distance = (this.posxEnd - this.posxStart) / 100;
 				const _start = this.posxStart;
 				currentX = steps * distance + _start;
 			} else currentX = this.posxStart;
 			let currentY = 0;
-			if (this.posySmooth) if (this.posyStart != this.posyEnd) {
-				const step = steps * .09 + 1;
-				const smoothStep = Math.log10(step);
-				const distance = this.posyEnd - this.posyStart;
-				const _start = this.posyStart;
-				currentY = smoothStep * distance + _start;
-			} else currentY = this.posyStart;
-			else if (this.posyStart != this.posyEnd) {
+			if (this.posySmooth) {
+				if (this.posyStart != this.posyEnd) {
+					const step = steps * .09 + 1;
+					const smoothStep = Math.log10(step);
+					const distance = this.posyEnd - this.posyStart;
+					const _start = this.posyStart;
+					currentY = smoothStep * distance + _start;
+				} else currentY = this.posyStart;
+			} else if (this.posyStart != this.posyEnd) {
 				const distance = (this.posyEnd - this.posyStart) / 100;
 				const _start = this.posyStart;
 				currentY = steps * distance + _start;
@@ -250567,41 +250853,44 @@ var init_TwoDEffect = __esmMin((() => {
 			SpriteRenderer.position[0] = this.position[0] + (currentX * Math.cos(cRad) - currentY * Math.sin(cRad));
 			SpriteRenderer.position[1] = this.position[1] + (currentY * Math.cos(cRad) + currentX * Math.sin(cRad));
 			let currentZ = 0;
-			if (this.poszSmooth) if (this.poszStart != this.poszEnd) {
-				const step = steps * .09 + 1;
-				const smoothStep = Math.log10(step);
-				const distance = this.poszEnd - this.poszStart;
-				const _start = this.poszStart;
-				currentZ = smoothStep * distance + _start;
-			} else currentZ = this.poszStart;
-			else if (this.poszStart != this.poszEnd) {
+			if (this.poszSmooth) {
+				if (this.poszStart != this.poszEnd) {
+					const step = steps * .09 + 1;
+					const smoothStep = Math.log10(step);
+					const distance = this.poszEnd - this.poszStart;
+					const _start = this.poszStart;
+					currentZ = smoothStep * distance + _start;
+				} else currentZ = this.poszStart;
+			} else if (this.poszStart != this.poszEnd) {
 				const distance = (this.poszEnd - this.poszStart) / 100;
 				const _start = this.poszStart;
 				currentZ = steps * distance + _start;
 			} else currentZ = this.poszStart;
 			SpriteRenderer.position[2] = this.position[2] + currentZ;
 			let currentOffsetX = 0;
-			if (this.offsetxSmooth) if (this.offsetxStart != this.offsetxEnd) {
-				const step = steps * .09 + 1;
-				const smoothStep = Math.log10(step);
-				const distance = this.offsetxEnd - this.offsetxStart;
-				const _start = this.offsetxStart;
-				currentOffsetX = smoothStep * distance + _start;
-			} else currentOffsetX = this.offsetxStart;
-			else if (this.offsetxStart != this.offsetxEnd) {
+			if (this.offsetxSmooth) {
+				if (this.offsetxStart != this.offsetxEnd) {
+					const step = steps * .09 + 1;
+					const smoothStep = Math.log10(step);
+					const distance = this.offsetxEnd - this.offsetxStart;
+					const _start = this.offsetxStart;
+					currentOffsetX = smoothStep * distance + _start;
+				} else currentOffsetX = this.offsetxStart;
+			} else if (this.offsetxStart != this.offsetxEnd) {
 				const distance = (this.offsetxEnd - this.offsetxStart) / 100;
 				const _start = this.offsetxStart;
 				currentOffsetX = steps * distance + _start;
 			} else currentOffsetX = this.offsetxStart;
 			let currentOffsetY = 0;
-			if (this.offsetySmooth) if (this.offsetyStart != this.offsetyEnd) {
-				const step = steps * .09 + 1;
-				const smoothStep = Math.log10(step);
-				const distance = this.offsetyEnd - this.offsetyStart;
-				const _start = this.offsetyStart;
-				currentOffsetY = smoothStep * distance + _start;
-			} else currentOffsetY = this.offsetyStart;
-			else if (this.offsetyStart != this.offsetyEnd) {
+			if (this.offsetySmooth) {
+				if (this.offsetyStart != this.offsetyEnd) {
+					const step = steps * .09 + 1;
+					const smoothStep = Math.log10(step);
+					const distance = this.offsetyEnd - this.offsetyStart;
+					const _start = this.offsetyStart;
+					currentOffsetY = smoothStep * distance + _start;
+				} else currentOffsetY = this.offsetyStart;
+			} else if (this.offsetyStart != this.offsetyEnd) {
 				const distance = (this.offsetyEnd - this.offsetyStart) / 100;
 				const _start = this.offsetyStart;
 				currentOffsetY = steps * distance + _start;
@@ -250650,15 +250939,18 @@ var init_TwoDEffect = __esmMin((() => {
 			if (this.rotate) {
 				const step = (this.toAngle - this.angle) / 100;
 				const startAngle = this.angle;
-				SpriteRenderer.angle = steps * step + startAngle;
+				const angle = steps * step + startAngle;
+				SpriteRenderer.angle = angle;
 			} else SpriteRenderer.angle = this.angle;
 			SpriteRenderer.runWithDepth(this.overlay === false, this.overlay === false, this.overlay === true, () => {
 				SpriteRenderer.render();
 			});
-			if (this.ownerEntity) if (this.endTick < tick) this.ownerEntity.attachments.remove(this.spriteName + "-" + this.sizeStartX + "-" + this.rotateLate);
-			else {
-				const attachment = this.ownerEntity.attachments.get(this.spriteName + "-" + this.sizeStartX + "-" + this.rotateLate);
-				if (attachment) attachment.position = new Int16Array([SpriteRenderer.position[0], SpriteRenderer.position[1]]);
+			if (this.ownerEntity) {
+				if (this.endTick < tick) this.ownerEntity.attachments.remove(this.spriteName + "-" + this.sizeStartX + "-" + this.rotateLate);
+				else {
+					const attachment = this.ownerEntity.attachments.get(this.spriteName + "-" + this.sizeStartX + "-" + this.rotateLate);
+					if (attachment) attachment.position = new Int16Array([SpriteRenderer.position[0], SpriteRenderer.position[1]]);
+				}
 			}
 			this.needCleanUp = this.endTick < tick;
 		}
@@ -251039,14 +251331,15 @@ var init_ThreeDEffect = __esmMin((() => {
 			if (this.rotatePosX > 0) {
 				posDelta = this.rotatePosX * Math.cos(steps * 3.5 * this.nbOfRotation * Math.PI / 180 - this.rotateLate * Math.PI / 2);
 				if (this.rotationClockwise) posDelta = -1 * posDelta;
-			} else if (this.posxSmooth) if (this.posxStart != this.posxEnd) {
-				const csJ = steps * .09 + 1;
-				const csK = Math.log10(csJ);
-				const csL = this.posxEnd - this.posxStart;
-				const csM = this.posxStart;
-				posDelta = csK * csL + csM;
-			} else posDelta = this.posxStart;
-			else if (this.posxStart != this.posxEnd) {
+			} else if (this.posxSmooth) {
+				if (this.posxStart != this.posxEnd) {
+					const csJ = steps * .09 + 1;
+					const csK = Math.log10(csJ);
+					const csL = this.posxEnd - this.posxStart;
+					const csM = this.posxStart;
+					posDelta = csK * csL + csM;
+				} else posDelta = this.posxStart;
+			} else if (this.posxStart != this.posxEnd) {
 				const csL = (this.posxEnd - this.posxStart) / 100;
 				const csM = this.posxStart;
 				posDelta = steps * csL + csM;
@@ -251054,14 +251347,15 @@ var init_ThreeDEffect = __esmMin((() => {
 			SpriteRenderer.position[0] = this.position[0] + posDelta;
 			posDelta = 0;
 			if (this.rotatePosY > 0) posDelta = this.rotatePosY * Math.sin(steps * 3.5 * this.nbOfRotation * Math.PI / 180 - this.rotateLate * Math.PI / 2);
-			else if (this.posySmooth) if (this.posyStart != this.posyEnd) {
-				const csJ = steps * .09 + 1;
-				const csK = Math.log10(csJ);
-				const csL = this.posyEnd - this.posyStart;
-				const csM = this.posyStart;
-				posDelta = csK * csL + csM;
-			} else posDelta = this.posyStart;
-			else if (this.posyStart != this.posyEnd) {
+			else if (this.posySmooth) {
+				if (this.posyStart != this.posyEnd) {
+					const csJ = steps * .09 + 1;
+					const csK = Math.log10(csJ);
+					const csL = this.posyEnd - this.posyStart;
+					const csM = this.posyStart;
+					posDelta = csK * csL + csM;
+				} else posDelta = this.posyStart;
+			} else if (this.posyStart != this.posyEnd) {
 				const csL = (this.posyEnd - this.posyStart) / 100;
 				const csM = this.posyStart;
 				posDelta = steps * csL + csM;
@@ -251087,14 +251381,15 @@ var init_ThreeDEffect = __esmMin((() => {
 				SpriteRenderer.position[0] = this.position[0] + linearX;
 				SpriteRenderer.position[1] = this.position[1] + linearY;
 			}
-			if (this.poszSmooth) if (this.poszStart != this.poszEnd) {
-				const csJ = steps * .09 + 1;
-				const csK = Math.log10(csJ);
-				const csL = this.poszEnd - this.poszStart;
-				const csM = this.poszStart;
-				posDelta = csK * csL + csM;
-			} else posDelta = this.poszStart;
-			else if (this.poszStart != this.poszEnd) {
+			if (this.poszSmooth) {
+				if (this.poszStart != this.poszEnd) {
+					const csJ = steps * .09 + 1;
+					const csK = Math.log10(csJ);
+					const csL = this.poszEnd - this.poszStart;
+					const csM = this.poszStart;
+					posDelta = csK * csL + csM;
+				} else posDelta = this.poszStart;
+			} else if (this.poszStart != this.poszEnd) {
 				const csL = (this.poszEnd - this.poszStart) / 100;
 				const csM = this.poszStart;
 				posDelta = steps * csL + csM;
@@ -251434,11 +251729,13 @@ var init_QuadHorn = __esmMin((() => {
 				gl.uniform1f(uniform.uHeight, this.height);
 				gl.uniform1f(uniform.uOffsetZ, this.offsetZ);
 			}
-			if (this.endTick > 0 && this.endTick < tick) if (this.animationOut && this._endAnimation) {
-				const lerpZOffset = -(deltaEnd / (this.animationSpeed / 1e3) * this.height);
-				if (lerpZOffset < -(this.height + this.offsetZ)) this.needCleanUp = this.endTick < tick;
-				gl.uniform1f(uniform.uOffsetZ, lerpZOffset);
-			} else this.needCleanUp = this.endTick < tick;
+			if (this.endTick > 0 && this.endTick < tick) {
+				if (this.animationOut && this._endAnimation) {
+					const lerpZOffset = -(deltaEnd / (this.animationSpeed / 1e3) * this.height);
+					if (lerpZOffset < -(this.height + this.offsetZ)) this.needCleanUp = this.endTick < tick;
+					gl.uniform1f(uniform.uOffsetZ, lerpZOffset);
+				} else this.needCleanUp = this.endTick < tick;
+			}
 			gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 			gl.vertexAttribPointer(attribute.aPosition, 3, gl.FLOAT, false, 0, 0);
 			gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -251893,12 +252190,14 @@ var init_EffectManager = __esmMin((() => {
 				if (!Params.Init.ownerEntity) return;
 				Params.Inst.position = Params.Init.ownerEntity.position;
 			}
-			if (!Params.Inst.otherPosition) if (Params.Init.otherEntity) Params.Inst.otherPosition = Params.Init.otherEntity.position;
-			else Params.Inst.otherPosition = [
-				Params.Inst.position[0] - 5,
-				Params.Inst.position[1] + 5,
-				Params.Inst.position[2]
-			];
+			if (!Params.Inst.otherPosition) {
+				if (Params.Init.otherEntity) Params.Inst.otherPosition = Params.Init.otherEntity.position;
+				else Params.Inst.otherPosition = [
+					Params.Inst.position[0] - 5,
+					Params.Inst.position[1] + 5,
+					Params.Inst.position[2]
+				];
+			}
 			Params.Inst.position = Params.effect.attachedEntity ? Params.Inst.position : [
 				Params.Inst.position[0],
 				Params.Inst.position[1],
@@ -251946,11 +252245,11 @@ var init_EffectManager = __esmMin((() => {
 				case "QuadHorn":
 					EffectManager.add(new QuadHorn(Params.effect, Params.Inst, Params.Init), Params);
 					break;
-				case "FUNC":
-					if (Params.effect.func) if (Params.effect.attachedEntity) {
+				case "FUNC": if (Params.effect.func) {
+					if (Params.effect.attachedEntity) {
 						if (Params.Init.ownerEntity) Params.effect.func.call(this, Params);
 					} else Params.effect.func.call(this, Params);
-					break;
+				}
 			}
 		}
 		/**
@@ -253609,7 +253908,6 @@ var init_Damage = __esmMin((() => {
 						default:
 							SpriteRenderer.position[0] = damage.entity.position[0] + perc * 4;
 							SpriteRenderer.position[1] = damage.entity.position[1] - perc * 4;
-							break;
 					}
 					SpriteRenderer.position[2] = damage.entity.position[2] + 2 + zArc;
 					if (damage.soundFile) {
@@ -253922,7 +254220,6 @@ function onDrop$8(event, target) {
 			ShortCut.removeElement(element.isSkill, element.ID, row, element.isSkill ? element.count : null);
 			ShortCut.addElement(index, element.isSkill, element.ID, element.count);
 			ShortCut.onChange(index, element.isSkill, element.ID, element.count);
-			break;
 	}
 }
 /**
@@ -253958,12 +254255,13 @@ function onElementInfo(event, icon) {
 	const element = _list$1[index];
 	event.stopImmediatePropagation();
 	event.preventDefault();
-	if (element.isSkill) if (SkillDescription_default.uid === _list$1[index].ID) SkillDescription_default.remove();
-	else {
-		SkillDescription_default.append();
-		SkillDescription_default.setSkill(_list$1[index].ID);
-	}
-	else {
+	if (element.isSkill) {
+		if (SkillDescription_default.uid === _list$1[index].ID) SkillDescription_default.remove();
+		else {
+			SkillDescription_default.append();
+			SkillDescription_default.setSkill(_list$1[index].ID);
+		}
+	} else {
 		if (ItemInfo_default.uid === _list$1[index].ID) {
 			ItemInfo_default.remove();
 			return;
@@ -254326,7 +254624,6 @@ var init_ShortCut = __esmMin((() => {
 				_preferences$19.size = (_preferences$19.size + 1) % (_rowCount + 1);
 				_preferences$19.save();
 				this._host.style.height = `${_preferences$19.size * 34}px`;
-				break;
 		}
 	};
 	ShortCut.useSkill = function useSkill(id, level) {
@@ -254395,8 +254692,10 @@ var init_ShortCut = __esmMin((() => {
 		}
 	};
 	ShortCut.setElement = function setElement(isSkill, ID, count) {
-		for (let i = 0, size = _list$1.length; i < size; ++i) if (_list$1[i] && _list$1[i].isSkill == isSkill && _list$1[i].ID === ID) if (isSkill && _list$1[i].count && _list$1[i].count <= count) ShortCut.addElement(i, isSkill, ID, _list$1[i].count);
-		else ShortCut.addElement(i, isSkill, ID, count);
+		for (let i = 0, size = _list$1.length; i < size; ++i) if (_list$1[i] && _list$1[i].isSkill == isSkill && _list$1[i].ID === ID) {
+			if (isSkill && _list$1[i].count && _list$1[i].count <= count) ShortCut.addElement(i, isSkill, ID, _list$1[i].count);
+			else ShortCut.addElement(i, isSkill, ID, count);
+		}
 	};
 	/**
 	* Add an element to shortcut
@@ -254414,13 +254713,14 @@ var init_ShortCut = __esmMin((() => {
 		if (!_list$1[index]) _list$1[index] = {};
 		_list$1[index].isSkill = isSkill;
 		_list$1[index].ID = ID;
-		if (isSkill) if (!count) return;
-		else {
-			_list$1[index].count = count;
-			file = SkillInfo[ID].Name;
-			name = SkillInfo[ID].SkillName;
-		}
-		else {
+		if (isSkill) {
+			if (!count) return;
+			else {
+				_list$1[index].count = count;
+				file = SkillInfo[ID].Name;
+				name = SkillInfo[ID].SkillName;
+			}
+		} else {
 			_list$1[index].count = count;
 			const item = InventoryController.getUI().getItemById(ID);
 			if (!item) return;
@@ -254619,8 +254919,8 @@ function updateJoystickSlot(joystickSlotIndex, shortcutIndex) {
 	icon.style.display = "block";
 	if (item.isSkill && item.count) {
 		const skillInfo = SkillInfo[item.ID];
-		if (skillInfo) Client.loadFile(DB.INTERFACE_PATH + "item/" + skillInfo.Name + ".bmp", function(url) {
-			img.style.backgroundImage = "url(" + url + ")";
+		if (skillInfo) Client.loadFile(`${DB.INTERFACE_PATH}item/${skillInfo.Name}.bmp`, (url) => {
+			img.style.backgroundImage = `url(${url})`;
 			amount.textContent = item.count;
 		});
 	} else {
@@ -254630,8 +254930,8 @@ function updateJoystickSlot(joystickSlotIndex, shortcutIndex) {
 			const fileName = inventoryItem.IsIdentified ? itemInfo.identifiedResourceName : itemInfo.unidentifiedResourceName;
 			let count = inventoryItem.count;
 			if ((inventoryItem.type === ItemType_default.WEAPON || inventoryItem.type === ItemType_default.ARMOR || inventoryItem.type === ItemType_default.SHADOWGEAR) && count) count = 1;
-			Client.loadFile(DB.INTERFACE_PATH + "item/" + fileName + ".bmp", function(url) {
-				img.style.backgroundImage = "url(" + url + ")";
+			Client.loadFile(`${DB.INTERFACE_PATH}item/${fileName}.bmp`, (url) => {
+				img.style.backgroundImage = `url(${url})`;
 				amount.textContent = count;
 			});
 		}
@@ -254692,6 +254992,7 @@ function dispose() {
 		document.removeEventListener("mousemove", _mouseMoveHandler);
 		_mouseMoveHandler = null;
 	}
+	ui = null;
 }
 var ui, _mouseMoveHandler, JoystickUIRenderer_default;
 var init_JoystickUIRenderer = __esmMin((() => {
@@ -255128,9 +255429,7 @@ function navigateDraggableItems(direction) {
 			case "left":
 				keyCode = 37;
 				break;
-			case "right":
-				keyCode = 39;
-				break;
+			case "right": keyCode = 39;
 		}
 		_dispatchKeyEvent(document, "keydown", keyCode);
 		return;
@@ -255159,9 +255458,7 @@ function navigateDraggableItems(direction) {
 		case "left":
 			newIndex = currentIndex - 1;
 			break;
-		case "right":
-			newIndex = currentIndex + 1;
-			break;
+		case "right": newIndex = currentIndex + 1;
 	}
 	newIndex = Math.max(0, Math.min(allDraggables.length - 1, newIndex));
 	if (newIndex !== currentIndex && newIndex < allDraggables.length) {
@@ -255705,26 +256002,35 @@ var init_JoystickAxisInput = __esmMin((() => {
 }));
 //#endregion
 //#region src/UI/Components/JoystickUI/JoystickInputService.js
-var hideTimeout, JoystickInputService_default;
+var hideTimeout, hideTimeoutHandle, JoystickInputService_default;
 var init_JoystickInputService = __esmMin((() => {
 	init_JoystickButtonInput();
 	init_JoystickAxisInput();
 	init_JoystickUIRenderer();
-	init_JoystickModule();
 	init_Controls();
 	hideTimeout = false;
+	hideTimeoutHandle = null;
 	JoystickInputService_default = {
 		active: false,
 		buttonStates: {},
+		_listening: false,
 		prepare: function() {
+			if (this._listening) return;
 			this._boundOnConnect = this._onConnect.bind(this);
 			this._boundOnDisconnect = this._onDisconnect.bind(this);
 			window.addEventListener("gamepadconnected", this._boundOnConnect);
 			window.addEventListener("gamepaddisconnected", this._boundOnDisconnect);
+			this._listening = true;
 		},
 		dispose: function() {
 			window.removeEventListener("gamepadconnected", this._boundOnConnect);
 			window.removeEventListener("gamepaddisconnected", this._boundOnDisconnect);
+			this._listening = false;
+			if (hideTimeoutHandle) {
+				clearTimeout(hideTimeoutHandle);
+				hideTimeoutHandle = null;
+			}
+			hideTimeout = false;
 			this.active = false;
 			this.buttonStates = {};
 		},
@@ -255779,21 +256085,21 @@ var init_JoystickInputService = __esmMin((() => {
 				hideTimeout = true;
 				const self = this;
 				this.active = false;
-				setTimeout(function() {
+				hideTimeoutHandle = setTimeout(function() {
 					hideTimeout = false;
+					hideTimeoutHandle = null;
 					if (self.active === false) JoystickUIRenderer_default.hide();
 				}, 3e4);
 			} else if (!hideTimeout) this.active = true;
 			return true;
 		},
 		_onConnect: function() {
-			JoystickModule_default.prepare();
 			this.active = true;
 			JoystickUIRenderer_default.show();
 		},
 		_onDisconnect: function() {
-			JoystickModule_default.dispose();
 			this.active = false;
+			this.buttonStates = {};
 			JoystickUIRenderer_default.hide();
 		}
 	};
@@ -255861,7 +256167,7 @@ var init_JoystickUI$2 = __esmMin((() => {
 //#region src/UI/Components/JoystickUI/JoystickUI.css?raw
 var JoystickUI_default$1;
 var init_JoystickUI$1 = __esmMin((() => {
-	JoystickUI_default$1 = ":host {\r\n	position: absolute;\r\n	bottom: 20px;\r\n	left: 50%;\r\n	transform: translateX(-50%);\r\n	z-index: 1000;\r\n	pointer-events: none;\r\n}\r\n\r\n#JoystickUI {\r\n	display: flex;\r\n	flex-direction: column;\r\n	align-items: center;\r\n}\r\n\r\n#JoystickUI .set-indicator {\r\n	margin-bottom: 5px;\r\n	background: rgba(0, 0, 0, 0.5);\r\n	border-radius: 4px;\r\n	padding: 2px;\r\n	pointer-events: auto;\r\n}\r\n\r\n#JoystickUI .set-btn {\r\n	display: inline-block;\r\n	padding: 2px 10px;\r\n	color: #ccc;\r\n	font-family: sans-serif;\r\n	border-radius: 3px;\r\n	cursor: pointer;\r\n}\r\n\r\n#JoystickUI .set-btn.active {\r\n	background-color: #d32f2f;\r\n	color: white;\r\n	font-weight: bold;\r\n}\r\n\r\n#JoystickUI .hotkey-bar {\r\n	display: flex;\r\n	gap: 4px;\r\n	align-items: flex-end;\r\n}\r\n\r\n#JoystickUI .group-container {\r\n	background: linear-gradient(to bottom, rgba(60, 60, 60, 0.9), rgba(30, 30, 30, 0.9));\r\n	border: 1px solid #555;\r\n	border-radius: 6px;\r\n	width: 110px;\r\n	height: 100px;\r\n	position: relative;\r\n	pointer-events: auto;\r\n	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);\r\n}\r\n\r\n#JoystickUI .group-header {\r\n	background: rgba(255, 255, 255, 0.1);\r\n	color: #e0e0e0;\r\n	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\r\n	font-size: 14px;\r\n	font-weight: bold;\r\n	text-align: center;\r\n	padding: 2px 0;\r\n	border-bottom: 1px solid #555;\r\n	text-shadow: 1px 1px 2px black;\r\n}\r\n\r\n#JoystickUI .cross-layout {\r\n	position: relative;\r\n	width: 100%;\r\n	height: 75px;\r\n}\r\n\r\n#JoystickUI .slot {\r\n	position: absolute;\r\n	width: 32px;\r\n	height: 32px;\r\n	background-color: rgba(0, 0, 0, 0.6);\r\n	border: 1px solid #777;\r\n	border-radius: 3px;\r\n	display: flex;\r\n	justify-content: center;\r\n	align-items: center;\r\n	box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.8);\r\n	transition: background 0.2s;\r\n}\r\n\r\n#JoystickUI .slot:active {\r\n	background-color: rgba(144, 238, 144, 0.3);\r\n	border-color: #90ee90;\r\n}\r\n\r\n#JoystickUI .slot.top {\r\n	top: 2px;\r\n	left: 50%;\r\n	transform: translateX(-60%);\r\n}\r\n\r\n#JoystickUI .slot.bottom {\r\n	bottom: 2px;\r\n	left: 50%;\r\n	transform: translateX(-60%);\r\n}\r\n\r\n#JoystickUI .slot.left {\r\n	top: 50%;\r\n	left: 2px;\r\n	transform: translateY(-60%);\r\n}\r\n\r\n#JoystickUI .slot.right {\r\n	top: 50%;\r\n	right: 4px;\r\n	transform: translateY(-60%);\r\n}\r\n\r\n#JoystickUI .key-label {\r\n	position: absolute;\r\n	top: 1px;\r\n	left: 3px;\r\n	font-weight: bold;\r\n	color: #fff;\r\n	text-shadow: 1px 1px 0 #000;\r\n	z-index: 2;\r\n	pointer-events: none;\r\n}\r\n\r\n#JoystickUI .group-container.active {\r\n	border-color: #00ff00;\r\n	background: linear-gradient(to bottom, rgba(80, 100, 80, 0.95), rgba(40, 60, 40, 0.95));\r\n	box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);\r\n	transform: translateY(-2px);\r\n	z-index: 10;\r\n}\r\n\r\n#JoystickUI .icon {\r\n	position: relative;\r\n}\r\n\r\n#JoystickUI .icon .img {\r\n	width: 24px;\r\n	height: 24px;\r\n	background-repeat: no-repeat;\r\n	border: none;\r\n	background-color: transparent;\r\n}\r\n\r\n#JoystickUI .icon .name {\r\n	display: none;\r\n	z-index: 1;\r\n	position: absolute;\r\n	top: 0px;\r\n	left: 0px;\r\n	background-color: rgba(0, 0, 0, 0.6);\r\n	text-shadow: 1px 1px black;\r\n	color: white;\r\n	padding: 5px;\r\n	white-space: nowrap;\r\n}\r\n\r\n#JoystickUI .icon:hover .name {\r\n	display: block;\r\n}\r\n\r\n#JoystickUI .icon.hide .name {\r\n	display: none;\r\n}\r\n\r\n#JoystickUI .icon .amount {\r\n	position: absolute;\r\n	right: 1px;\r\n	top: 20px;\r\n	text-shadow: 1px 1px 0px white;\r\n	text-align: right;\r\n	font-weight: bold;\r\n}\r\n";
+	JoystickUI_default$1 = ":host {\r\n	position: absolute;\r\n	bottom: 20px;\r\n	left: 50%;\r\n	transform: translateX(-50%);\r\n	z-index: 1000;\r\n	pointer-events: none;\r\n}\r\n\r\n#JoystickUI {\r\n	display: flex;\r\n	flex-direction: column;\r\n	align-items: center;\r\n}\r\n\r\n#JoystickUI .set-indicator {\r\n	margin-bottom: 5px;\r\n	background: rgba(0, 0, 0, 0.5);\r\n	border-radius: 4px;\r\n	padding: 2px;\r\n	pointer-events: auto;\r\n}\r\n\r\n#JoystickUI .set-btn {\r\n	display: inline-block;\r\n	padding: 2px 10px;\r\n	color: #ccc;\r\n	font-family: sans-serif;\r\n	border-radius: 3px;\r\n	cursor: pointer;\r\n}\r\n\r\n#JoystickUI .set-btn.active {\r\n	background-color: #d32f2f;\r\n	color: white;\r\n	font-weight: bold;\r\n}\r\n\r\n#JoystickUI .hotkey-bar {\r\n	display: flex;\r\n	gap: 4px;\r\n	align-items: flex-end;\r\n}\r\n\r\n#JoystickUI .group-container {\r\n	background: linear-gradient(to bottom, rgba(60, 60, 60, 0.9), rgba(30, 30, 30, 0.9));\r\n	border: 1px solid #555;\r\n	border-radius: 6px;\r\n	width: 110px;\r\n	height: 100px;\r\n	position: relative;\r\n	pointer-events: auto;\r\n	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);\r\n}\r\n\r\n#JoystickUI .group-header {\r\n	background: rgba(255, 255, 255, 0.1);\r\n	color: #e0e0e0;\r\n	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\r\n	/* Opt out of Common.css's font-size-adjust: keep Segoe UI's native x-height. Scoped to this\r\n	   header only — the .set-btn above uses generic sans-serif and stays normalized. */\r\n	font-size-adjust: none;\r\n	font-size: 14px;\r\n	font-weight: bold;\r\n	text-align: center;\r\n	padding: 2px 0;\r\n	border-bottom: 1px solid #555;\r\n	text-shadow: 1px 1px 2px black;\r\n}\r\n\r\n#JoystickUI .cross-layout {\r\n	position: relative;\r\n	width: 100%;\r\n	height: 75px;\r\n}\r\n\r\n#JoystickUI .slot {\r\n	position: absolute;\r\n	width: 32px;\r\n	height: 32px;\r\n	background-color: rgba(0, 0, 0, 0.6);\r\n	border: 1px solid #777;\r\n	border-radius: 3px;\r\n	display: flex;\r\n	justify-content: center;\r\n	align-items: center;\r\n	box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.8);\r\n	transition: background 0.2s;\r\n}\r\n\r\n#JoystickUI .slot:active {\r\n	background-color: rgba(144, 238, 144, 0.3);\r\n	border-color: #90ee90;\r\n}\r\n\r\n#JoystickUI .slot.top {\r\n	top: 2px;\r\n	left: 50%;\r\n	transform: translateX(-60%);\r\n}\r\n\r\n#JoystickUI .slot.bottom {\r\n	bottom: 2px;\r\n	left: 50%;\r\n	transform: translateX(-60%);\r\n}\r\n\r\n#JoystickUI .slot.left {\r\n	top: 50%;\r\n	left: 2px;\r\n	transform: translateY(-60%);\r\n}\r\n\r\n#JoystickUI .slot.right {\r\n	top: 50%;\r\n	right: 4px;\r\n	transform: translateY(-60%);\r\n}\r\n\r\n#JoystickUI .key-label {\r\n	position: absolute;\r\n	top: 1px;\r\n	left: 3px;\r\n	font-weight: bold;\r\n	color: #fff;\r\n	text-shadow: 1px 1px 0 #000;\r\n	z-index: 2;\r\n	pointer-events: none;\r\n}\r\n\r\n#JoystickUI .group-container.active {\r\n	border-color: #00ff00;\r\n	background: linear-gradient(to bottom, rgba(80, 100, 80, 0.95), rgba(40, 60, 40, 0.95));\r\n	box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);\r\n	transform: translateY(-2px);\r\n	z-index: 10;\r\n}\r\n\r\n#JoystickUI .icon {\r\n	position: relative;\r\n}\r\n\r\n#JoystickUI .icon .img {\r\n	width: 24px;\r\n	height: 24px;\r\n	background-repeat: no-repeat;\r\n	border: none;\r\n	background-color: transparent;\r\n}\r\n\r\n#JoystickUI .icon .name {\r\n	display: none;\r\n	z-index: 1;\r\n	position: absolute;\r\n	top: 0px;\r\n	left: 0px;\r\n	background-color: rgba(0, 0, 0, 0.6);\r\n	text-shadow: 1px 1px black;\r\n	color: white;\r\n	padding: 5px;\r\n	white-space: nowrap;\r\n}\r\n\r\n#JoystickUI .icon:hover .name {\r\n	display: block;\r\n}\r\n\r\n#JoystickUI .icon.hide .name {\r\n	display: none;\r\n}\r\n\r\n#JoystickUI .icon .amount {\r\n	position: absolute;\r\n	right: 1px;\r\n	top: 20px;\r\n	text-shadow: 1px 1px 0px white;\r\n	text-align: right;\r\n	font-weight: bold;\r\n}\r\n";
 }));
 //#endregion
 //#region src/UI/Components/JoystickUI/JoystickUI.js
@@ -256480,6 +256786,13 @@ var init_Upsampling = __esmMin((() => {
 //#region src/Renderer/MapRenderer.js
 var MapRenderer_exports = /* @__PURE__ */ __exportAll({ default: () => MapRenderer });
 /**
+* @param {string} mapname
+* @returns {string} map name without its extension
+*/
+function stripMapExtension(mapname) {
+	return (mapname || "").replace(/\.[^.]*$/, "");
+}
+/**
 * Received progress from Thread
 *
 * @param {number} percent (progress)
@@ -256723,7 +257036,7 @@ var init_MapRenderer = __esmMin((() => {
 			Renderer.stop();
 			UIManager.removeComponents();
 			Cursor.setType(Cursor.ACTION.DEFAULT);
-			if (this.currentMap !== mapname) {
+			if (stripMapExtension(this.currentMap) !== stripMapExtension(mapname)) {
 				this.loading = true;
 				BGM.stop();
 				this.currentMap = mapname;
@@ -256745,6 +257058,7 @@ var init_MapRenderer = __esmMin((() => {
 			EntityManager.free();
 			Damage.free(gl);
 			EffectManager.free(gl);
+			JoystickUI_default.onRestore();
 			Mouse.intersect = false;
 			Background.remove(() => {
 				MapRenderer.onLoad();
@@ -257036,15 +257350,17 @@ var init_Camera = __esmMin((() => {
 		*/
 		static processQuake(tick) {
 			for (let i = 0; i < this.quakes.length; i++) if (this.quakes[i].active) {
-				if (this.quakes[i].startTick <= tick) if (this.quakes[i].startTick + this.quakes[i].duration > tick) {
-					this.position[0] += ((Math.random() * 5 - 2.5) / 10 + this.quakes[i].sideQuake) * Math.cos(this.angle[1] * (Math.PI / 180)) * C_QUAKE_MULT;
-					this.position[1] += ((Math.random() * 5 - 2.5) / 10 + this.quakes[i].sideQuake) * -Math.sin(this.angle[1] * (Math.PI / 180)) * C_QUAKE_MULT;
-					this.quakes[i].sideQuake *= -1;
-					this.zoom += ((Math.random() * 5 - 2.5) / 10 + this.quakes[i].zoomQuake) * C_QUAKE_MULT;
-					this.quakes[i].zoomQuake *= -1;
-					this.angle[0] += ((Math.random() * 5 - 2.5) / 15 + this.quakes[i].latitudeQuake) * C_QUAKE_MULT;
-					this.quakes[i].latitudeQuake *= -1;
-				} else this.quakes[i].active = false;
+				if (this.quakes[i].startTick <= tick) {
+					if (this.quakes[i].startTick + this.quakes[i].duration > tick) {
+						this.position[0] += ((Math.random() * 5 - 2.5) / 10 + this.quakes[i].sideQuake) * Math.cos(this.angle[1] * (Math.PI / 180)) * C_QUAKE_MULT;
+						this.position[1] += ((Math.random() * 5 - 2.5) / 10 + this.quakes[i].sideQuake) * -Math.sin(this.angle[1] * (Math.PI / 180)) * C_QUAKE_MULT;
+						this.quakes[i].sideQuake *= -1;
+						this.zoom += ((Math.random() * 5 - 2.5) / 10 + this.quakes[i].zoomQuake) * C_QUAKE_MULT;
+						this.quakes[i].zoomQuake *= -1;
+						this.angle[0] += ((Math.random() * 5 - 2.5) / 15 + this.quakes[i].latitudeQuake) * C_QUAKE_MULT;
+						this.quakes[i].latitudeQuake *= -1;
+					} else this.quakes[i].active = false;
+				}
 			} else this.quakes.splice(i, 1);
 		}
 		/**
@@ -257088,8 +257404,10 @@ var init_Camera = __esmMin((() => {
 				return;
 			}
 			if (action.tick + 500 > tick && Math.abs(action.x - Mouse.screen.x) < 10 && Math.abs(action.y - Mouse.screen.y) < 10) {
-				if (KEYS.SHIFT) if (DB.isIndoor(this.currentMap)) this.angleFinal[0] = +this.indoorRange;
-				else this.angleFinal[0] = +this.range;
+				if (KEYS.SHIFT) {
+					if (DB.isIndoor(this.currentMap)) this.angleFinal[0] = +this.indoorRange;
+					else this.angleFinal[0] = +this.range;
+				}
 				if (KEYS.CTRL) this.zoomFinal = 125;
 				else if (DB.isIndoor(this.currentMap)) this.angleFinal[1] = this.indoorRotationTo;
 				else this.angleFinal[1] = 0;
@@ -257325,6 +257643,8 @@ var init_Renderer = __esmMin((() => {
 		*/
 		static init(param) {
 			if (!this.gl) {
+				document.body.classList.add("ro-viewport");
+				this.canvas.className = "ro-scene";
 				this.canvas.style.position = "absolute";
 				this.canvas.style.top = "0px";
 				this.canvas.style.left = "0px";
@@ -257542,9 +257862,9 @@ function ensureDropFrame(gl) {
 	const tex = gl.createTexture();
 	gl.bindTexture(gl.TEXTURE_2D, tex);
 	const h = 16;
-	const data = new Uint8Array(h * 4);
+	const data = /* @__PURE__ */ new Uint8Array(64);
 	for (let i = 0; i < h; i++) {
-		const t = i / (h - 1);
+		const t = i / 15;
 		let a = Math.min(1, t / .7);
 		if (t > .7) a *= 1 - (t - .7) / .3 * .35;
 		const alphaByte = Math.max(0, Math.min(255, Math.floor(a * 255)));
@@ -257592,9 +257912,9 @@ function ensureSplashFrame(gl) {
 	if (_splashFrame && _splashFrame.texture && gl.isTexture(_splashFrame.texture)) return;
 	_splashFrame = null;
 	const w = 16, h = 16;
-	const data = new Uint8Array(w * h * 4);
-	const cx = (w - 1) / 2;
-	const cy = (h - 1) / 2;
+	const data = /* @__PURE__ */ new Uint8Array(1024);
+	const cx = 15 / 2;
+	const cy = 15 / 2;
 	const maxR = Math.min(cx, cy);
 	for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
 		const dx = x - cx;
@@ -257631,9 +257951,9 @@ function ensurePuddleFrame(gl) {
 	if (_puddleFrame && _puddleFrame.texture && gl.isTexture(_puddleFrame.texture)) return;
 	_puddleFrame = null;
 	const w = 64, h = 64;
-	const data = new Uint8Array(w * h * 4);
-	const cx = (w - 1) / 2;
-	const cy = (h - 1) / 2;
+	const data = /* @__PURE__ */ new Uint8Array(16384);
+	const cx = 63 / 2;
+	const cy = 63 / 2;
 	const maxR = Math.min(cx, cy) * .85;
 	for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
 		const dx = x - cx;
@@ -257767,7 +258087,7 @@ var init_RainWeather = __esmMin((() => {
 	RAG_TICK_MS = 25;
 	FADEOUT_TAIL_MS = 1e3 * RAG_TICK_MS;
 	EMIT_PER_TICK = 10;
-	EMIT_STOP_BEFORE_END_MS = 160 * RAG_TICK_MS;
+	EMIT_STOP_BEFORE_END_MS = 4e3;
 	MAX_DROPS = 1100;
 	SCATTER_RADIUS_CELLS = 70;
 	SPAWN_HEIGHT_MIN_CELLS = 22;
@@ -258142,15 +258462,16 @@ var init_RainWeather = __esmMin((() => {
 			if (this.isFlashing) {
 				const elapsed = now - this.flashStartTime;
 				let flashAlpha = 0;
-				if (this.flashMultiCount === 2) if (elapsed < 80) flashAlpha = .6 * (1 - elapsed / 80);
-				else if (elapsed < 160) flashAlpha = 0;
-				else {
-					const elapsed2 = elapsed - 160;
-					if (elapsed2 < FLASH_FADE_IN) flashAlpha = elapsed2 / FLASH_FADE_IN * .8;
-					else if (elapsed2 < 350) flashAlpha = .8 * (1 - (elapsed2 - FLASH_FADE_IN) / FLASH_FADE_OUT);
-					else this.isFlashing = false;
-				}
-				else if (elapsed < FLASH_FADE_IN) flashAlpha = elapsed / FLASH_FADE_IN * .8;
+				if (this.flashMultiCount === 2) {
+					if (elapsed < 80) flashAlpha = .6 * (1 - elapsed / 80);
+					else if (elapsed < 160) flashAlpha = 0;
+					else {
+						const elapsed2 = elapsed - 160;
+						if (elapsed2 < FLASH_FADE_IN) flashAlpha = elapsed2 / FLASH_FADE_IN * .8;
+						else if (elapsed2 < 350) flashAlpha = .8 * (1 - (elapsed2 - FLASH_FADE_IN) / FLASH_FADE_OUT);
+						else this.isFlashing = false;
+					}
+				} else if (elapsed < FLASH_FADE_IN) flashAlpha = elapsed / FLASH_FADE_IN * .8;
 				else if (elapsed < 350) flashAlpha = .8 * (1 - (elapsed - FLASH_FADE_IN) / FLASH_FADE_OUT);
 				else this.isFlashing = false;
 				if (this.isFlashing) {
@@ -258368,7 +258689,7 @@ var init_SwirlingAura$1 = __esmMin((() => {
 }));
 //#endregion
 //#region src/Renderer/Effects/SwirlingAura.js
-var mat4$8, _program$8, _modelMatrix, E_DIVISION, FULL_DISPLAY_ANGLE, DEG_TO_RAD$1, STRIDE, VERTICES_PER_BAND, SwirlingAura;
+var mat4$8, _program$8, _modelMatrix, E_DIVISION, FULL_DISPLAY_ANGLE, DEG_TO_RAD$1, SwirlingAura;
 var init_SwirlingAura = __esmMin((() => {
 	init_SwirlingAura$2();
 	init_SwirlingAura$1();
@@ -258382,8 +258703,6 @@ var init_SwirlingAura = __esmMin((() => {
 	E_DIVISION = 21;
 	FULL_DISPLAY_ANGLE = 315;
 	DEG_TO_RAD$1 = Math.PI / 180;
-	STRIDE = 5;
-	VERTICES_PER_BAND = E_DIVISION * 2;
 	SwirlingAura = class {
 		constructor(position, textureName, tick, sizeType) {
 			this.position = position;
@@ -258393,13 +258712,13 @@ var init_SwirlingAura = __esmMin((() => {
 			const GAME_TO_WORLD = .1 * 2.2;
 			if (this.sizeType === 7) this.color = {
 				r: 100 / 255,
-				g: 255 / 255,
+				g: 1,
 				b: 100 / 255
 			};
 			else this.color = {
 				r: 100 / 255,
 				g: 100 / 255,
-				b: 255 / 255
+				b: 1
 			};
 			this.alphaB = 120 / 255;
 			const INNER_CIRCLE_SCALE = .6;
@@ -258415,8 +258734,8 @@ var init_SwirlingAura = __esmMin((() => {
 				height: new Float32Array(E_DIVISION),
 				flag1: new Uint8Array(E_DIVISION)
 			});
-			this.basicAngle = FULL_DISPLAY_ANGLE / (E_DIVISION - 1);
-			this.vertices = new Float32Array(VERTICES_PER_BAND * STRIDE);
+			this.basicAngle = FULL_DISPLAY_ANGLE / 20;
+			this.vertices = /* @__PURE__ */ new Float32Array(210);
 			this.buffers = null;
 			this.indexBuffer = null;
 			this.indexCount = 0;
@@ -258460,7 +258779,7 @@ var init_SwirlingAura = __esmMin((() => {
 				const topX = baseX + Rx * cosAngle;
 				const topY = -Ry;
 				const topZ = baseZ + Rx * sinAngle;
-				const u = k / (E_DIVISION - 1);
+				const u = k / 20;
 				verts[offset++] = baseX;
 				verts[offset++] = 0;
 				verts[offset++] = baseZ;
@@ -258478,7 +258797,7 @@ var init_SwirlingAura = __esmMin((() => {
 		*/
 		generateIndices() {
 			const indices = [];
-			for (let k = 0; k < E_DIVISION - 1; k++) {
+			for (let k = 0; k < 20; k++) {
 				const i0 = k * 2;
 				const i1 = k * 2 + 1;
 				const i2 = k * 2 + 2;
@@ -258552,8 +258871,8 @@ var init_SwirlingAura = __esmMin((() => {
 					self.fillBandMesh(band);
 					gl.bindBuffer(gl.ARRAY_BUFFER, self.buffers[ec]);
 					gl.bufferSubData(gl.ARRAY_BUFFER, 0, self.vertices);
-					gl.vertexAttribPointer(attribute.aPosition, 3, gl.FLOAT, false, STRIDE * 4, 0);
-					gl.vertexAttribPointer(attribute.aTextureCoord, 2, gl.FLOAT, false, STRIDE * 4, 12);
+					gl.vertexAttribPointer(attribute.aPosition, 3, gl.FLOAT, false, 20, 0);
+					gl.vertexAttribPointer(attribute.aTextureCoord, 2, gl.FLOAT, false, 20, 12);
 					gl.uniform4f(uniform.uColor, self.color.r, self.color.g, self.color.b, self.alphaB);
 					gl.uniform1f(uniform.uZIndex, .01 + ec * .001);
 					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.indexBuffer);
@@ -258866,7 +259185,7 @@ function pickColor(flag1) {
 	if (flag1 === 1) return {
 		r: 80 / 255,
 		g: 80 / 255,
-		b: 255 / 255
+		b: 1
 	};
 	if (flag1 === 11 || flag1 === 3) return {
 		r: .85,
@@ -259541,9 +259860,9 @@ var init_Tiles = __esmMin((() => {
 //#region src/Renderer/Effects/Songs.js
 function AbyssEffects$1() {
 	return [FlatColorTile_default("abyss", {
-		r: 255 / 255,
-		g: 255 / 255,
-		b: 255 / 255,
+		r: 1,
+		g: 1,
+		b: 1,
 		a: .05
 	}), HoveringTexture("data/texture/effect/" + [
 		"·¹µåÁª½ºÅæ",
@@ -259563,15 +259882,15 @@ var init_Songs = __esmMin((() => {
 	init_Tiles();
 	init_FlatColorTile();
 	DissonanceEffects$1 = [FlatColorTile_default("dissonance", {
-		r: 255 / 255,
-		g: 255 / 255,
-		b: 255 / 255,
+		r: 1,
+		g: 1,
+		b: 1,
 		a: .05
 	}), HoveringTexture("data/texture/effect/lens_w.bmp", .5, .7)];
 	LullabyEffects$1 = [FlatColorTile_default("lullaby", {
 		r: 237 / 255,
 		g: 158 / 255,
-		b: 255 / 255,
+		b: 1,
 		a: .05
 	}), HoveringTexture("data/texture/effect/zz.bmp", .5, .7)];
 	MrKimEffects$1 = [FlatColorTile_default("mrkim", {
@@ -259582,7 +259901,7 @@ var init_Songs = __esmMin((() => {
 	}), HoveringTexture("data/texture/effect/pocket.bmp", .5, .7)];
 	EtChaosEffects$1 = [FlatColorTile_default("etchaos", {
 		r: 128 / 255,
-		g: 255 / 255,
+		g: 1,
 		b: 194 / 255,
 		a: .05
 	}), HoveringTexture("data/texture/effect/lens_g.bmp", .5, .7)];
@@ -259595,7 +259914,7 @@ var init_Songs = __esmMin((() => {
 	NibelungEffects$1 = [FlatColorTile_default("nibelung", {
 		r: 28 / 255,
 		g: 236 / 255,
-		b: 255 / 255,
+		b: 1,
 		a: .05
 	}), HoveringTexture("data/texture/effect/twirl.bmp", .5, .7)];
 	LokiEffects$1 = [FlatColorTile_default("loki", {
@@ -259607,17 +259926,17 @@ var init_Songs = __esmMin((() => {
 	SiegfiedEffects$1 = [FlatColorTile_default("siegfried", {
 		r: 72 / 255,
 		g: 59 / 255,
-		b: 255 / 255,
+		b: 1,
 		a: .05
 	}), HoveringTexture("data/texture/effect/lens_b.bmp", .5, .7)];
 	WhistleEffects$1 = [FlatColorTile_default("whislte", {
-		r: 255 / 255,
+		r: 1,
 		g: 192 / 255,
 		b: 203 / 255,
 		a: .05
 	}), HoveringTexture("data/texture/effect/melody_b.bmp", .5, .7)];
 	SinEffects$1 = [FlatColorTile_default("sinsun", {
-		r: 255 / 255,
+		r: 1,
 		g: .8,
 		b: .85,
 		a: .4
@@ -259633,15 +259952,15 @@ var init_Songs = __esmMin((() => {
 		};
 	})();
 	AppleEffects$1 = [FlatColorTile_default("apple", {
-		r: 255 / 255,
-		g: 255 / 255,
-		b: 0 / 255,
+		r: 1,
+		g: 1,
+		b: 0,
 		a: .05
 	}), HoveringTexture("data/texture/effect/idun_apple.bmp", 1, .7)];
 	UglyEffects$1 = [FlatColorTile_default("ugly", {
-		r: 255 / 255,
-		g: 255 / 255,
-		b: 255 / 255,
+		r: 1,
+		g: 1,
+		b: 1,
 		a: .05
 	}), HoveringTexture("data/texture/effect/lens_w.bmp", .5, .7)];
 	HummingEffects$1 = [FlatColorTile_default("humming", {
@@ -259652,7 +259971,7 @@ var init_Songs = __esmMin((() => {
 	}), HoveringTexture("data/texture/effect/melody_a.bmp", .5, .7)];
 	ForgetEffects$1 = [FlatColorTile_default("humming", {
 		r: 28 / 255,
-		g: 255 / 255,
+		g: 1,
 		b: 115 / 255,
 		a: .05
 	}), HoveringTexture("data/texture/effect/lens_g.bmp", .5, .7)];
@@ -259663,15 +259982,15 @@ var init_Songs = __esmMin((() => {
 		a: .05
 	}), HoveringTexture("data/texture/effect/heart_2.bmp", .5, .7)];
 	ServiceEffects$1 = [FlatColorTile_default("service", {
-		r: 255 / 255,
+		r: 1,
 		g: 128 / 255,
 		b: 183 / 255,
 		a: .05
 	}), HoveringTexture("data/texture/effect/safeline.bmp", .5, .7)];
 	GospelEffects$1 = [FlatColorTile_default("gospel", {
-		r: 255 / 255,
-		g: 255 / 255,
-		b: 255 / 255,
+		r: 1,
+		g: 1,
+		b: 1,
 		a: .05
 	}), HoveringTexture("data/texture/effect/cross_old.bmp", .5, .7)];
 	FogEffects$1 = [FlatColorTile_default("fog", {
@@ -259681,9 +260000,9 @@ var init_Songs = __esmMin((() => {
 		a: .6
 	}), HoveringTexture("data/texture/effect/lens_w.bmp", .5, .7)];
 	GravityEffects$1 = [FlatColorTile_default("gravity", {
-		r: 255 / 255,
-		g: 255 / 255,
-		b: 255 / 255,
+		r: 1,
+		g: 1,
+		b: 1,
 		a: .2
 	}), HoveringTexture("data/texture/effect/lens_w.bmp", .5, .7)];
 	EvillandEffects$1 = [FlatColorTile_default("gray", {
@@ -260354,9 +260673,10 @@ var init_MagicTarget = __esmMin((() => {
 		constructor(id, x, y, endTick, srcEntity) {
 			this.x = x;
 			this.y = y;
-			if (CastSize[id]) if (SessionStorage_default.Entity == srcEntity && id == SessionStorage_default.Entity.lastSKID && SessionStorage_default.Entity.lastSkLvl && CastSize[id].length >= SessionStorage_default.Entity.lastSkLvl) this.size = CastSize[id][SessionStorage_default.Entity.lastSkLvl - 1] || 1;
-			else this.size = CastSize[id][0] || 1;
-			else this.size = 1;
+			if (CastSize[id]) {
+				if (SessionStorage_default.Entity == srcEntity && id == SessionStorage_default.Entity.lastSKID && SessionStorage_default.Entity.lastSkLvl && CastSize[id].length >= SessionStorage_default.Entity.lastSkLvl) this.size = CastSize[id][SessionStorage_default.Entity.lastSkLvl - 1] || 1;
+				else this.size = CastSize[id][0] || 1;
+			} else this.size = 1;
 			this.endTick = endTick;
 		}
 		/**
@@ -264507,9 +264827,7 @@ var init_EffectTable = __esmMin((() => {
 							return false;
 						}
 						if (time < 400) {
-							const progress = (time - 200) / 200;
-							const startVal = 5 / 255;
-							const val = startVal + (1 - startVal) * progress;
+							const val = 5 / 255 + .9803921568627451 * ((time - 200) / 200);
 							entity._flashColor[0] = val;
 							entity._flashColor[1] = val;
 							entity._flashColor[2] = 1;
@@ -264544,9 +264862,7 @@ var init_EffectTable = __esmMin((() => {
 							return false;
 						}
 						if (time < 400) {
-							const progress = (time - 200) / 200;
-							const startVal = 5 / 255;
-							const val = startVal + (1 - startVal) * progress;
+							const val = 5 / 255 + .9803921568627451 * ((time - 200) / 200);
 							entity._flashColor[0] = val;
 							entity._flashColor[1] = val;
 							entity._flashColor[2] = 1;
@@ -267764,9 +268080,7 @@ var init_EffectTable = __esmMin((() => {
 						return false;
 					}
 					if (time < 400) {
-						const progress = (time - 200) / 200;
-						const startVal = 5 / 255;
-						const val = startVal + (1 - startVal) * progress;
+						const val = 5 / 255 + .9803921568627451 * ((time - 200) / 200);
 						entity._flashColor[0] = val;
 						entity._flashColor[1] = val;
 						entity._flashColor[2] = 1;
@@ -267894,7 +268208,7 @@ var init_EffectTable = __esmMin((() => {
 			attachedEntity: false,
 			func: function(Params) {
 				const BlueTile = FlatColorTile_default("salmon", {
-					r: 255 / 255,
+					r: 1,
 					g: 138 / 255,
 					b: 187 / 255,
 					a: .6
@@ -267923,9 +268237,7 @@ var init_EffectTable = __esmMin((() => {
 							return false;
 						}
 						if (tick < 500) {
-							const progress = (tick - 200) / 300;
-							const startVal = 5 / 255;
-							const val = startVal + (1 - startVal) * progress;
+							const val = 5 / 255 + .9803921568627451 * ((tick - 200) / 300);
 							entity._flashColor[0] = 1;
 							entity._flashColor[1] = 1;
 							entity._flashColor[2] = val;
@@ -269106,7 +269418,7 @@ var init_EffectTable = __esmMin((() => {
 				for (let i = 0; i < count; i++) {
 					let delta = 1;
 					if (i <= 15) delta = 12 * (8 / 360);
-					else if (i <= 30) delta = 18 * (8 / 360);
+					else if (i <= 30) delta = .4;
 					else if (i <= 40) delta = 24 * (8 / 360);
 					else delta = 48 * (8 / 360);
 					Events.setTimeout(function() {
@@ -272683,20 +272995,21 @@ var init_EffectTable = __esmMin((() => {
 				func: function EffectBodyColor(Params) {
 					const entity = Params.Init;
 					entity.animations.add(function(tick) {
-						if (tick < 500) if (tick % 2 == 0) {
-							entity._flashColor[0] = 1;
-							entity._flashColor[1] = 1;
-							entity._flashColor[2] = 1;
-							entity._flashColor[3] = .4;
-							entity.recalculateBlendingColor();
+						if (tick < 500) {
+							if (tick % 2 == 0) {
+								entity._flashColor[0] = 1;
+								entity._flashColor[1] = 1;
+								entity._flashColor[2] = 1;
+								entity._flashColor[3] = .4;
+								entity.recalculateBlendingColor();
+							} else {
+								entity._flashColor[0] = 1;
+								entity._flashColor[1] = 1;
+								entity._flashColor[2] = 1;
+								entity._flashColor[3] = 1;
+								entity.recalculateBlendingColor();
+							}
 						} else {
-							entity._flashColor[0] = 1;
-							entity._flashColor[1] = 1;
-							entity._flashColor[2] = 1;
-							entity._flashColor[3] = 1;
-							entity.recalculateBlendingColor();
-						}
-						else {
 							entity._flashColor[0] = 1;
 							entity._flashColor[1] = 1;
 							entity._flashColor[2] = 1;
@@ -272781,20 +273094,21 @@ var init_EffectTable = __esmMin((() => {
 				func: function EffectBodyColor(Params) {
 					const entity = Params.Init.ownerEntity;
 					entity.animations.add(function(tick) {
-						if (tick < 500) if (tick % 2 == 0) {
-							entity._flashColor[0] = 1;
-							entity._flashColor[1] = .1;
-							entity._flashColor[2] = .5;
-							entity._flashColor[3] = .4;
-							entity.recalculateBlendingColor();
+						if (tick < 500) {
+							if (tick % 2 == 0) {
+								entity._flashColor[0] = 1;
+								entity._flashColor[1] = .1;
+								entity._flashColor[2] = .5;
+								entity._flashColor[3] = .4;
+								entity.recalculateBlendingColor();
+							} else {
+								entity._flashColor[0] = 1;
+								entity._flashColor[1] = 1;
+								entity._flashColor[2] = 1;
+								entity._flashColor[3] = 1;
+								entity.recalculateBlendingColor();
+							}
 						} else {
-							entity._flashColor[0] = 1;
-							entity._flashColor[1] = 1;
-							entity._flashColor[2] = 1;
-							entity._flashColor[3] = 1;
-							entity.recalculateBlendingColor();
-						}
-						else {
 							entity._flashColor[0] = 1;
 							entity._flashColor[1] = 1;
 							entity._flashColor[2] = 1;
@@ -273581,7 +273895,7 @@ var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		/** Used to indicate the type of lazy iteratees. */
 		var LAZY_FILTER_FLAG = 1, LAZY_MAP_FLAG = 2, LAZY_WHILE_FLAG = 3;
 		/** Used as references for various `Number` constants. */
-		var INFINITY = Infinity, MAX_SAFE_INTEGER = 9007199254740991, MAX_INTEGER = 17976931348623157e292, NAN = NaN;
+		var INFINITY = 1 / 0, MAX_SAFE_INTEGER = 9007199254740991, MAX_INTEGER = 17976931348623157e292, NAN = NaN;
 		/** Used as references for the maximum length and index of an array. */
 		var MAX_ARRAY_LENGTH = 4294967295, MAX_ARRAY_INDEX = MAX_ARRAY_LENGTH - 1, HALF_MAX_ARRAY_LENGTH = MAX_ARRAY_LENGTH >>> 1;
 		/** Used to associate wrap methods with their bit flags. */
@@ -275098,8 +275412,10 @@ var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 					while (++iterIndex < iterLength) {
 						var data = iteratees[iterIndex], iteratee = data.iteratee, type = data.type, computed = iteratee(value);
 						if (type == LAZY_MAP_FLAG) value = computed;
-						else if (!computed) if (type == LAZY_FILTER_FLAG) continue outer;
-						else break outer;
+						else if (!computed) {
+							if (type == LAZY_FILTER_FLAG) continue outer;
+							else break outer;
+						}
 					}
 					result[resIndex++] = value;
 				}
@@ -275494,7 +275810,7 @@ var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 				var data = this.__data__;
 				if (data instanceof ListCache) {
 					var pairs = data.__data__;
-					if (!Map || pairs.length < LARGE_ARRAY_SIZE - 1) {
+					if (!Map || pairs.length < 199) {
 						pairs.push([key, value]);
 						this.size = ++data.size;
 						return this;
@@ -275924,9 +276240,10 @@ var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 				result || (result = []);
 				while (++index < length) {
 					var value = array[index];
-					if (depth > 0 && predicate(value)) if (depth > 1) baseFlatten(value, depth - 1, predicate, isStrict, result);
-					else arrayPush(result, value);
-					else if (!isStrict) result[result.length] = value;
+					if (depth > 0 && predicate(value)) {
+						if (depth > 1) baseFlatten(value, depth - 1, predicate, isStrict, result);
+						else arrayPush(result, value);
+					} else if (!isStrict) result[result.length] = value;
 				}
 				return result;
 			}
@@ -276459,16 +276776,17 @@ var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 				if (isCommon) {
 					var isArr = isArray(srcValue), isBuff = !isArr && isBuffer(srcValue), isTyped = !isArr && !isBuff && isTypedArray(srcValue);
 					newValue = srcValue;
-					if (isArr || isBuff || isTyped) if (isArray(objValue)) newValue = objValue;
-					else if (isArrayLikeObject(objValue)) newValue = copyArray(objValue);
-					else if (isBuff) {
-						isCommon = false;
-						newValue = cloneBuffer(srcValue, true);
-					} else if (isTyped) {
-						isCommon = false;
-						newValue = cloneTypedArray(srcValue, true);
-					} else newValue = [];
-					else if (isPlainObject(srcValue) || isArguments(srcValue)) {
+					if (isArr || isBuff || isTyped) {
+						if (isArray(objValue)) newValue = objValue;
+						else if (isArrayLikeObject(objValue)) newValue = copyArray(objValue);
+						else if (isBuff) {
+							isCommon = false;
+							newValue = cloneBuffer(srcValue, true);
+						} else if (isTyped) {
+							isCommon = false;
+							newValue = cloneTypedArray(srcValue, true);
+						} else newValue = [];
+					} else if (isPlainObject(srcValue) || isArguments(srcValue)) {
 						newValue = objValue;
 						if (isArguments(objValue)) newValue = toPlainObject(objValue);
 						else if (!isObject(objValue) || isFunction(objValue)) newValue = initCloneObject(srcValue);
@@ -278183,8 +278501,10 @@ var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 					var unmasked = true;
 				} catch (e) {}
 				var result = nativeObjectToString.call(value);
-				if (unmasked) if (isOwn) value[symToStringTag] = tag;
-				else delete value[symToStringTag];
+				if (unmasked) {
+					if (isOwn) value[symToStringTag] = tag;
+					else delete value[symToStringTag];
+				}
 				return result;
 			}
 			/**
@@ -278259,9 +278579,7 @@ var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 						case "take":
 							end = nativeMin(end, start + size);
 							break;
-						case "takeRight":
-							start = nativeMax(start, end - size);
-							break;
+						case "takeRight": start = nativeMax(start, end - size);
 					}
 				}
 				return {
@@ -283605,7 +283923,7 @@ var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			* // => false
 			*/
 			function isSafeInteger(value) {
-				return isInteger(value) && value >= -9007199254740991 && value <= MAX_SAFE_INTEGER;
+				return isInteger(value) && value >= -MAX_SAFE_INTEGER && value <= MAX_SAFE_INTEGER;
 			}
 			/**
 			* Checks if `value` is classified as a `Set` object.
@@ -283999,7 +284317,7 @@ var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			* // => 3
 			*/
 			function toSafeInteger(value) {
-				return value ? baseClamp(toInteger(value), -9007199254740991, MAX_SAFE_INTEGER) : value === 0 ? value : 0;
+				return value ? baseClamp(toInteger(value), -MAX_SAFE_INTEGER, MAX_SAFE_INTEGER) : value === 0 ? value : 0;
 			}
 			/**
 			* Converts `value` to a string. An empty string is returned for `null`
@@ -288216,8 +288534,10 @@ function formatValue(ctx, value, recurseTimes) {
 	if (isDate(value)) base = " " + Date.prototype.toUTCString.call(value);
 	if (isError(value)) base = " " + formatError(value);
 	if (keys.length === 0 && (!array || value.length == 0)) return braces[0] + base + braces[1];
-	if (recurseTimes < 0) if (isRegExp(value)) return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
-	else return ctx.stylize("[Object]", "special");
+	if (recurseTimes < 0) {
+		if (isRegExp(value)) return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
+		else return ctx.stylize("[Object]", "special");
+	}
 	ctx.seen.push(value);
 	var output;
 	if (array) output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
@@ -288251,20 +288571,25 @@ function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
 }
 function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
 	var name, str, desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
-	if (desc.get) if (desc.set) str = ctx.stylize("[Getter/Setter]", "special");
-	else str = ctx.stylize("[Getter]", "special");
-	else if (desc.set) str = ctx.stylize("[Setter]", "special");
+	if (desc.get) {
+		if (desc.set) str = ctx.stylize("[Getter/Setter]", "special");
+		else str = ctx.stylize("[Getter]", "special");
+	} else if (desc.set) str = ctx.stylize("[Setter]", "special");
 	if (!hasOwnProperty(visibleKeys, key)) name = "[" + key + "]";
-	if (!str) if (ctx.seen.indexOf(desc.value) < 0) {
-		if (isNull(recurseTimes)) str = formatValue(ctx, desc.value, null);
-		else str = formatValue(ctx, desc.value, recurseTimes - 1);
-		if (str.indexOf("\n") > -1) if (array) str = str.split("\n").map(function(line) {
-			return "  " + line;
-		}).join("\n").substr(2);
-		else str = "\n" + str.split("\n").map(function(line) {
-			return "   " + line;
-		}).join("\n");
-	} else str = ctx.stylize("[Circular]", "special");
+	if (!str) {
+		if (ctx.seen.indexOf(desc.value) < 0) {
+			if (isNull(recurseTimes)) str = formatValue(ctx, desc.value, null);
+			else str = formatValue(ctx, desc.value, recurseTimes - 1);
+			if (str.indexOf("\n") > -1) {
+				if (array) str = str.split("\n").map(function(line) {
+					return "  " + line;
+				}).join("\n").substr(2);
+				else str = "\n" + str.split("\n").map(function(line) {
+					return "   " + line;
+				}).join("\n");
+			}
+		} else str = ctx.stylize("[Circular]", "special");
+	}
 	if (isUndefined(name)) {
 		if (array && key.match(/^\d+$/)) return str;
 		name = JSON.stringify("" + key);
@@ -288776,9 +289101,10 @@ var init_wasmoon_lua5_1 = __esmMin((() => {
 		}
 		pushBasicValue(target, options) {
 			if (target === void 0 || target === null) this.luaApi.lua_pushnil(this.address);
-			else if (typeof target === "number") if (Number.isInteger(target)) this.luaApi.lua_pushinteger(this.address, target);
-			else this.luaApi.lua_pushnumber(this.address, target);
-			else if (typeof target === "string") this.luaApi.lua_pushstring(this.address, target);
+			else if (typeof target === "number") {
+				if (Number.isInteger(target)) this.luaApi.lua_pushinteger(this.address, target);
+				else this.luaApi.lua_pushnumber(this.address, target);
+			} else if (typeof target === "string") this.luaApi.lua_pushstring(this.address, target);
 			else if (typeof target === "boolean") this.luaApi.lua_pushboolean(this.address, target ? 1 : 0);
 			else if (lodash__namespace.isPlainObject(target) || lodash__namespace.isArray(target)) this.pushTable(target, options);
 			else return false;
@@ -288786,22 +289112,23 @@ var init_wasmoon_lua5_1 = __esmMin((() => {
 		}
 		pushValue(target, options = {}) {
 			const startTop = this.getTop();
-			if (target instanceof JsType) if (target._push) target._push({
-				thread: this,
-				target: target.value,
-				options
-			});
-			else {
-				if (!this.pushBasicValue(target.value, options)) {
-					const ref = this.luaApi.ref(target.value);
-					const luaPointer = this.luaApi.lua_newuserdata(this.address, PointerSize);
-					this.luaApi.module.setValue(luaPointer, ref, "*");
+			if (target instanceof JsType) {
+				if (target._push) target._push({
+					thread: this,
+					target: target.value,
+					options
+				});
+				else {
+					if (!this.pushBasicValue(target.value, options)) {
+						const ref = this.luaApi.ref(target.value);
+						const luaPointer = this.luaApi.lua_newuserdata(this.address, PointerSize);
+						this.luaApi.module.setValue(luaPointer, ref, "*");
+					}
+					this.luaApi.lua_createtable(this.address, 0, 0);
+					target._pushMetaTable(this);
+					this.luaApi.lua_setmetatable(this.address, -2);
 				}
-				this.luaApi.lua_createtable(this.address, 0, 0);
-				target._pushMetaTable(this);
-				this.luaApi.lua_setmetatable(this.address, -2);
-			}
-			else if (target instanceof LuaThread) {
+			} else if (target instanceof LuaThread) {
 				if (!(this.luaApi.lua_pushthread(target.address) === 1)) this.luaApi.lua_xmove(target.address, this.address, 1);
 				return;
 			} else if (target && target.$istable) {
@@ -289022,11 +289349,13 @@ var init_wasmoon_lua5_1 = __esmMin((() => {
 			if (result !== exports$1.LuaReturn.Ok && result !== exports$1.LuaReturn.Yield) {
 				const resultString = exports$1.LuaReturn[result];
 				let error = /* @__PURE__ */ new Error(`Lua Error(${resultString}/${result})`);
-				if (this.getTop() > 0) if (result === exports$1.LuaReturn.ErrorMem) error.message = this.luaApi.lua_tolstring(this.address, -1, null);
-				else {
-					const luaError = this.getValue(-1);
-					if (luaError instanceof Error) error = luaError;
-					else error.message = new TextDecoder().decode(this.indexToString(-1));
+				if (this.getTop() > 0) {
+					if (result === exports$1.LuaReturn.ErrorMem) error.message = this.luaApi.lua_tolstring(this.address, -1, null);
+					else {
+						const luaError = this.getValue(-1);
+						if (luaError instanceof Error) error = luaError;
+						else error.message = new TextDecoder().decode(this.indexToString(-1));
+					}
 				}
 				if (result !== exports$1.LuaReturn.ErrorMem) {
 					const pointer = this.luaApi.module._malloc(LuaDebug.structSize);
@@ -289137,9 +289466,7 @@ var init_wasmoon_lua5_1 = __esmMin((() => {
 				case exports$1.LuaLibraries.Debug:
 					this.luaApi.luaopen_debug(this.address);
 					break;
-				case exports$1.LuaLibraries.Package:
-					this.luaApi.luaopen_package(this.address);
-					break;
+				case exports$1.LuaLibraries.Package: this.luaApi.luaopen_package(this.address);
 			}
 			this.luaApi.lua_setglobal(this.address, library);
 		}
@@ -292647,17 +292974,19 @@ var init_wasmoon_lua5_1 = __esmMin((() => {
 					if (commonType.includes(argType)) {
 						resolvedArgTypes.push(argType);
 						resolvedArgs.push(args[i]);
-					} else if (argType === "string|number") if (typeof args[i] === "number") {
-						resolvedArgTypes.push("number");
-						resolvedArgs.push(args[i]);
-					} else if (((_a = args[i]) === null || _a === void 0 ? void 0 : _a.length) > 1024) {
-						const bufferPointer = this.module.stringToNewUTF8(args[i]);
-						resolvedArgTypes.push("number");
-						resolvedArgs.push(bufferPointer);
-						pointersToBeFreed.push(bufferPointer);
-					} else {
-						resolvedArgTypes.push("string");
-						resolvedArgs.push(args[i]);
+					} else if (argType === "string|number") {
+						if (typeof args[i] === "number") {
+							resolvedArgTypes.push("number");
+							resolvedArgs.push(args[i]);
+						} else if (((_a = args[i]) === null || _a === void 0 ? void 0 : _a.length) > 1024) {
+							const bufferPointer = this.module.stringToNewUTF8(args[i]);
+							resolvedArgTypes.push("number");
+							resolvedArgs.push(bufferPointer);
+							pointersToBeFreed.push(bufferPointer);
+						} else {
+							resolvedArgTypes.push("string");
+							resolvedArgs.push(args[i]);
+						}
 					}
 				});
 				try {
@@ -293043,15 +293372,11 @@ function loadFontFromClient(fontPath) {
 							}  								
 						`;
 			document.head.appendChild(style);
-		}, function(error) {
-			console.warn("[loadFontFromClient] - Failed loading client font:", fontPath, "- Using Arial");
-			document.body.style.fontFamily = "Arial, Helvetica, sans-serif";
-			document.body.style.fontSize = "10px";
+		}, function() {
+			console.warn("[loadFontFromClient] - Failed to load client font:", fontPath);
 		});
-	}, function(error) {
-		console.warn("[loadFontFromClient] - Failed loading client font:", fontPath, "- Using Arial");
-		document.body.style.fontFamily = "Arial, Helvetica, sans-serif";
-		document.body.style.fontSize = "10px";
+	}, function() {
+		console.warn("[loadFontFromClient] - Failed to load client font:", fontPath);
 	});
 }
 function arrayBufferToBase64(buffer) {
@@ -293132,7 +293457,8 @@ function loadCSV(filename, targetTable, keyIndex, valueIndex, onEnd) {
 			const parts = isBase64 ? line.split(",") : line.split("	");
 			if (parts.length <= Math.max(keyIndex, valueIndex)) continue;
 			try {
-				targetTable[index] = isBase64 ? base64DecodeUtf8(parts[valueIndex].trim()) : parts[valueIndex].trim();
+				const value = isBase64 ? base64DecodeUtf8(parts[valueIndex].trim()) : parts[valueIndex].trim();
+				targetTable[index] = value;
 				index++;
 			} catch (e) {
 				console.error("Base64 decode failed on line", i + 1, ":", line, e);
@@ -294729,11 +295055,13 @@ function loadWeaponTable(filename, callback, onEnd) {
 			const buffer = file instanceof ArrayBuffer ? new Uint8Array(file) : file;
 			const ctx = lua.ctx;
 			ctx.AddWeaponName = (weaponID, weaponName) => {
-				WeaponName[weaponID] = weaponName && weaponName.length > 0 ? userStringDecoder.decode(weaponName) : "";
+				const decoded_weaponName = weaponName && weaponName.length > 0 ? userStringDecoder.decode(weaponName) : "";
+				WeaponName[weaponID] = decoded_weaponName;
 				return 1;
 			};
 			ctx.AddWeaponHitSound = (weaponID, soundFile) => {
-				WeaponSound[weaponID] = soundFile && soundFile.length > 0 ? userStringDecoder.decode(soundFile) : "";
+				const decoded_soundFile = soundFile && soundFile.length > 0 ? userStringDecoder.decode(soundFile) : "";
+				WeaponSound[weaponID] = decoded_soundFile;
 				return 1;
 			};
 			ctx.AddExpansionWeapon = (weaponID, expansionWeaponID) => {
@@ -295610,8 +295938,10 @@ function onUpdateOwnerName(pkt) {
 * Function to update MapTable with MapInfo values
 */
 function updateMapTable() {
-	for (const key in MapInfo) if (MapInfo.hasOwnProperty(key)) if (MapTable[key]) MapTable[key].name = MapInfo[key].displayName;
-	else MapTable[key] = { name: MapInfo[key].displayName };
+	for (const key in MapInfo) if (MapInfo.hasOwnProperty(key)) {
+		if (MapTable[key]) MapTable[key].name = MapInfo[key].displayName;
+		else MapTable[key] = { name: MapInfo[key].displayName };
+	}
 }
 var lua, HO_AI, MER_AI, default_HO_AI, default_MER_AI, MsgStringTable, JokeTable, ScreamTable, MapTable, SkillDescription, SexTable, PetTalkTable, CheckAttendanceTable, buyingStoreItemList, LaphineSysTable, LaphineUpgTable, ItemDBNameTbl, ItemReformTable, EnchantListTable, SignBoardTranslatedTable, SignBoardTable, NaviMapTable, NaviMobTable, NaviNpcTable, NaviLinkTable, NaviLinkDistanceTable, NaviNpcDistanceTable, QuestInfo, TitleTable, PetDBTable, EggIDToJobID, ReputeGroup, ReputeInfo, AchievementTable, MsgEmotionCSV, HatEffectID, HatEffectInfo, FootPrintEffectInfo, CashShopBannerTable, Ez2streffect, unknownItem, servers, langType, userCharpage, userStringDecoder, DB, SUFFIX_TO_FIELD, HARDCODED_FIELD_MAPPING;
 var init_DBManager = __esmMin((() => {
@@ -296264,12 +296594,10 @@ var init_DBManager = __esmMin((() => {
 				case "4062_WUG":
 				case "4098_WUG": return "data/sprite/¸ó½ºÅÍ/¿ö±×";
 				case "4257_WUG": return "data/sprite/ÀÌÆÑÆ®/windhawk_wolf";
-				default:
-					if (typeof id === "string") {
-						if (id.includes("_FALCON")) return "data/sprite/ÀÌÆÑÆ®/¸Å";
-						else if (id.includes("_WUG")) return "data/sprite/¸ó½ºÅÍ/¿ö±×";
-					}
-					break;
+				default: if (typeof id === "string") {
+					if (id.includes("_FALCON")) return "data/sprite/ÀÌÆÑÆ®/¸Å";
+					else if (id.includes("_WUG")) return "data/sprite/¸ó½ºÅÍ/¿ö±×";
+				}
 			}
 			return "data/sprite/¸ó½ºÅÍ/" + (MonsterTable_default[id] || MonsterTable_default[1001]).toLowerCase();
 		}
@@ -296395,17 +296723,15 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.GUILLOTINE_CROSS:
 				case JobConst_default.GUILLOTINE_CROSS_H:
 				case JobConst_default.GUILLOTINE_CROSS_B:
-				case JobConst_default.SHADOW_CROSS:
-					switch (DB.getWeaponType(itemID)) {
-						case WeaponType_default.KATAR:
-						case WeaponType_default.SHORTSWORD_SHORTSWORD:
-						case WeaponType_default.SWORD_SWORD:
-						case WeaponType_default.AXE_AXE:
-						case WeaponType_default.SHORTSWORD_SWORD:
-						case WeaponType_default.SHORTSWORD_AXE:
-						case WeaponType_default.SWORD_AXE: return 3;
-					}
-					break;
+				case JobConst_default.SHADOW_CROSS: switch (DB.getWeaponType(itemID)) {
+					case WeaponType_default.KATAR:
+					case WeaponType_default.SHORTSWORD_SHORTSWORD:
+					case WeaponType_default.SWORD_SWORD:
+					case WeaponType_default.AXE_AXE:
+					case WeaponType_default.SHORTSWORD_SWORD:
+					case WeaponType_default.SHORTSWORD_AXE:
+					case WeaponType_default.SWORD_AXE: return 3;
+				}
 			}
 			return 6;
 		}
@@ -296421,9 +296747,7 @@ var init_DBManager = __esmMin((() => {
 						case WeaponType_default.GUN_RIFLE:
 						case WeaponType_default.GUN_GATLING:
 						case WeaponType_default.GUN_SHOTGUN:
-						case WeaponType_default.GUN_GRANADE:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.GUN_GRANADE: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.NINJA:
@@ -296435,9 +296759,7 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.OBORO_B:
 				case JobConst_default.SHIRANUI:
 					switch (weaponType) {
-						case WeaponType_default.SYURIKEN:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.SYURIKEN: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.GANGSI:
@@ -296465,9 +296787,7 @@ var init_DBManager = __esmMin((() => {
 							if (sex == 1) dualWeapon = true;
 							break;
 						case WeaponType_default.ROD:
-						case WeaponType_default.TWOHANDROD:
-							if (sex == 0) dualWeapon = true;
-							break;
+						case WeaponType_default.TWOHANDROD: if (sex == 0) dualWeapon = true;
 					}
 					break;
 				case JobConst_default.SWORDMAN:
@@ -296475,9 +296795,7 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.SWORDMAN_B:
 					switch (weaponType) {
 						case WeaponType_default.TWOHANDSWORD:
-						case WeaponType_default.TWOHANDSPEAR:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.TWOHANDSPEAR: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.ARCHER:
@@ -296485,36 +296803,28 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.ARCHER_B:
 					switch (weaponType) {
 						case WeaponType_default.BOW: break;
-						default:
-							dualWeapon = true;
-							break;
+						default: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.THIEF:
 				case JobConst_default.THIEF_H:
 				case JobConst_default.THIEF_B:
 					switch (weaponType) {
-						case WeaponType_default.BOW:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.BOW: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.MAGICIAN:
 				case JobConst_default.MAGICIAN_H:
 				case JobConst_default.MAGICIAN_B:
 					switch (weaponType) {
-						case WeaponType_default.TWOHANDROD:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.TWOHANDROD: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.MERCHANT:
 				case JobConst_default.MERCHANT_H:
 				case JobConst_default.MERCHANT_B:
 					switch (weaponType) {
-						case WeaponType_default.TWOHANDAXE:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.TWOHANDAXE: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.ACOLYTE:
@@ -296535,22 +296845,18 @@ var init_DBManager = __esmMin((() => {
 								case WeaponType_default.TWOHANDAXE:
 								case WeaponType_default.TWOHANDROD:
 								case WeaponType_default.TWOHANDMACE: break;
-								case WeaponType_default.SHORTSWORD:
-									dualWeapon = true;
-									break;
+								case WeaponType_default.SHORTSWORD: dualWeapon = true;
 							}
 							break;
-						case 1:
-							switch (weaponType) {
-								case WeaponType_default.TWOHANDSWORD:
-								case WeaponType_default.TWOHANDAXE:
-								case WeaponType_default.TWOHANDROD:
-								case WeaponType_default.TWOHANDMACE:
-									dualWeapon = true;
-									break;
-								case WeaponType_default.SHORTSWORD: break;
-							}
-							break;
+						case 1: switch (weaponType) {
+							case WeaponType_default.TWOHANDSWORD:
+							case WeaponType_default.TWOHANDAXE:
+							case WeaponType_default.TWOHANDROD:
+							case WeaponType_default.TWOHANDMACE:
+								dualWeapon = true;
+								break;
+							case WeaponType_default.SHORTSWORD:
+						}
 					}
 					break;
 				case JobConst_default.KNIGHT:
@@ -296572,9 +296878,7 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.DRAGON_KNIGHT2:
 					switch (weaponType) {
 						case WeaponType_default.TWOHANDSPEAR:
-						case WeaponAction.TWOHANDSWORD:
-							dualWeapon = true;
-							break;
+						case WeaponAction.TWOHANDSWORD: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.PRIEST:
@@ -296585,9 +296889,7 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.ARCHBISHOP_B:
 				case JobConst_default.CARDINAL:
 					switch (weaponType) {
-						case WeaponType_default.BOOK:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.BOOK: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.WIZARD:
@@ -296602,9 +296904,7 @@ var init_DBManager = __esmMin((() => {
 							if (sex == 1) dualWeapon = true;
 							break;
 						case WeaponType_default.ROD:
-						case WeaponType_default.TWOHANDROD:
-							if (sex == 0) dualWeapon = true;
-							break;
+						case WeaponType_default.TWOHANDROD: if (sex == 0) dualWeapon = true;
 					}
 					break;
 				case JobConst_default.BLACKSMITH:
@@ -296622,9 +296922,7 @@ var init_DBManager = __esmMin((() => {
 						case WeaponType_default.SWORD:
 						case WeaponType_default.AXE:
 						case WeaponType_default.TWOHANDAXE:
-						case WeaponType_default.MACE:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.MACE: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.ASSASSIN:
@@ -296641,9 +296939,7 @@ var init_DBManager = __esmMin((() => {
 						case WeaponType_default.SHORTSWORD_AXE:
 						case WeaponType_default.SWORD_SWORD:
 						case WeaponType_default.SWORD_AXE:
-						case WeaponType_default.AXE_AXE:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.AXE_AXE: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.HUNTER:
@@ -296658,9 +296954,7 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.WINDHAWK:
 				case JobConst_default.WINDHAWK2:
 					switch (weaponType) {
-						case WeaponType_default.BOW:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.BOW: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.SAGE:
@@ -296674,9 +296968,7 @@ var init_DBManager = __esmMin((() => {
 						case WeaponType_default.BOOK:
 						case WeaponType_default.ROD:
 						case WeaponType_default.TWOHANDROD:
-						case WeaponType_default.TWOHANDSPEAR:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.TWOHANDSPEAR: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.ALCHEMIST:
@@ -296690,9 +296982,7 @@ var init_DBManager = __esmMin((() => {
 						case WeaponType_default.SWORD:
 						case WeaponType_default.AXE:
 						case WeaponType_default.TWOHANDAXE:
-						case WeaponType_default.MACE:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.MACE: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.CRUSADER:
@@ -296714,9 +297004,7 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.IMPERIAL_GUARD2:
 					switch (weaponType) {
 						case WeaponType_default.SPEAR:
-						case WeaponType_default.TWOHANDSPEAR:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.TWOHANDSPEAR: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.MONK:
@@ -296728,9 +297016,7 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.INQUISITOR:
 					switch (weaponType) {
 						case WeaponType_default.KNUKLE:
-						case WeaponType_default.NONE:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.NONE: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.ROGUE:
@@ -296741,9 +297027,7 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.SHADOW_CHASER_B:
 				case JobConst_default.ABYSS_CHASER:
 					switch (weaponType) {
-						case WeaponType_default.BOW:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.BOW: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.BARD:
@@ -296761,14 +297045,12 @@ var init_DBManager = __esmMin((() => {
 				case JobConst_default.WANDERER_B:
 				case JobConst_default.TROUVERE:
 					switch (weaponType) {
-						case WeaponType_default.BOW:
-							dualWeapon = true;
-							break;
+						case WeaponType_default.BOW: dualWeapon = true;
 					}
 					break;
 				case JobConst_default.DO_SUMMONER1:
 				case JobConst_default.DO_SUMMONER_B1:
-				case JobConst_default.SPIRIT_HANDLER: break;
+				case JobConst_default.SPIRIT_HANDLER:
 			}
 			return dualWeapon;
 		}
@@ -297002,14 +297284,16 @@ var init_DBManager = __esmMin((() => {
 		* @param {number} weapon id
 		*/
 		static getWeaponSound(id) {
-			return WeaponSound$1[DB.getWeaponType(id, true)];
+			const type = DB.getWeaponType(id, true);
+			return WeaponSound$1[type];
 		}
 		/**
 		* @return {string} Path to eapon sound
 		* @param {number} weapon id
 		*/
 		static getWeaponHitSound(id) {
-			const hitSound = WeaponSound[DB.getWeaponType(id, true, true)];
+			const type = DB.getWeaponType(id, true, true);
+			const hitSound = WeaponSound[type];
 			if (Array.isArray(hitSound)) return hitSound[Math.floor(Math.random() * hitSound.length)];
 			return hitSound;
 		}
@@ -297071,9 +297355,7 @@ var init_DBManager = __esmMin((() => {
 				case 12:
 					weapon = WeaponType_default.AXE_AXE;
 					break;
-				default:
-					weapon = viewId;
-					break;
+				default: weapon = viewId;
 			}
 			return weapon;
 		}
@@ -297166,9 +297448,7 @@ var init_DBManager = __esmMin((() => {
 							case 4:
 								elem = MsgStringTable[453];
 								break;
-							default:
-								elem = MsgStringTable[450];
-								break;
+							default: elem = MsgStringTable[450];
 						}
 						const GID = (item.slot.card4 << 16) + item.slot.card3;
 						name = "<font color=\"red\" class=\"owner-" + GID + "\">Unknown</font>";
@@ -297231,7 +297511,6 @@ var init_DBManager = __esmMin((() => {
 					case 1:
 						showslots = false;
 						str = DB.getMessage(756) + " " + str;
-						break;
 				}
 			}
 			if (showprefix && showItemPrefix) str += prefix;
@@ -298428,10 +298707,7 @@ var init_PetInformations = __esmMin((() => {
 				case "release":
 					PetInformations.reqBackToEgg();
 					break;
-				case "unequip":
-					PetInformations.reqUnEquipPet();
-					break;
-				default:
+				case "unequip": PetInformations.reqUnEquipPet();
 			}
 			this.value = "default";
 		});
@@ -298469,12 +298745,10 @@ var init_PetInformations = __esmMin((() => {
 	*/
 	PetInformations.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				if (this._host.style.display === "none") {
-					this._host.style.display = "";
-					this.focus();
-				} else this._host.style.display = "none";
-				break;
+			case "TOGGLE": if (this._host.style.display === "none") {
+				this._host.style.display = "";
+				this.focus();
+			} else this._host.style.display = "none";
 		}
 	};
 	/**
@@ -299067,9 +299341,7 @@ var init_EntityControl = __esmMin((() => {
 				case Entity.TYPE_WARP:
 					Cursor.setType(Cursor.ACTION.WARP);
 					return;
-				case Entity.TYPE_ITEM:
-					Cursor.setType(Cursor.ACTION.PICK, true, 0);
-					break;
+				case Entity.TYPE_ITEM: Cursor.setType(Cursor.ACTION.PICK, true, 0);
 			}
 			switch (this.display.load) {
 				case this.display.TYPE.NONE: {
@@ -299086,7 +299358,6 @@ var init_EntityControl = __esmMin((() => {
 					mat4$1.multiply(_matrix, Camera.projection, this.matrix);
 					this.display.render(_matrix);
 					this.display.add();
-					break;
 			}
 		}
 		/**
@@ -299370,21 +299641,19 @@ var init_EntityControl = __esmMin((() => {
 						});
 					}
 					break;
-				case Entity.TYPE_MERC:
-					if (SessionStorage_default.mercId === this.GID) {
-						ContextMenu_default.remove();
-						ContextMenu_default.append();
-						ContextMenu_default.addElement("View Status", () => {
-							MercenaryInformations_default.ui.toggle();
-						});
-						if (localStorage.getItem("MER_AGGRESSIVE") == 0) ContextMenu_default.addElement("Assist", () => {
-							MercenaryInformations_default.toggleAggressive();
-						});
-						else ContextMenu_default.addElement("Stand By", () => {
-							MercenaryInformations_default.toggleAggressive();
-						});
-					}
-					break;
+				case Entity.TYPE_MERC: if (SessionStorage_default.mercId === this.GID) {
+					ContextMenu_default.remove();
+					ContextMenu_default.append();
+					ContextMenu_default.addElement("View Status", () => {
+						MercenaryInformations_default.ui.toggle();
+					});
+					if (localStorage.getItem("MER_AGGRESSIVE") == 0) ContextMenu_default.addElement("Assist", () => {
+						MercenaryInformations_default.toggleAggressive();
+					});
+					else ContextMenu_default.addElement("Stand By", () => {
+						MercenaryInformations_default.toggleAggressive();
+					});
+				}
 			}
 			return false;
 		}
@@ -299585,11 +299854,53 @@ function Init$10() {
 		case Entity.TYPE_FALCON:
 			this.ACTION.IDLE = 0;
 			this.ACTION.WALK = 1;
-			break;
 	}
 }
 var init_EntityAction = __esmMin((() => {
 	init_DBManager();
+}));
+//#endregion
+//#region src/Renderer/Entity/EntityOverlay.js
+var EntityOverlay;
+var init_EntityOverlay = __esmMin((() => {
+	EntityOverlay = class {
+		/**
+		* @var {HTMLElement} the layer, created on first use
+		*/
+		static layer = null;
+		/**
+		* Get the layer, appending it to the document if needed
+		*
+		* @return {HTMLElement} layer
+		*/
+		static getLayer() {
+			if (!this.layer) {
+				this.layer = document.createElement("div");
+				this.layer.className = "entity-overlay";
+				Object.assign(this.layer.style, {
+					position: "fixed",
+					top: "0px",
+					left: "0px",
+					width: "100%",
+					height: "100%",
+					overflow: "hidden",
+					pointerEvents: "none",
+					zIndex: "2"
+				});
+			}
+			if (!this.layer.parentNode) document.body.appendChild(this.layer);
+			return this.layer;
+		}
+		/**
+		* Add an overlay to the layer
+		*
+		* @param {HTMLElement} element
+		*/
+		static append(element) {
+			const layer = this.getLayer();
+			if (element.parentNode !== layer) layer.appendChild(element);
+		}
+	};
 }));
 //#endregion
 //#region src/Renderer/Entity/EntityCast.js
@@ -299602,6 +299913,7 @@ function Init$9() {
 var vec4$5, _pos$5, _size$5, Cast;
 var init_EntityCast = __esmMin((() => {
 	init_gl_matrix();
+	init_EntityOverlay();
 	vec4$5 = gl_matrix_default.vec4;
 	_pos$5 = /* @__PURE__ */ new Float32Array(4);
 	_size$5 = /* @__PURE__ */ new Float32Array(2);
@@ -299614,6 +299926,7 @@ var init_EntityCast = __esmMin((() => {
 			this.color = "#00FF00";
 			this.onComplete = null;
 			this.canvas = document.createElement("canvas");
+			this.canvas.className = "entity-cast";
 			this.ctx = this.canvas.getContext("2d");
 			this.canvas.style.position = "absolute";
 			this.canvas.style.zIndex = 1;
@@ -299637,7 +299950,7 @@ var init_EntityCast = __esmMin((() => {
 		remove() {
 			this.percent = -1;
 			this.display = false;
-			if (this.canvas.parentNode) document.body.removeChild(this.canvas);
+			this.canvas.remove();
 		}
 		/**
 		* Clean up memory
@@ -299658,9 +299971,9 @@ var init_EntityCast = __esmMin((() => {
 			ctx.fillStyle = "#10189c";
 			ctx.fillRect(0, 0, width, height);
 			ctx.fillStyle = "#424242";
-			ctx.fillRect(1, 1, width - 2, 4);
+			ctx.fillRect(1, 1, 58, 4);
 			ctx.fillStyle = this.color;
-			ctx.fillRect(1, 1, Math.round((width - 2) * perc), 4);
+			ctx.fillRect(1, 1, Math.round(58 * perc), 4);
 		}
 		/**
 		* Rendering cast
@@ -299694,7 +300007,7 @@ var init_EntityCast = __esmMin((() => {
 			_pos$5[1] = _size$5[1] - Math.round(_size$5[1] * (_pos$5[1] * z));
 			canvas.style.top = (_pos$5[1] | 0) + "px";
 			canvas.style.left = (_pos$5[0] - canvas.width / 2 | 0) + "px";
-			if (!canvas.parentNode) document.body.appendChild(canvas);
+			EntityOverlay.append(canvas);
 		}
 	};
 }));
@@ -299711,6 +300024,7 @@ var vec4$4, _pos$4, _size$4, Life;
 var init_EntityLife = __esmMin((() => {
 	init_gl_matrix();
 	init_DBManager();
+	init_EntityOverlay();
 	vec4$4 = gl_matrix_default.vec4;
 	_pos$4 = /* @__PURE__ */ new Float32Array(4);
 	_size$4 = /* @__PURE__ */ new Float32Array(2);
@@ -299724,6 +300038,7 @@ var init_EntityLife = __esmMin((() => {
 			this.ap_max = -1;
 			this.display = false;
 			this.canvas = document.createElement("canvas");
+			this.canvas.className = "entity-life";
 			this.ctx = this.canvas.getContext("2d");
 			this.canvas.style.position = "absolute";
 			this.canvas.style.zIndex = 1;
@@ -299736,7 +300051,7 @@ var init_EntityLife = __esmMin((() => {
 		*/
 		remove() {
 			this.display = false;
-			if (this.canvas.parentNode) document.body.removeChild(this.canvas);
+			this.canvas.remove();
 		}
 		/**
 		* Clean Up Life
@@ -299772,29 +300087,29 @@ var init_EntityLife = __esmMin((() => {
 			ctx.fillStyle = "#10189c";
 			ctx.fillRect(0, 0, width, height);
 			ctx.fillStyle = "#424242";
-			ctx.fillRect(1, 1, width - 2, height - 2);
+			ctx.fillRect(1, 1, 58, height - 2);
 			this.canvas.style.zIndex = this.entity.objecttype === Entity.TYPE_PC ? 2 : 1;
 			if (this.entity.objecttype === Entity.TYPE_MOB || this.entity.objecttype === Entity.TYPE_NPC_ABR || this.entity.objecttype === Entity.TYPE_NPC_BIONIC) ctx.fillStyle = hp_per < .25 ? "#FFFF00" : "#FF00E7";
 			else if (this.entity.objecttype === Entity.TYPE_PET) ctx.fillStyle = hp_per < .25 ? "#FFFF00" : "#FFE7E7";
 			else ctx.fillStyle = hp_per < .25 ? "#FF0000" : "#10ef21";
-			ctx.fillRect(1, 1, Math.round((width - 2) * hp_per), 3);
+			ctx.fillRect(1, 1, Math.round(58 * hp_per), 3);
 			if (sp) {
 				ctx.fillStyle = "#10189c";
 				ctx.fillRect(0, 4, width, 1);
 				ctx.fillStyle = "#1863de";
-				ctx.fillRect(1, 5, Math.round((width - 2) * sp_per), 3);
+				ctx.fillRect(1, 5, Math.round(58 * sp_per), 3);
 			}
 			if (ap) {
 				ctx.fillStyle = "#424242";
 				ctx.fillRect(1, 9, width, 1);
 				ctx.fillStyle = "#ffc663";
-				ctx.fillRect(1, 9, Math.round((width - 2) * ap_per), 3);
+				ctx.fillRect(1, 9, Math.round(58 * ap_per), 3);
 			}
 			if (hunger) {
 				ctx.fillStyle = "#424242";
 				ctx.fillRect(1, 9, width, 1);
 				ctx.fillStyle = hunger_per < .25 ? "#FFFF00" : "#FFE7E7";
-				ctx.fillRect(1, 9, Math.round((width - 2) * hunger_per), 3);
+				ctx.fillRect(1, 9, Math.round(58 * hunger_per), 3);
 			}
 		}
 		/**
@@ -299817,7 +300132,7 @@ var init_EntityLife = __esmMin((() => {
 			if (window.VerticalFlip && window.VerticalFlip.isActive()) _pos$4[1] = window.innerHeight - _pos$4[1];
 			canvas.style.top = (_pos$4[1] | 0) + "px";
 			canvas.style.left = (_pos$4[0] - canvas.width / 2 | 0) + "px";
-			if (!canvas.parentNode) document.body.appendChild(canvas);
+			EntityOverlay.append(canvas);
 		}
 	};
 }));
@@ -299843,6 +300158,7 @@ var vec4$3, _pos$3, _size$3, dpr, procCanvas, procCtx, _isUglyShadow, Display;
 var init_EntityDisplay = __esmMin((() => {
 	init_gl_matrix();
 	init_Map();
+	init_EntityOverlay();
 	vec4$3 = gl_matrix_default.vec4;
 	_pos$3 = /* @__PURE__ */ new Float32Array(4);
 	_size$3 = /* @__PURE__ */ new Float32Array(2);
@@ -299905,6 +300221,7 @@ var init_EntityDisplay = __esmMin((() => {
 			this.gifEmblem = null;
 			this.display = false;
 			this.canvas = document.createElement("canvas");
+			this.canvas.className = "entity-display";
 			this.ctx = this.canvas.getContext("2d");
 			this.canvas.style.position = "absolute";
 			this.canvas.style.zIndex = 1;
@@ -299928,7 +300245,7 @@ var init_EntityDisplay = __esmMin((() => {
 		* Remove GUI from html
 		*/
 		remove() {
-			if (this.canvas.parentNode) document.body.removeChild(this.canvas);
+			this.canvas.remove();
 			this.display = false;
 		}
 		/**
@@ -299961,11 +300278,13 @@ var init_EntityDisplay = __esmMin((() => {
 			const height = fontSize * 3 * (lines[1].length ? 2 : 1) + paddingTop;
 			ctx.canvas.width = width;
 			ctx.canvas.height = height;
-			if (this.emblem && (style === this.STYLE.DEFAULT || style === this.STYLE.ADMIN || style === this.STYLE.MOB || style === this.STYLE.NPC)) if (this.gifEmblem) {
-				const fw = this.gifEmblem.frameWidth;
-				const fh = this.gifEmblem.frameHeight;
-				ctx.drawImage(this.gifEmblem, 0, 0, fw, fh, 0, paddingTop, 24, 24);
-			} else ctx.drawImage(this.emblem, 0, paddingTop, 24, 24);
+			if (this.emblem && (style === this.STYLE.DEFAULT || style === this.STYLE.ADMIN || style === this.STYLE.MOB || style === this.STYLE.NPC)) {
+				if (this.gifEmblem) {
+					const fw = this.gifEmblem.frameWidth;
+					const fh = this.gifEmblem.frameHeight;
+					ctx.drawImage(this.gifEmblem, 0, 0, fw, fh, 0, paddingTop, 24, 24);
+				} else ctx.drawImage(this.emblem, 0, paddingTop, 24, 24);
+			}
 			let color = "white";
 			switch (style) {
 				case this.STYLE.MOB:
@@ -299977,9 +300296,7 @@ var init_EntityDisplay = __esmMin((() => {
 				case this.STYLE.ITEM:
 					color = "#FFEF94";
 					break;
-				case this.STYLE.ADMIN:
-					color = "#ffff00";
-					break;
+				case this.STYLE.ADMIN: color = "#ffff00";
 			}
 			ctx.font = (Map_default.showname ? "bold " : "") + fontSize + "px Arial";
 			ctx.textBaseline = "top";
@@ -300054,7 +300371,7 @@ var init_EntityDisplay = __esmMin((() => {
 			canvas.style.left = (_pos$3[0] - canvas.width / dpr / 2 | 0) + "px";
 			canvas.style.width = canvas.width / dpr + "px";
 			canvas.style.height = canvas.height / dpr + "px";
-			if (!canvas.parentNode) document.body.appendChild(canvas);
+			EntityOverlay.append(canvas);
 		}
 	};
 }));
@@ -300083,6 +300400,7 @@ var vec4$2, _pos$2, _size$2, Dialog;
 var init_EntityDialog = __esmMin((() => {
 	init_gl_matrix();
 	init_Events();
+	init_EntityOverlay();
 	vec4$2 = gl_matrix_default.vec4;
 	_pos$2 = /* @__PURE__ */ new Float32Array(4);
 	_size$2 = /* @__PURE__ */ new Float32Array(2);
@@ -300093,6 +300411,7 @@ var init_EntityDialog = __esmMin((() => {
 			this.timeout = null;
 			this.display = false;
 			this.canvas = document.createElement("canvas");
+			this.canvas.className = "entity-dialog";
 			this.ctx = this.canvas.getContext("2d");
 			this.canvas.style.position = "absolute";
 			this.canvas.style.zIndex = 1;
@@ -300154,7 +300473,7 @@ var init_EntityDialog = __esmMin((() => {
 				Events.clearTimeout(this.timeout);
 				this.timeout = null;
 			}
-			if (this.canvas.parentNode) document.body.removeChild(this.canvas);
+			this.canvas.remove();
 			this.display = false;
 			this.text = "";
 		}
@@ -300181,7 +300500,7 @@ var init_EntityDialog = __esmMin((() => {
 			_pos$2[1] = _size$2[1] - Math.round(_size$2[1] * (_pos$2[1] * z));
 			canvas.style.top = (_pos$2[1] - canvas.height - 2 | 0) + "px";
 			canvas.style.left = (_pos$2[0] - canvas.width / 2 | 0) + "px";
-			if (!canvas.parentNode) document.body.appendChild(canvas);
+			EntityOverlay.append(canvas);
 		}
 	};
 }));
@@ -300973,9 +301292,7 @@ function UpdateBody(job) {
 			case DB.isBionic(job):
 				objecttype = Entity.TYPE_NPC_BIONIC;
 				break;
-			default:
-				objecttype = Entity.TYPE_UNKNOWN;
-				break;
+			default: objecttype = Entity.TYPE_UNKNOWN;
 		}
 		if (objecttype !== this.objecttype) {
 			this.objecttype = objecttype;
@@ -301128,9 +301445,7 @@ function getBodyVal() {
 		case JobConst_default.TROUVERE_B:
 		case JobConst_default.WANDERER:
 		case JobConst_default.WANDERER_H:
-		case JobConst_default.WANDERER_B:
-			job = JobConst_default.WANDERER_2ND;
-			break;
+		case JobConst_default.WANDERER_B: job = JobConst_default.WANDERER_2ND;
 	}
 	return job || this._job;
 }
@@ -301241,9 +301556,7 @@ function UpdateGeneric(type, func, fallback) {
 			case "robe":
 				path = DB[func](val, this.job, this._sex);
 				break;
-			default:
-				path = DB[func](val, this._sex);
-				break;
+			default: path = DB[func](val, this._sex);
 		}
 		if (!path) {
 			this.files[type].spr = null;
@@ -301462,7 +301775,19 @@ function computeWalkStartTick(nowTick, moveStartTime, pathDuration, maxClamp) {
 	return nowTick - elapsed;
 }
 /**
-* Walk save structure
+* WalkStructure — pathfinding movement controller for entity walking
+*
+* @class WalkStructure
+* @property {number} speed Movement speed in ms per cell
+* @property {number} tick Walk movement start tick
+* @property {number} prevTick Previous tick frame
+* @property {number} dist Walk distance accumulated in map cells
+* @property {Int16Array} path Array of cell coordinate pairs [x0, y0, x1, y1, ...]
+* @property {Float32Array} pos [x, y, z] target position
+* @property {Float32Array} lastPos [x, y, z] previous position
+* @property {function|null} onEnd Callback fired when entity reaches path end
+* @property {number} index Current segment index in path
+* @property {number} total Total number of coordinate values in path
 */
 function WalkStructure() {
 	this.speed = 150;
@@ -301742,25 +302067,27 @@ function walkProcess() {
 		pos[0] = newX;
 		pos[1] = newY;
 		pos[2] = cellHeight;
-		if (index < total) if (index === 2) {
-			const remDx = nextX - newX;
-			const remDy = nextY - newY;
-			if (Math.abs(remDx) < .001 && Math.abs(remDy) < .001) {
-				const prevTileX0 = path[index - 2];
-				const prevTileY0 = path[index - 1];
-				const segDx0 = nextX - prevTileX0;
-				const segDy0 = nextY - prevTileY0;
-				const dirRow0 = DIRECTION$1[segDx0 + 1];
-				if (dirRow0 && typeof dirRow0[segDy0 + 1] !== "undefined") this.direction = dirRow0[segDy0 + 1];
+		if (index < total) {
+			if (index === 2) {
+				const remDx = nextX - newX;
+				const remDy = nextY - newY;
+				if (Math.abs(remDx) < .001 && Math.abs(remDy) < .001) {
+					const prevTileX0 = path[index - 2];
+					const prevTileY0 = path[index - 1];
+					const segDx0 = nextX - prevTileX0;
+					const segDy0 = nextY - prevTileY0;
+					const dirRow0 = DIRECTION$1[segDx0 + 1];
+					if (dirRow0 && typeof dirRow0[segDy0 + 1] !== "undefined") this.direction = dirRow0[segDy0 + 1];
+				} else {
+					const contDir = offsetToFloatDir(remDx, remDy);
+					this.direction = quantizeDir(contDir);
+				}
 			} else {
-				const contDir = offsetToFloatDir(remDx, remDy);
-				this.direction = quantizeDir(contDir);
+				const segDx = Math.round(nextX - startX);
+				const segDy = Math.round(nextY - startY);
+				const dirRow = DIRECTION$1[segDx + 1];
+				if (dirRow && typeof dirRow[segDy + 1] !== "undefined") this.direction = dirRow[segDy + 1];
 			}
-		} else {
-			const segDx = Math.round(nextX - startX);
-			const segDy = Math.round(nextY - startY);
-			const dirRow = DIRECTION$1[segDx + 1];
-			if (dirRow && typeof dirRow[segDy + 1] !== "undefined") this.direction = dirRow[segDy + 1];
 		}
 		walk.dist += traveledDist;
 		walk.index = index;
@@ -301780,25 +302107,23 @@ function entitiesWalkProcess() {
 	const ownerCellX = this.position[0];
 	const ownerCellY = this.position[1];
 	if (this.falcon && !this.falcon.isAttacking && (!this.falcon.walk.lastWalkTick || this.falcon.walk.lastWalkTick + 1e3 < Date.now())) {
-		const range = 2;
-		if (Math.floor(this.distance(this, this.falcon)) < range) return;
+		if (Math.floor(this.distance(this, this.falcon)) < 2) return;
 		if (this.falcon._followTargetX !== ownerCellX || this.falcon._followTargetY !== ownerCellY) {
 			this.falcon.walk.speed = Math.max(this.walk.speed - 50, 1);
 			this.falcon._followTargetX = ownerCellX;
 			this.falcon._followTargetY = ownerCellY;
 			this.falcon.walk.lastWalkTick = Date.now();
-			this.falcon.walkToNonWalkableGround(this.falcon.position[0], this.falcon.position[1], ownerCellX, ownerCellY, range - 1, false, false, Date.now());
+			this.falcon.walkToNonWalkableGround(this.falcon.position[0], this.falcon.position[1], ownerCellX, ownerCellY, 1, false, false, Date.now());
 		}
 	}
 	if (this.wug && !this.wug.isAttacking && (!this.wug.walk.lastWalkTick || this.wug.walk.lastWalkTick + 1e3 < Date.now())) {
-		const range = 4;
-		if (Math.floor(this.distance(this, this.wug)) < range) return;
+		if (Math.floor(this.distance(this, this.wug)) < 4) return;
 		if (this.wug._followTargetX !== ownerCellX || this.wug._followTargetY !== ownerCellY) {
 			this.wug.walk.speed = Math.max(this.walk.speed - 50, 1);
 			this.wug._followTargetX = ownerCellX;
 			this.wug._followTargetY = ownerCellY;
 			this.wug.walk.lastWalkTick = Date.now();
-			this.wug.walkToNonWalkableGround(this.wug.position[0], this.wug.position[1], ownerCellX, ownerCellY, range - 1, false, false, Date.now());
+			this.wug.walkToNonWalkableGround(this.wug.position[0], this.wug.position[1], ownerCellX, ownerCellY, 3, false, false, Date.now());
 		}
 	}
 }
@@ -302202,7 +302527,7 @@ var init_EntityRender = __esmMin((() => {
 	init_DBManager();
 	init_Graphics();
 	init_GR2ModelRenderer();
-	WALK_DIST_TO_MOTION = 4.6 * .37 * 4 * 25;
+	WALK_DIST_TO_MOTION = 170.2;
 	renderGUI = (function renderGUIClosure() {
 		const mat4 = gl_matrix_default.mat4;
 		const vec4 = gl_matrix_default.vec4;
@@ -302342,9 +302667,7 @@ var init_EntityRender = __esmMin((() => {
 						const RIDING_STATUS = self.effectState & (StatusState_default.EffectState.RIDING | StatusState_default.EffectState.DRAGON1 | StatusState_default.EffectState.DRAGON2 | StatusState_default.EffectState.DRAGON3 | StatusState_default.EffectState.DRAGON4 | StatusState_default.EffectState.DRAGON5 | StatusState_default.EffectState.WUGRIDER) || self.allRidingState;
 						function robeCorrection(lookingFront) {
 							if (self.robe > 0 && self.robeHeight && self.bodyHeight) {
-								const HEAD_SIZE = 64;
-								const COMPENSATION = 25;
-								if (self.robeHeight + (self.action === self.ACTION.SIT ? 0 : RIDING_STATUS && lookingFront ? COMPENSATION * 2 : COMPENSATION) > self.bodyHeight + HEAD_SIZE) {
+								if (self.robeHeight + (self.action === self.ACTION.SIT ? 0 : RIDING_STATUS && lookingFront ? 50 : 25) > self.bodyHeight + 64) {
 									if (self.action === self.ACTION.SIT) return lookingFront ? -450 : RIDING_STATUS ? 1 : -100;
 									return lookingFront ? -300 : RIDING_STATUS ? 100 : 1;
 								}
@@ -302438,7 +302761,6 @@ var init_EntityRender = __esmMin((() => {
 					SpriteRenderer.runWithDepth(true, false, false, function() {
 						renderElement(self, self.files.body, "body", _position, true);
 					});
-					break;
 			}
 			SpriteRenderer.zIndex = 1;
 		};
@@ -302495,7 +302817,6 @@ var init_EntityRender = __esmMin((() => {
 				case 7:
 					_position[0] = -30;
 					_position[1] = -10;
-					break;
 			}
 			if (type !== "shadow" && entity.getOpt3(StatusState_default.Status.BERSERK) || entity.getOpt3(StatusState_default.Status.MARIONETTE)) isBlendModeOne = true;
 			const isBUNSIN = entity.getOpt3(StatusState_default.Status.NJ_BUNSINJYUTSU);
@@ -302686,9 +303007,7 @@ var init_EntityRoom = __esmMin((() => {
 					case Room.Type.BUY_SHOP:
 						filename = "shop";
 						break;
-					case Room.Type.PRIVATE_CHAT:
-						filename = "chat_close";
-						break;
+					case Room.Type.PRIVATE_CHAT: filename = "chat_close";
 				}
 				self.type = type;
 				self.id = id;
@@ -302864,9 +303183,7 @@ function updateBodyState(value) {
 			SoundManager.playPosition("_stone_explosion.wav", this.position);
 			this.animation.play = true;
 			break;
-		case StatusState_default.BodyState.STUN:
-			this.attachments.remove("status-stun");
-			break;
+		case StatusState_default.BodyState.STUN: this.attachments.remove("status-stun");
 	}
 	switch (value) {
 		case StatusState_default.BodyState.STONE:
@@ -302916,7 +303233,6 @@ function updateBodyState(value) {
 				file: "status-stun",
 				head: true
 			});
-			break;
 	}
 	this._bodyState = value;
 	recalculateBlendingColor.call(this);
@@ -302992,29 +303308,33 @@ function updateEffectState(value) {
 	if (value & StatusState_default.EffectState.XMAS) costume = 26;
 	if (value & StatusState_default.EffectState.SUMMER) costume = 27;
 	if (value & StatusState_default.EffectState.INVISIBLE) this._effectStateColor[3] = 0;
-	else if (value & (StatusState_default.EffectState.HIDE | StatusState_default.EffectState.CLOAK | StatusState_default.EffectState.CHASEWALK)) if (SessionStorage_default.Character.intravision) {
-		this._effectStateColor[0] = 0;
-		this._effectStateColor[1] = 0;
-		this._effectStateColor[2] = 0;
-	} else this._effectStateColor[3] = 0;
-	else if (this.Camouflage || this.Stealthfield) if (SessionStorage_default.Character.intravision) {
-		this._effectStateColor[0] = 0;
-		this._effectStateColor[1] = 0;
-		this._effectStateColor[2] = 0;
-	} else {
-		this._effectStateColor[3] = .1;
-		SoundManager.play("effect/assasin_cloaking.wav");
-	}
-	else if (this.Shadowform) if (SessionStorage_default.Character.intravision) {
-		this._effectStateColor[0] = 0;
-		this._effectStateColor[1] = 0;
-		this._effectStateColor[2] = 0;
-	} else {
-		this._effectStateColor[0] = .2;
-		this._effectStateColor[1] = .2;
-		this._effectStateColor[2] = .2;
-		this._effectStateColor[3] = .2;
-		SoundManager.play("effect/assasin_cloaking.wav", this.position);
+	else if (value & (StatusState_default.EffectState.HIDE | StatusState_default.EffectState.CLOAK | StatusState_default.EffectState.CHASEWALK)) {
+		if (SessionStorage_default.Entity?.intravision) {
+			this._effectStateColor[0] = 0;
+			this._effectStateColor[1] = 0;
+			this._effectStateColor[2] = 0;
+		} else this._effectStateColor[3] = 0;
+	} else if (this.Camouflage || this.Stealthfield) {
+		if (SessionStorage_default.Entity?.intravision) {
+			this._effectStateColor[0] = 0;
+			this._effectStateColor[1] = 0;
+			this._effectStateColor[2] = 0;
+		} else {
+			this._effectStateColor[3] = .1;
+			SoundManager.play("effect/assasin_cloaking.wav");
+		}
+	} else if (this.Shadowform) {
+		if (SessionStorage_default.Entity?.intravision) {
+			this._effectStateColor[0] = 0;
+			this._effectStateColor[1] = 0;
+			this._effectStateColor[2] = 0;
+		} else {
+			this._effectStateColor[0] = .2;
+			this._effectStateColor[1] = .2;
+			this._effectStateColor[2] = .2;
+			this._effectStateColor[3] = .2;
+			SoundManager.play("effect/assasin_cloaking.wav", this.position);
+		}
 	}
 	if (value & StatusState_default.EffectState.ORCISH) this.isOrcish = true;
 	else this.isOrcish = false;
@@ -303461,20 +303781,21 @@ var init_EntityAura = __esmMin((() => {
 			const server = Configs.getServer();
 			/** @type {TAuraSettings} - merge server aura config with default settings */
 			const settings = server != null ? Object.assign({}, _auraSettings, server.aura) : Object.assign({}, _auraSettings);
-			if (Map_default.aura > 0 && this.entity.clevel >= settings.defaultLv) if (this.entity.isVisible()) {
-				if (this.lastAuraState !== Map_default.aura && this.isLoaded) this.remove(effectManager);
-				if (!this.isLoaded) {
-					const effects = Map_default.aura < 2 ? simpleEffects : normalEffects;
-					for (let effectIndex = 0; effectIndex < effects.length; effectIndex++) effectManager.spam({
-						ownerAID: this.entity.GID,
-						position: this.entity.position,
-						effectId: effects[effectIndex]
-					});
-					this.isLoaded = true;
-					this.lastAuraState = Map_default.aura;
-				}
-			} else this.remove(effectManager);
-			else if (this.isLoaded) {
+			if (Map_default.aura > 0 && this.entity.clevel >= settings.defaultLv) {
+				if (this.entity.isVisible()) {
+					if (this.lastAuraState !== Map_default.aura && this.isLoaded) this.remove(effectManager);
+					if (!this.isLoaded) {
+						const effects = Map_default.aura < 2 ? simpleEffects : normalEffects;
+						for (let effectIndex = 0; effectIndex < effects.length; effectIndex++) effectManager.spam({
+							ownerAID: this.entity.GID,
+							position: this.entity.position,
+							effectId: effects[effectIndex]
+						});
+						this.isLoaded = true;
+						this.lastAuraState = Map_default.aura;
+					}
+				} else this.remove(effectManager);
+			} else if (this.isLoaded) {
 				this.remove(effectManager);
 				this.lastAuraState = Map_default.aura;
 			}
@@ -303567,6 +303888,7 @@ function Init() {
 var vec4, _pos, _size, Emblem;
 var init_EntityEmblem = __esmMin((() => {
 	init_gl_matrix();
+	init_EntityOverlay();
 	vec4 = gl_matrix_default.vec4;
 	_pos = /* @__PURE__ */ new Float32Array(4);
 	_size = /* @__PURE__ */ new Float32Array(2);
@@ -303575,6 +303897,7 @@ var init_EntityEmblem = __esmMin((() => {
 			this.emblem = null;
 			this.display = false;
 			this.canvas = document.createElement("canvas");
+			this.canvas.className = "entity-emblem";
 			this.ctx = this.canvas.getContext("2d");
 			this.canvas.style.position = "absolute";
 			this.canvas.style.zIndex = 1;
@@ -303585,7 +303908,7 @@ var init_EntityEmblem = __esmMin((() => {
 		*/
 		remove() {
 			this.display = false;
-			if (this.canvas.parentNode) document.body.removeChild(this.canvas);
+			this.canvas.remove();
 		}
 		/**
 		* Clean Up Emblem
@@ -303611,7 +303934,7 @@ var init_EntityEmblem = __esmMin((() => {
 		render(matrix) {
 			const canvas = this.canvas;
 			_pos[0] = 0;
-			_pos[1] = 140 / 35;
+			_pos[1] = 4;
 			_pos[2] = 0;
 			_pos[3] = 1;
 			_size[0] = window.innerWidth / 2;
@@ -303622,7 +303945,7 @@ var init_EntityEmblem = __esmMin((() => {
 			_pos[1] = _size[1] - Math.round(_size[1] * (_pos[1] * z));
 			canvas.style.top = (_pos[1] | 0) + "px";
 			canvas.style.left = (_pos[0] - canvas.width / 2 | 0) + "px";
-			if (!canvas.parentNode) document.body.appendChild(canvas);
+			EntityOverlay.append(canvas);
 		}
 	};
 }));
@@ -303791,11 +304114,12 @@ var init_Entity$1 = __esmMin((() => {
 				if (pending.job_transform !== void 0) this._job_transform = pending.job_transform;
 				delete pendingTrans[unit.GID];
 			}
-			if (unit.hasOwnProperty("job")) if (this._active_monster_transform || this._monster_transform || this._job_transform) {
-				this._job = unit.job;
-				this.job = this._effectiveJob;
-			} else this.job = unit.job;
-			else this.job = this._job;
+			if (unit.hasOwnProperty("job")) {
+				if (this._active_monster_transform || this._monster_transform || this._job_transform) {
+					this._job = unit.job;
+					this.job = this._effectiveJob;
+				} else this.job = unit.job;
+			} else this.job = this._job;
 			this.clothes = 0;
 			const keys = Object.keys(unit);
 			const count = keys.length;
@@ -303881,9 +304205,10 @@ var init_Entity$1 = __esmMin((() => {
 				case "hideShadow":
 					this.hideShadow = unit.hideShadow;
 					break;
-				default:
-					if (Entity.prototype.hasOwnProperty(keys[i]) || Entity.prototype.hasOwnProperty(`_${keys[i]}`)) this[keys[i]] = unit[keys[i]];
+				case "level":
+					this.clevel = unit.level;
 					break;
+				default: if (Entity.prototype.hasOwnProperty(keys[i]) || Entity.prototype.hasOwnProperty(`_${keys[i]}`)) this[keys[i]] = unit[keys[i]];
 			}
 			if (this.life.hp > -1 && this.life.hp_max > -1) {
 				this.life.update();
@@ -303947,7 +304272,6 @@ var init_Entity$1 = __esmMin((() => {
 					this.clean();
 					this.remove_tick = Date.now();
 					this.remove_delay = 0;
-					break;
 			}
 		}
 		/**
@@ -304081,6 +304405,31 @@ var init_Entity$1 = __esmMin((() => {
 	Entity.prototype.wug = null;
 	Entity.prototype.hideShadow = false;
 	Entity.prototype.call_flag = 0;
+	Object.defineProperty(Entity.prototype, "level", {
+		get() {
+			return this.clevel;
+		},
+		set(val) {
+			this.clevel = val;
+		},
+		enumerable: true,
+		configurable: true
+	});
+	/**
+	* Player-specific fields — declared on Entity.prototype so Entity.set() can
+	* auto-map them from server packets (charselect, status updates, etc.).
+	*
+	* The whitelist gate in set() uses Entity.prototype.hasOwnProperty() which does
+	* NOT walk the prototype chain, so any field only on Player.prototype is
+	* invisible to it. Entity.prototype already hosts player-specific state
+	* (clevel, hasCart, falcon, call_flag, etc.), so this follows the established
+	* pattern.
+	*/
+	Entity.prototype.joblevel = 0;
+	Entity.prototype.money = 0;
+	Entity.prototype.weight = 0;
+	Entity.prototype.max_weight = 0;
+	Entity.prototype.intravision = false;
 	/**
 	* @var {integer} tick to remove
 	*/
@@ -304142,7 +304491,7 @@ function forEach(callback) {
 * @returns {object} Entity
 */
 function getEntity(gid) {
-	if (SessionStorage_default.Entity.GID === gid) return SessionStorage_default.Entity;
+	if (SessionStorage_default.Entity && SessionStorage_default.Entity.GID === gid) return SessionStorage_default.Entity;
 	return getEntityByGID(gid);
 }
 /**
@@ -304164,7 +304513,7 @@ function storePendingTransform(aid, key, value) {
 * @returns {object} Entity
 */
 function getEntityByCID(aid) {
-	if (SessionStorage_default.Entity.AID === aid) return SessionStorage_default.Entity;
+	if (SessionStorage_default.Entity && SessionStorage_default.Entity.AID === aid) return SessionStorage_default.Entity;
 	const index = getEntityIndexBy((e) => e.AID, aid);
 	return index < 0 ? null : _list[index];
 }
@@ -304855,8 +305204,6 @@ var init_CursorManager = __esmMin((() => {
 						if (!Controls_default.itemsnap) break;
 						x += Math.floor(Mouse.screen.x - (entity.boundingRect.x1 + (entity.boundingRect.x2 - entity.boundingRect.x1) / 2));
 						y += Math.floor(Mouse.screen.y - (entity.boundingRect.y1 + (entity.boundingRect.y2 - entity.boundingRect.y1) / 2));
-						break;
-					default: break;
 				}
 			}
 			if (animation.compiledStyleIndex !== _lastStyleId || x !== _lastX || y !== _lastY) {
@@ -305176,7 +305523,10 @@ var init_Scrollbar = __esmMin((() => {
 			let startY = 0;
 			let startThumbY = 0;
 			/**
-			* Update thumb position relative to scroll position
+			* Update thumb position relative to scroll position.
+			* Reads scrollTop/scrollHeight/clientHeight and writes only the thumb,
+			* wrapper and paddingRight styles — it never writes element.scrollTop,
+			* so a 'scroll' listener calling this cannot trigger a re-entrant scroll.
 			*/
 			const updateThumb = () => {
 				const h = element.clientHeight;
@@ -305218,6 +305568,9 @@ var init_Scrollbar = __esmMin((() => {
 				}, 300);
 			};
 			element._roScrollbarRestart();
+			if (element._roScrollHandler) element.removeEventListener("scroll", element._roScrollHandler);
+			element._roScrollHandler = updateThumb;
+			element.addEventListener("scroll", updateThumb);
 			element.addEventListener("wheel", (e) => {
 				const h = element.clientHeight;
 				if (element.scrollHeight <= h) return;
@@ -305356,6 +305709,7 @@ var init_GUIComponent = __esmMin((() => {
 			this.needFocus = true;
 			this.manager = null;
 			this.__loaded = false;
+			this.__preparing = false;
 			this.__active = false;
 			this.__scrollbarObserver = null;
 			this.__mouseStopBlock = null;
@@ -305377,7 +305731,16 @@ var init_GUIComponent = __esmMin((() => {
 		* Equivalent to UIComponent.prototype.prepare().
 		*/
 		prepare() {
-			if (this.__loaded) return;
+			if (this.__loaded || this.__preparing) return;
+			this.__preparing = true;
+			try {
+				this._prepare();
+				this.__loaded = true;
+			} finally {
+				this.__preparing = false;
+			}
+		}
+		_prepare() {
 			_ensureDeps();
 			this._host = document.createElement("div");
 			this._host.id = this.name;
@@ -305401,7 +305764,6 @@ var init_GUIComponent = __esmMin((() => {
 			if (this.init) this.init();
 			this._setupMouseMode();
 			this._host.remove();
-			this.__loaded = true;
 		}
 		/**
 		* Add the component to the DOM.
@@ -305530,7 +305892,7 @@ var init_GUIComponent = __esmMin((() => {
 			cloned.mouseMode = this.mouseMode;
 			cloned.needFocus = this.needFocus;
 			if (full) for (const key of Object.keys(this)) {
-				if (key === "_host" || key === "_shadow" || key === "_container" || key === "ui" || key === "__loaded" || key === "__scrollbarObserver") continue;
+				if (key === "_host" || key === "_shadow" || key === "_container" || key === "ui" || key === "__loaded" || key === "__preparing" || key === "__scrollbarObserver") continue;
 				cloned[key] = this[key];
 			}
 			return cloned;
@@ -306224,8 +306586,38 @@ var init_MobileUI$1 = __esmMin((() => {
 function bindButton(root, selector, handler) {
 	const el = root.querySelector(selector);
 	if (el) {
-		el.addEventListener("click", handler);
-		el.addEventListener("touchstart", handler);
+		let touchHandled = false;
+		let releaseTimer = null;
+		const clearGuard = () => {
+			if (releaseTimer !== null) {
+				clearTimeout(releaseTimer);
+				releaseTimer = null;
+			}
+		};
+		const releaseGuard = () => {
+			clearGuard();
+			releaseTimer = setTimeout(() => {
+				releaseTimer = null;
+				touchHandled = false;
+			}, C_TOUCH_CLICK_GUARD);
+		};
+		el.addEventListener("click", (event) => {
+			if (touchHandled) {
+				touchHandled = false;
+				clearGuard();
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				return;
+			}
+			handler(event);
+		});
+		el.addEventListener("touchstart", (event) => {
+			touchHandled = true;
+			clearGuard();
+			handler(event);
+		});
+		el.addEventListener("touchend", releaseGuard);
+		el.addEventListener("touchcancel", releaseGuard);
 	}
 }
 /**
@@ -306755,7 +307147,7 @@ function isFreeCell$2(x, y) {
 	});
 	return free;
 }
-var vec2, mat2, direction, rotate, targetPos, movementTimer, MobileUI, _preferences$17, showButtons, C_AUTOTARGET_DELAY, centerX, centerY, maxDistance, normalizedX, normalizedY, _joystickBase, _joystickThumb, MobileUI_default;
+var vec2, mat2, direction, rotate, targetPos, movementTimer, MobileUI, _preferences$17, showButtons, C_AUTOTARGET_DELAY, C_TOUCH_CLICK_GUARD, centerX, centerY, maxDistance, normalizedX, normalizedY, _joystickBase, _joystickThumb, MobileUI_default;
 var init_MobileUI = __esmMin((() => {
 	init_Context();
 	init_UIManager();
@@ -306793,6 +307185,7 @@ var init_MobileUI = __esmMin((() => {
 	}, 1);
 	showButtons = false;
 	C_AUTOTARGET_DELAY = 500;
+	C_TOUCH_CLICK_GUARD = 750;
 	maxDistance = 0;
 	normalizedX = 0;
 	normalizedY = 0;
@@ -306842,7 +307235,7 @@ var init_MobileUI = __esmMin((() => {
 			["#yButton", 89],
 			["#uButton", 85],
 			["#iButton", 73],
-			["#oButton", 89],
+			["#oButton", 79],
 			["#aButton", 65],
 			["#sButton", 83],
 			["#dButton", 68],
@@ -306948,9 +307341,7 @@ var init_MobileUI = __esmMin((() => {
 			case "AT":
 				toggleAutoTargeting();
 				break;
-			case "ATK":
-				attackTargeted();
-				break;
+			case "ATK": attackTargeted();
 		}
 	};
 	/**
@@ -307205,19 +307596,19 @@ var init_html2canvas = __esmMin((() => {
 					arr[1] = parseInt(arr[1], 10);
 					val = arr;
 				}
-			} else if (el.currentStyle) if (attribute === "backgroundPosition") val = [toPX(attribute + "X", el.currentStyle[attribute + "X"]), toPX(attribute + "Y", el.currentStyle[attribute + "Y"])];
-			else {
-				val = toPX(attribute, el.currentStyle[attribute]);
-				if (/^(border)/i.test(attribute) && /^(medium|thin|thick)$/i.test(val)) switch (val) {
-					case "thin":
-						val = "1px";
-						break;
-					case "medium":
-						val = "0px";
-						break;
-					case "thick":
-						val = "5px";
-						break;
+			} else if (el.currentStyle) {
+				if (attribute === "backgroundPosition") val = [toPX(attribute + "X", el.currentStyle[attribute + "X"]), toPX(attribute + "Y", el.currentStyle[attribute + "Y"])];
+				else {
+					val = toPX(attribute, el.currentStyle[attribute]);
+					if (/^(border)/i.test(attribute) && /^(medium|thin|thick)$/i.test(val)) switch (val) {
+						case "thin":
+							val = "1px";
+							break;
+						case "medium":
+							val = "0px";
+							break;
+						case "thick": val = "5px";
+					}
 				}
 			}
 			return val;
@@ -307314,7 +307705,6 @@ var init_html2canvas = __esmMin((() => {
 								case "left":
 									gradient.x0 = 0;
 									gradient.x1 = bounds.width;
-									break;
 							}
 						}
 						if (gradient.x0 === null && gradient.x1 === null) gradient.x0 = gradient.x1 = bounds.width / 2;
@@ -307449,14 +307839,12 @@ var init_html2canvas = __esmMin((() => {
 								}
 								break;
 							case "closest-side":
-							case "contain":
-								if (m2[0] === "circle") gradient.rx = gradient.ry = Math.min(gradient.cx, gradient.cy, gradient.x1 - gradient.cx, gradient.y1 - gradient.cy);
-								else {
-									gradient.type = m2[0];
-									gradient.rx = Math.min(gradient.cx, gradient.x1 - gradient.cx);
-									gradient.ry = Math.min(gradient.cy, gradient.y1 - gradient.cy);
-								}
-								break;
+							case "contain": if (m2[0] === "circle") gradient.rx = gradient.ry = Math.min(gradient.cx, gradient.cy, gradient.x1 - gradient.cx, gradient.y1 - gradient.cy);
+							else {
+								gradient.type = m2[0];
+								gradient.rx = Math.min(gradient.cx, gradient.x1 - gradient.cx);
+								gradient.ry = Math.min(gradient.cy, gradient.y1 - gradient.cy);
+							}
 						}
 						m2 = m1[5].match(/((?:rgb|rgba)\(\d{1,3},\s\d{1,3},\s\d{1,3}(?:,\s[0-9\.]+)?\)(?:\s\d{1,3}(?:%|px))?)+/g);
 						if (m2) {
@@ -307475,7 +307863,6 @@ var init_html2canvas = __esmMin((() => {
 								});
 							}
 						}
-						break;
 				}
 				return gradient;
 			};
@@ -307733,9 +308120,7 @@ var init_html2canvas = __esmMin((() => {
 						case 401:
 							bold = "bold";
 							break;
-						case 400:
-							bold = "normal";
-							break;
+						case 400: bold = "normal";
 					}
 					ctx.setVariable("fillStyle", color);
 					ctx.setVariable("font", font_style + " " + font_variant + " " + bold + " " + size + " " + family);
@@ -307775,9 +308160,7 @@ var init_html2canvas = __esmMin((() => {
 							case "overline":
 								renderRect(ctx, bounds.left, bounds.top, bounds.width, 1, color);
 								break;
-							case "line-through":
-								renderRect(ctx, bounds.left, Math.ceil(bounds.top + metrics.middle + metrics.lineWidth), bounds.width, 1, color);
-								break;
+							case "line-through": renderRect(ctx, bounds.left, Math.ceil(bounds.top + metrics.middle + metrics.lineWidth), bounds.width, 1, color);
 						}
 						textOffset += renderList[c].length;
 					}
@@ -307823,9 +308206,7 @@ var init_html2canvas = __esmMin((() => {
 						case "lower-alpha":
 							text = _html2canvas.Generate.ListAlpha(currentIndex).toLowerCase();
 							break;
-						case "upper-alpha":
-							text = _html2canvas.Generate.ListAlpha(currentIndex);
-							break;
+						case "upper-alpha": text = _html2canvas.Generate.ListAlpha(currentIndex);
 					}
 					text += ". ";
 					listBounds = listPosition(element, text);
@@ -307833,9 +308214,7 @@ var init_html2canvas = __esmMin((() => {
 						case 401:
 							bold = "bold";
 							break;
-						case 400:
-							bold = "normal";
-							break;
+						case 400: bold = "normal";
 					}
 					ctx.setVariable("fillStyle", getCSS(element, "color"));
 					ctx.setVariable("font", getCSS(element, "fontVariant") + " " + bold + " " + getCSS(element, "fontStyle") + " " + getCSS(element, "fontSize") + " " + getCSS(element, "fontFamily"));
@@ -308004,7 +308383,6 @@ var init_html2canvas = __esmMin((() => {
 									bx,
 									by + bh + borders[2].width
 								];
-								break;
 						}
 						borderBounds = {
 							left: bx,
@@ -308146,7 +308524,6 @@ var init_html2canvas = __esmMin((() => {
 								if (add > 0) bgp.top += add;
 								bgy = Math.floor(bgy + image.height) - add;
 							}
-							break;
 					}
 					else h2clog("html2canvas: Error loading background:" + background_image);
 				}
@@ -308165,15 +308542,19 @@ var init_html2canvas = __esmMin((() => {
 					cssPosition
 				};
 				if (parentStack.clip) stack.clip = _html2canvas.Util.Extend({}, parentStack.clip);
-				if (options.useOverflow === true && /(hidden|scroll|auto)/.test(getCSS(el, "overflow")) === true && /(BODY)/i.test(el.nodeName) === false) if (stack.clip) stack.clip = clipBounds(stack.clip, bounds);
-				else stack.clip = bounds;
+				if (options.useOverflow === true && /(hidden|scroll|auto)/.test(getCSS(el, "overflow")) === true && /(BODY)/i.test(el.nodeName) === false) {
+					if (stack.clip) stack.clip = clipBounds(stack.clip, bounds);
+					else stack.clip = bounds;
+				}
 				stackLength = zindex.children.push(stack);
 				ctx = zindex.children[stackLength - 1].ctx;
 				ctx.setVariable("globalAlpha", stack.opacity);
 				borders = renderBorders(el, ctx, bounds, false);
 				stack.borders = borders;
-				if (ignoreElementsRegExp.test(el.nodeName) && options.iframeDefault !== "transparent") if (options.iframeDefault === "default") bgcolor = "#efefef";
-				else bgcolor = options.iframeDefault;
+				if (ignoreElementsRegExp.test(el.nodeName) && options.iframeDefault !== "transparent") {
+					if (options.iframeDefault === "default") bgcolor = "#efefef";
+					else bgcolor = options.iframeDefault;
+				}
 				bgbounds = {
 					left: x + borders[3].width,
 					top: y + borders[0].width,
@@ -308215,7 +308596,6 @@ var init_html2canvas = __esmMin((() => {
 						paddingRight = getCSSInt(el, "paddingRight");
 						paddingBottom = getCSSInt(el, "paddingBottom");
 						renderImage(ctx, el, 0, 0, el.width, el.height, x + paddingLeft + borders[3].width, y + paddingTop + borders[0].width, bounds.width - (borders[1].width + borders[3].width + paddingLeft + paddingRight), bounds.height - (borders[0].width + borders[2].width + paddingTop + paddingBottom));
-						break;
 				}
 				return zindex.children[stackLength - 1];
 			}
@@ -308356,20 +308736,22 @@ var init_html2canvas = __esmMin((() => {
 					} catch (e) {
 						h2clog("html2canvas: failed to get background-image - Exception: " + e.message);
 					}
-					if (background_image && background_image !== "1" && background_image !== "none") if (/^(-webkit|-o|-moz|-ms|linear)-/.test(background_image)) {
-						img = _html2canvas.Generate.Gradient(background_image, _html2canvas.Util.Bounds(el));
-						if (img !== undefined) {
-							images[background_image] = {
-								img,
-								succeeded: true
-							};
-							images.numTotal++;
-							images.numLoaded++;
-							start();
+					if (background_image && background_image !== "1" && background_image !== "none") {
+						if (/^(-webkit|-o|-moz|-ms|linear)-/.test(background_image)) {
+							img = _html2canvas.Generate.Gradient(background_image, _html2canvas.Util.Bounds(el));
+							if (img !== undefined) {
+								images[background_image] = {
+									img,
+									succeeded: true
+								};
+								images.numTotal++;
+								images.numLoaded++;
+								start();
+							}
+						} else {
+							src = _html2canvas.Util.backgroundImage(background_image.match(/data:image\/.*;base64,/i) ? background_image : background_image.split(",")[0]);
+							methods.loadImage(src);
 						}
-					} else {
-						src = _html2canvas.Util.backgroundImage(background_image.match(/data:image\/.*;base64,/i) ? background_image : background_image.split(",")[0]);
-						methods.loadImage(src);
 					}
 				}
 			}
@@ -308639,14 +309021,15 @@ var init_html2canvas = __esmMin((() => {
 				script.src = options.flashcanvas;
 				script.onload = (function(script, func) {
 					let intervalFunc;
-					if (script.onload === undefined) if (script.onreadystatechange !== undefined) {
-						intervalFunc = function() {
-							if (script.readyState !== "loaded" && script.readyState !== "complete") window.setTimeout(intervalFunc, 250);
-							else func();
-						};
-						window.setTimeout(intervalFunc, 250);
-					} else h2clog("html2canvas: Renderer: Can't track when flashcanvas is loaded");
-					else return func;
+					if (script.onload === undefined) {
+						if (script.onreadystatechange !== undefined) {
+							intervalFunc = function() {
+								if (script.readyState !== "loaded" && script.readyState !== "complete") window.setTimeout(intervalFunc, 250);
+								else func();
+							};
+							window.setTimeout(intervalFunc, 250);
+						} else h2clog("html2canvas: Renderer: Can't track when flashcanvas is loaded");
+					} else return func;
 				})(script, function() {
 					if (typeof window.FlashCanvas !== "undefined") {
 						h2clog("html2canvas: Renderer: Flashcanvas initialized");
@@ -308686,38 +309069,35 @@ var init_html2canvas = __esmMin((() => {
 							case "variable":
 								ctx[renderItem.name] = renderItem["arguments"];
 								break;
-							case "function":
-								if (renderItem.name === "fillRect") {
-									if (!usingFlashcanvas || renderItem["arguments"][0] + renderItem["arguments"][2] < flashMaxSize && renderItem["arguments"][1] + renderItem["arguments"][3] < flashMaxSize) ctx.fillRect.apply(ctx, renderItem["arguments"]);
-								} else if (renderItem.name === "drawShape") (function(args) {
-									let i, len = args.length;
-									ctx.beginPath();
-									for (i = 0; i < len; i++) ctx[args[i].name].apply(ctx, args[i]["arguments"]);
-									ctx.closePath();
-									ctx.fill();
-								})(renderItem["arguments"]);
-								else if (renderItem.name === "fillText") {
-									if (!usingFlashcanvas || renderItem["arguments"][1] < flashMaxSize && renderItem["arguments"][2] < flashMaxSize) ctx.fillText.apply(ctx, renderItem["arguments"]);
-								} else if (renderItem.name === "drawImage") {
-									if (renderItem["arguments"][8] > 0 && renderItem["arguments"][7]) {
-										if (hasCTX && options.taintTest) {
-											if (safeImages.indexOf(renderItem["arguments"][0].src) === -1) {
-												testctx.drawImage(renderItem["arguments"][0], 0, 0);
-												try {
-													testctx.getImageData(0, 0, 1, 1);
-												} catch (e) {
-													testCanvas = doc.createElement("canvas");
-													testctx = testCanvas.getContext("2d");
-													continue;
-												}
-												safeImages.push(renderItem["arguments"][0].src);
+							case "function": if (renderItem.name === "fillRect") {
+								if (!usingFlashcanvas || renderItem["arguments"][0] + renderItem["arguments"][2] < flashMaxSize && renderItem["arguments"][1] + renderItem["arguments"][3] < flashMaxSize) ctx.fillRect.apply(ctx, renderItem["arguments"]);
+							} else if (renderItem.name === "drawShape") (function(args) {
+								let i, len = args.length;
+								ctx.beginPath();
+								for (i = 0; i < len; i++) ctx[args[i].name].apply(ctx, args[i]["arguments"]);
+								ctx.closePath();
+								ctx.fill();
+							})(renderItem["arguments"]);
+							else if (renderItem.name === "fillText") {
+								if (!usingFlashcanvas || renderItem["arguments"][1] < flashMaxSize && renderItem["arguments"][2] < flashMaxSize) ctx.fillText.apply(ctx, renderItem["arguments"]);
+							} else if (renderItem.name === "drawImage") {
+								if (renderItem["arguments"][8] > 0 && renderItem["arguments"][7]) {
+									if (hasCTX && options.taintTest) {
+										if (safeImages.indexOf(renderItem["arguments"][0].src) === -1) {
+											testctx.drawImage(renderItem["arguments"][0], 0, 0);
+											try {
+												testctx.getImageData(0, 0, 1, 1);
+											} catch (e) {
+												testCanvas = doc.createElement("canvas");
+												testctx = testCanvas.getContext("2d");
+												continue;
 											}
+											safeImages.push(renderItem["arguments"][0].src);
 										}
-										ctx.drawImage.apply(ctx, renderItem["arguments"]);
 									}
+									ctx.drawImage.apply(ctx, renderItem["arguments"]);
 								}
-								break;
-							default:
+							}
 						}
 					}
 					if (storageContext.clip) ctx.restore();
@@ -308760,55 +309140,52 @@ var init_html2canvas = __esmMin((() => {
 							case "variable":
 								settings[renderItem.name] = renderItem["arguments"];
 								break;
-							case "function":
-								if (renderItem.name === "fillRect") {
-									el = doc.createElementNS(svgNS, "rect");
-									el.setAttribute("x", renderItem["arguments"][0]);
-									el.setAttribute("y", renderItem["arguments"][1]);
-									el.setAttribute("width", renderItem["arguments"][2]);
-									el.setAttribute("height", renderItem["arguments"][3]);
-									el.setAttribute("fill", settings.fillStyle);
-									svg.appendChild(el);
-								} else if (renderItem.name === "fillText") {
-									el = doc.createElementNS(svgNS, "text");
-									fontStyle = settings.font.split(" ");
-									el.style.fontVariant = fontStyle.splice(0, 1)[0];
-									el.style.fontWeight = fontStyle.splice(0, 1)[0];
-									el.style.fontStyle = fontStyle.splice(0, 1)[0];
-									el.style.fontSize = fontStyle.splice(0, 1)[0];
-									el.setAttribute("x", renderItem["arguments"][1]);
-									el.setAttribute("y", renderItem["arguments"][2] - (parseInt(el.style.fontSize, 10) + 3));
-									el.setAttribute("fill", settings.fillStyle);
-									el.style.dominantBaseline = "text-before-edge";
-									el.style.fontFamily = fontStyle.join(" ");
-									text = doc.createTextNode(renderItem["arguments"][0]);
+							case "function": if (renderItem.name === "fillRect") {
+								el = doc.createElementNS(svgNS, "rect");
+								el.setAttribute("x", renderItem["arguments"][0]);
+								el.setAttribute("y", renderItem["arguments"][1]);
+								el.setAttribute("width", renderItem["arguments"][2]);
+								el.setAttribute("height", renderItem["arguments"][3]);
+								el.setAttribute("fill", settings.fillStyle);
+								svg.appendChild(el);
+							} else if (renderItem.name === "fillText") {
+								el = doc.createElementNS(svgNS, "text");
+								fontStyle = settings.font.split(" ");
+								el.style.fontVariant = fontStyle.splice(0, 1)[0];
+								el.style.fontWeight = fontStyle.splice(0, 1)[0];
+								el.style.fontStyle = fontStyle.splice(0, 1)[0];
+								el.style.fontSize = fontStyle.splice(0, 1)[0];
+								el.setAttribute("x", renderItem["arguments"][1]);
+								el.setAttribute("y", renderItem["arguments"][2] - (parseInt(el.style.fontSize, 10) + 3));
+								el.setAttribute("fill", settings.fillStyle);
+								el.style.dominantBaseline = "text-before-edge";
+								el.style.fontFamily = fontStyle.join(" ");
+								text = doc.createTextNode(renderItem["arguments"][0]);
+								el.appendChild(text);
+								svg.appendChild(el);
+							} else if (renderItem.name === "drawImage") {
+								if (renderItem["arguments"][8] > 0 && renderItem["arguments"][7]) {
+									el = doc.createElementNS(svgNS, "clipPath");
+									el.setAttribute("id", "clipId" + clipId);
+									text = doc.createElementNS(svgNS, "rect");
+									text.setAttribute("x", renderItem["arguments"][5]);
+									text.setAttribute("y", renderItem["arguments"][6]);
+									text.setAttribute("width", renderItem["arguments"][3]);
+									text.setAttribute("height", renderItem["arguments"][4]);
 									el.appendChild(text);
+									defs.appendChild(el);
+									el = doc.createElementNS(svgNS, "image");
+									el.setAttributeNS(xlinkNS, "xlink:href", renderItem["arguments"][0].src);
+									el.setAttribute("width", renderItem["arguments"][7]);
+									el.setAttribute("height", renderItem["arguments"][8]);
+									el.setAttribute("x", renderItem["arguments"][5]);
+									el.setAttribute("y", renderItem["arguments"][6]);
+									el.setAttribute("clip-path", "url(#clipId" + clipId + ")");
+									el.setAttribute("preserveAspectRatio", "none");
 									svg.appendChild(el);
-								} else if (renderItem.name === "drawImage") {
-									if (renderItem["arguments"][8] > 0 && renderItem["arguments"][7]) {
-										el = doc.createElementNS(svgNS, "clipPath");
-										el.setAttribute("id", "clipId" + clipId);
-										text = doc.createElementNS(svgNS, "rect");
-										text.setAttribute("x", renderItem["arguments"][5]);
-										text.setAttribute("y", renderItem["arguments"][6]);
-										text.setAttribute("width", renderItem["arguments"][3]);
-										text.setAttribute("height", renderItem["arguments"][4]);
-										el.appendChild(text);
-										defs.appendChild(el);
-										el = doc.createElementNS(svgNS, "image");
-										el.setAttributeNS(xlinkNS, "xlink:href", renderItem["arguments"][0].src);
-										el.setAttribute("width", renderItem["arguments"][7]);
-										el.setAttribute("height", renderItem["arguments"][8]);
-										el.setAttribute("x", renderItem["arguments"][5]);
-										el.setAttribute("y", renderItem["arguments"][6]);
-										el.setAttribute("clip-path", "url(#clipId" + clipId + ")");
-										el.setAttribute("preserveAspectRatio", "none");
-										svg.appendChild(el);
-										clipId += 1;
-									}
+									clipId += 1;
 								}
-								break;
-							default:
+							}
 						}
 					}
 				}
@@ -308903,14 +309280,16 @@ var init_ScreenShot = __esmMin((() => {
 */
 function onMouseDown(event) {
 	const action = event && event.which || 1;
+	if (Mouse.state === Mouse.MOUSE_STATE.USESKILL && SkillTargetSelection_default.onMapMouseDown(event)) return;
 	if (!Mouse.intersect) return;
 	const entityFocus = EntityManager.getFocusEntity();
 	const entityOver = EntityManager.getOverEntity();
 	switch (action) {
 		case 1:
-			if (!KEYS.SHIFT && KEYS.ALT && !KEYS.CTRL) if (entityOver && entityOver != SessionStorage_default.Entity && entityOver.objecttype != Entity.TYPE_EFFECT && entityOver.objecttype != Entity.TYPE_TRAP) AIDriver.setmsg(SessionStorage_default.mercId, "3," + entityOver.GID);
-			else AIDriver.setmsg(SessionStorage_default.mercId, "1," + Mouse.world.x + "," + Mouse.world.y);
-			else {
+			if (!KEYS.SHIFT && KEYS.ALT && !KEYS.CTRL) {
+				if (entityOver && entityOver != SessionStorage_default.Entity && entityOver.objecttype != Entity.TYPE_EFFECT && entityOver.objecttype != Entity.TYPE_TRAP) AIDriver.setmsg(SessionStorage_default.mercId, "3," + entityOver.GID);
+				else AIDriver.setmsg(SessionStorage_default.mercId, "1," + Mouse.world.x + "," + Mouse.world.y);
+			} else {
 				SessionStorage_default.moveAction = null;
 				SessionStorage_default.autoFollow = false;
 				let stop = false;
@@ -308953,7 +309332,6 @@ function onMouseDown(event) {
 				Cursor.setType(Cursor.ACTION.ROTATE);
 				Camera.rotate(true);
 			}
-			break;
 	}
 }
 /**
@@ -308969,11 +309347,11 @@ function onMouseUp(event) {
 			if (entity) {
 				ET = entity.constructor;
 				entity.onMouseUp();
-				if (Controls_default.noctrl === false || ![
+				if (!SessionStorage_default.TouchTargeting && (Controls_default.noctrl === false || ![
 					ET.TYPE_MOB,
 					ET.TYPE_NPC_ABR,
 					ET.TYPE_NPC_BIONIC
-				].includes(entity.objecttype) && !SessionStorage_default.TouchTargeting) {
+				].includes(entity.objecttype))) {
 					EntityManager.setFocusEntity(null);
 					entity.onFocusEnd();
 				}
@@ -308987,7 +309365,6 @@ function onMouseUp(event) {
 				entity = EntityManager.getOverEntity();
 				if (entity && entity !== SessionStorage_default.Entity) entity.onContextMenu();
 			}
-			break;
 	}
 }
 /**
@@ -309640,7 +310017,6 @@ var init_Vending = __esmMin((() => {
 				root.querySelector(".zenySpan").textContent = prettyZeny$3(SessionStorage_default.zeny);
 				root.querySelector(".weightSpan").textContent = `${BasicInfoController.getUI().weight}/${BasicInfoController.getUI().weight_max}`;
 				root.querySelector(".limitZeny").value = "0";
-				break;
 		}
 		_type$3 = type;
 	};
@@ -310136,8 +310512,10 @@ var init_VendingShop = __esmMin((() => {
 		itemDiv.innerHTML = `<div class="icon"></div><div class="amount"><span class="count">${item.count || 1}</span></div>`;
 		content.appendChild(itemDiv);
 		const hideEl = root.querySelector(".hide");
-		if (hideEl) if (content.clientHeight < content.scrollHeight) hideEl.style.display = "none";
-		else hideEl.style.display = "";
+		if (hideEl) {
+			if (content.clientHeight < content.scrollHeight) hideEl.style.display = "none";
+			else hideEl.style.display = "";
+		}
 		Client.loadFile(`${DB.INTERFACE_PATH}item/${item.IsIdentified ? it.identifiedResourceName : it.unidentifiedResourceName}.bmp`, (data) => {
 			const iconEl = content.querySelector(`.item[data-index="${item.index}"] .icon`);
 			if (iconEl) iconEl.style.backgroundImage = `url(${data})`;
@@ -310683,7 +311061,7 @@ var init_ChangeCart = __esmMin((() => {
 		ChatBox_default.addText(msg, ChatBox_default.TYPE.PUBLIC | ChatBox_default.TYPE.SELF, ChatBox_default.FILTER.PUBLIC_LOG);
 		if (SessionStorage_default.Entity) SessionStorage_default.Entity.dialog.set(msg);
 		ChangeCart.ui.show();
-		updateList(SessionStorage_default.Character.level);
+		updateList(SessionStorage_default.Entity.clevel);
 		Renderer.stop(render$3);
 		Renderer.render(render$3);
 	};
@@ -311062,12 +311440,10 @@ var init_Emoticons = __esmMin((() => {
 	*/
 	Emoticons.onShortCut = function onShortCut(key) {
 		switch (key.cmd) {
-			case "TOGGLE":
-				if (this._host.style.display === "none") {
-					this.ui.show();
-					this.focus();
-				} else this._host.style.display = "none";
-				break;
+			case "TOGGLE": if (this._host.style.display === "none") {
+				this.ui.show();
+				this.focus();
+			} else this._host.style.display = "none";
 		}
 	};
 	Emoticons.mouseMode = GUIComponent.MouseMode.STOP;
@@ -311347,9 +311723,7 @@ var init_ShortCuts = __esmMin((() => {
 			case "EXECUTE_FLAG_8":
 				executeFlag(8);
 				break;
-			case "EXECUTE_FLAG_9":
-				executeFlag(9);
-				break;
+			case "EXECUTE_FLAG_9": executeFlag(9);
 		}
 	};
 	/**
@@ -311630,11 +312004,13 @@ var init_StatusIcons = __esmMin((() => {
 		_status[index].start = Renderer.tick;
 		_status[index].end = Renderer.tick + life;
 		if (life === 9999) _status[index].end = Infinity;
-		if (_status[index].img) if (TKM_ICON_OVERRIDE[index]) {
-			const wantVariant = SessionStorage_default.Entity && DB.isTaeKwon(SessionStorage_default.Entity._job) && TKM_ICON_OVERRIDE[index] || null;
-			if (_status[index].tkmVariant !== wantVariant) _status[index].img = null;
-			else return;
-		} else return;
+		if (_status[index].img) {
+			if (TKM_ICON_OVERRIDE[index]) {
+				const wantVariant = SessionStorage_default.Entity && DB.isTaeKwon(SessionStorage_default.Entity._job) && TKM_ICON_OVERRIDE[index] || null;
+				if (_status[index].tkmVariant !== wantVariant) _status[index].img = null;
+				else return;
+			} else return;
+		}
 		loadStatusIcon(index);
 		ScreenEffectManager.parseStatus(index);
 	};
@@ -311699,7 +312075,6 @@ function onClickPagination(target) {
 			CashShop.currentPage = CashShop.totalPage;
 			CashShop.pageOffset = (CashShop.currentPage - 1) * CashShop.pageLimit;
 			CashShop.isLastPage = true;
-			break;
 	}
 	CashShop.paginationOffsetLimit();
 	const arrowsL = CashShop.isFirstPage ? "off" : "on";
@@ -312351,7 +312726,6 @@ var init_CashShop$1 = __esmMin((() => {
 				default:
 					UIManager.showMessageBox("Something went wrong while using cashshop!", "ok");
 					ChatBox_default.addText("Something went wrong while using cashshop!", ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-					break;
 			}
 		}
 	};
@@ -312760,7 +313134,6 @@ function onItemReformResult(pkt) {
 			onRequestReformClose();
 			break;
 		}
-		default: break;
 	}
 }
 /**
@@ -313134,12 +313507,7 @@ function onAddMaterialItem$1(item, inventory_count, source_needcount, source_ico
 */
 function onLaphineSysResult(pkt) {
 	if (pkt) switch (pkt.result) {
-		case 0:
-			onRequestLaphineClose();
-			break;
-		case 5:
-		case 7: break;
-		default: break;
+		case 0: onRequestLaphineClose();
 	}
 }
 /**
@@ -313188,14 +313556,15 @@ function onSubmitItem$1() {
 	if (!sourceItem) return;
 	if (this.classList && this.classList.contains("unselectable")) {
 		let message;
-		if (item.type === ItemType_default.WEAPON || item.type === ItemType_default.ARMOR) if (item.RefiningLevel > LaphineUIState.needRefineMax) {
-			message = DB.getMessage(3644);
-			showMessage$1(message);
+		if (item.type === ItemType_default.WEAPON || item.type === ItemType_default.ARMOR) {
+			if (item.RefiningLevel > LaphineUIState.needRefineMax) {
+				message = DB.getMessage(3644);
+				showMessage$1(message);
+			} else {
+				message = DB.getMessage(2899);
+				showMessage$1(message);
+			}
 		} else {
-			message = DB.getMessage(2899);
-			showMessage$1(message);
-		}
-		else {
 			message = DB.getMessage(2898).replace("%d", sourceItem.count);
 			showMessage$1(message);
 		}
@@ -313760,10 +314129,7 @@ function onAddMaterialItem(item, target_iconname) {
 */
 function onLaphineUpgResult(pkt) {
 	if (pkt) switch (pkt.result) {
-		case 0:
-			onRequestLaphineUpgClose();
-			break;
-		default: break;
+		case 0: onRequestLaphineUpgClose();
 	}
 }
 /**
@@ -314495,7 +314861,7 @@ var init_Roulette$1 = __esmMin((() => {
 			if (btnSpin) btnSpin.disabled = false;
 			return;
 		}
-		const targetRotation = 360 * 5 + resultIndex * (360 / (_rouletteInfo.items.length || 10));
+		const targetRotation = 1800 + resultIndex * (360 / (_rouletteInfo.items.length || 10));
 		wheelSlots.style.transform = `translate(-50%, -50%) rotate(${targetRotation}deg)`;
 		setTimeout(() => {
 			_isSpinning = false;
@@ -314627,7 +314993,7 @@ var init_PCGoldTimer$1 = __esmMin((() => {
 	PCGoldTimer.startTimer = function startTimer() {
 		const root = this.getRoot();
 		this.timer = setInterval(function() {
-			const millisecondsMissing = 3600 * 1e3 - (Date.now() - _data.startTime + _data.playedTime * 1e3);
+			const millisecondsMissing = 36e5 - (Date.now() - _data.startTime + _data.playedTime * 1e3);
 			let text = PCGoldTimer.formatTime(millisecondsMissing);
 			if (text.includes("-")) {
 				text = "00:00";
@@ -314973,7 +315339,7 @@ var init_Clan$3 = __esmMin((() => {
 //#region src/UI/Components/Clan/Clan.css?raw
 var Clan_default$1;
 var init_Clan$2 = __esmMin((() => {
-	Clan_default$1 = ":host {\r\n	top: 150px;\r\n	left: 150px;\r\n	width: 400px;\r\n	height: 317px;\r\n}\r\n\r\n#Clan {\r\n	position: absolute;\r\n	width: 400px;\r\n	height: 317px;\r\n}\r\n\r\n#Clan .titlebar {\r\n	width: 100%;\r\n	height: 17px;\r\n	background-color: white;\r\n	background-repeat: repeat-x;\r\n	border-radius: 3px 3px 0px 0px;\r\n}\r\n\r\n#Clan .titlebar .base {\r\n	width: 11px;\r\n	height: 11px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	vertical-align: middle;\r\n}\r\n\r\n#Clan .titlebar .right {\r\n	float: right;\r\n	margin-right: 3px;\r\n}\r\n\r\n#Clan .titlebar .clear {\r\n	clear: both;\r\n}\r\n\r\n#Clan .panel {\r\n	background-color: white;\r\n	padding-right: 2px;\r\n}\r\n\r\n#Clan .content {\r\n	overflow-y: auto;\r\n	padding: 2px;\r\n	border-top: 1px solid #c6c6c6;\r\n	height: 238px;\r\n}\r\n\r\n#Clan .tabs {\r\n	height: 23px;\r\n	background-color: #b5b6b5;\r\n	white-space: nowrap;\r\n}\r\n\r\n#Clan .tabs button.active {\r\n	background-color: #fff;\r\n}\r\n\r\n#Clan .tabs button {\r\n	width: 64px;\r\n	height: 23px;\r\n	margin-left: 1px;\r\n	margin-right: 1px;\r\n	margin-top: 1px;\r\n	padding: 0;\r\n	overflow: hidden;\r\n	text-overflow: ellipsis;\r\n	white-space: nowrap;\r\n	background-color: #cecece;\r\n	border: 0px;\r\n	padding: 3px;\r\n}\r\n\r\n#Clan .footer {\r\n	width: 100%;\r\n	height: 27px;\r\n	background-repeat: repeat-x;\r\n	background-color: transparent;\r\n	position: relative;\r\n	border-radius: 0px 0px 3px 3px;\r\n}\r\n\r\n#Clan .footer .btn_ok {\r\n	display: none;\r\n	position: absolute;\r\n	bottom: 4px;\r\n	right: 4px;\r\n	width: 42px;\r\n	height: 20px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n	border: none;\r\n}\r\n\r\n/*\r\n * Clan Info CSS\r\n */\r\n#Clan .content.info .exp,\r\n#Clan .content.info .emblem,\r\n#Clan .content.info .tax,\r\n#Clan .content.info .ally,\r\n#Clan .content.info .ally_list,\r\n#Clan .content.info .hostile,\r\n#Clan .content.info .hostile_list {\r\n	position: absolute;\r\n	left: 201px;\r\n}\r\n\r\n#Clan .content.info .name {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 13px;\r\n}\r\n\r\n#Clan .content.info .level {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 28px;\r\n}\r\n\r\n#Clan .content.info .master {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 45px;\r\n}\r\n\r\n#Clan .content.info .members {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 61px;\r\n}\r\n\r\n#Clan .content.info .territory {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 77px;\r\n}\r\n\r\n#Clan .content.info .clan_illust {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 99px;\r\n	width: 180px;\r\n	height: 134px;\r\n	background-repeat: no-repeat;\r\n}\r\n\r\n#Clan .content.info .members ui-button {\r\n	margin-left: 5px;\r\n	vertical-align: -4px;\r\n	border: none;\r\n	width: 15px;\r\n	height: 15px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n}\r\n\r\n#Clan .content.info .emblem {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 37px;\r\n}\r\n\r\n#Clan .content.info .ally {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 99px;\r\n}\r\n\r\n#Clan .content.info .ally_list {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 114px;\r\n	white-space: pre;\r\n	width: 168px;\r\n	height: 48px;\r\n	background: #cecece;\r\n}\r\n\r\n#Clan .content.info .hostile {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 173px;\r\n}\r\n\r\n#Clan .content.info .hostile_list {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 188px;\r\n	white-space: pre;\r\n	width: 168px;\r\n	height: 48px;\r\n	background: #cecece;\r\n}\r\n\r\n#Clan .content.info .ally_list div,\r\n#Clan .content.info .hostile_list div {\r\n	padding: 2px;\r\n}\r\n\r\n#Clan .content.info .ally_list div.active,\r\n#Clan .content.info .hostile_list div.active {\r\n	background-color: #739eef;\r\n	padding: 2px;\r\n}\r\n\r\n#Clan .content.info .emblem_container {\r\n	width: 24px;\r\n	height: 24px;\r\n	position: absolute;\r\n	top: 29px;\r\n	left: 300px;\r\n	background-color: #709ce7;\r\n	background-repeat: no-repeat;\r\n}\r\n\r\n#Clan .content.info .emblem_edit {\r\n	position: absolute;\r\n	top: 34px;\r\n	left: 330px;\r\n	width: 42px;\r\n	height: 20px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	overflow: hidden;\r\n}\r\n\r\n#Clan .content.info .emblem_edit input {\r\n	opacity: 0;\r\n}\r\n";
+	Clan_default$1 = ":host {\r\n	top: 150px;\r\n	left: 150px;\r\n	width: 400px;\r\n	height: 317px;\r\n}\r\n\r\n#Clan {\r\n	position: absolute;\r\n	width: 400px;\r\n	height: 317px;\r\n}\r\n\r\n#Clan .titlebar {\r\n	width: 100%;\r\n	height: 17px;\r\n	background-color: white;\r\n	background-repeat: repeat-x;\r\n	border-radius: 3px 3px 0px 0px;\r\n}\r\n\r\n#Clan .titlebar .base {\r\n	width: 11px;\r\n	height: 11px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	vertical-align: middle;\r\n}\r\n\r\n#Clan .titlebar .right {\r\n	float: right;\r\n	margin-right: 3px;\r\n}\r\n\r\n#Clan .titlebar .clear {\r\n	clear: both;\r\n}\r\n\r\n#Clan .panel {\r\n	background-color: white;\r\n	padding-right: 2px;\r\n}\r\n\r\n#Clan .content {\r\n	position: relative;\r\n	box-sizing: border-box;\r\n	overflow-y: auto;\r\n	padding: 2px;\r\n	border-top: 1px solid #c6c6c6;\r\n	height: 250px;\r\n}\r\n\r\n#Clan .tabs {\r\n	height: 23px;\r\n	background-color: #b5b6b5;\r\n	white-space: nowrap;\r\n}\r\n\r\n#Clan .tabs button.active {\r\n	background-color: #fff;\r\n}\r\n\r\n#Clan .tabs button {\r\n	width: 64px;\r\n	height: 23px;\r\n	margin-left: 1px;\r\n	margin-right: 1px;\r\n	margin-top: 1px;\r\n	padding: 0;\r\n	overflow: hidden;\r\n	text-overflow: ellipsis;\r\n	white-space: nowrap;\r\n	background-color: #cecece;\r\n	border: 0px;\r\n	padding: 3px;\r\n}\r\n\r\n#Clan .footer {\r\n	width: 100%;\r\n	height: 27px;\r\n	background-repeat: repeat-x;\r\n	background-color: transparent;\r\n	position: relative;\r\n	border-radius: 0px 0px 3px 3px;\r\n}\r\n\r\n#Clan .footer .btn_ok {\r\n	display: none;\r\n	position: absolute;\r\n	bottom: 4px;\r\n	right: 4px;\r\n	width: 42px;\r\n	height: 20px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n	border: none;\r\n}\r\n\r\n/*\r\n * Clan Info CSS\r\n */\r\n#Clan .content.info .exp,\r\n#Clan .content.info .emblem,\r\n#Clan .content.info .tax,\r\n#Clan .content.info .ally,\r\n#Clan .content.info .ally_list,\r\n#Clan .content.info .hostile,\r\n#Clan .content.info .hostile_list {\r\n	position: absolute;\r\n	left: 201px;\r\n}\r\n\r\n#Clan .content.info .name {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 13px;\r\n}\r\n\r\n#Clan .content.info .level {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 28px;\r\n}\r\n\r\n#Clan .content.info .master {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 45px;\r\n}\r\n\r\n#Clan .content.info .members {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 61px;\r\n}\r\n\r\n#Clan .content.info .territory {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 77px;\r\n}\r\n\r\n#Clan .content.info .clan_illust {\r\n	position: absolute;\r\n	left: 9px;\r\n	top: 99px;\r\n	width: 180px;\r\n	height: 134px;\r\n	background-repeat: no-repeat;\r\n}\r\n\r\n#Clan .content.info .members ui-button {\r\n	margin-left: 5px;\r\n	vertical-align: -4px;\r\n	border: none;\r\n	width: 15px;\r\n	height: 15px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n}\r\n\r\n#Clan .content.info .emblem {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 37px;\r\n}\r\n\r\n#Clan .content.info .ally {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 99px;\r\n}\r\n\r\n#Clan .content.info .ally_list {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 114px;\r\n	white-space: pre;\r\n	width: 168px;\r\n	height: 48px;\r\n	background: #cecece;\r\n}\r\n\r\n#Clan .content.info .hostile {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 173px;\r\n}\r\n\r\n#Clan .content.info .hostile_list {\r\n	position: absolute;\r\n	left: 201px;\r\n	top: 188px;\r\n	white-space: pre;\r\n	width: 168px;\r\n	height: 48px;\r\n	background: #cecece;\r\n}\r\n\r\n#Clan .content.info .ally_list div,\r\n#Clan .content.info .hostile_list div {\r\n	padding: 2px;\r\n}\r\n\r\n#Clan .content.info .ally_list div.active,\r\n#Clan .content.info .hostile_list div.active {\r\n	background-color: #739eef;\r\n	padding: 2px;\r\n}\r\n\r\n#Clan .content.info .emblem_container {\r\n	width: 24px;\r\n	height: 24px;\r\n	position: absolute;\r\n	top: 29px;\r\n	left: 300px;\r\n	background-color: #709ce7;\r\n	background-repeat: no-repeat;\r\n}\r\n\r\n#Clan .content.info .emblem_edit {\r\n	position: absolute;\r\n	top: 34px;\r\n	left: 330px;\r\n	width: 42px;\r\n	height: 20px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n	overflow: hidden;\r\n}\r\n\r\n#Clan .content.info .emblem_edit input {\r\n	opacity: 0;\r\n}\r\n";
 }));
 //#endregion
 //#region src/UI/Components/Clan/Clan.js
@@ -315134,8 +315500,10 @@ var init_PluginManager = __esmMin((() => {
 				resolvedPath
 ).then((module) => {
 				const plugin = module.default || module;
-				if (typeof plugin === "function") if (plugin(params[i])) console.log("[PluginManager] Initialized plugin: " + pluginPath);
-				else console.error("[PluginManager] Failed to intialize plugin: " + pluginPath);
+				if (typeof plugin === "function") {
+					if (plugin(params[i])) console.log("[PluginManager] Initialized plugin: " + pluginPath);
+					else console.error("[PluginManager] Failed to intialize plugin: " + pluginPath);
+				}
 			}), [], import.meta.url).catch((err) => {
 				console.error("[PluginManager] Error loading plugin: " + pluginPath, err);
 			});
@@ -315187,7 +315555,7 @@ function renderTimer(seconds) {
 	const s = seconds % 60;
 	const text = m === 0 ? String(s).padStart(2, "0") : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 	const digitWidth = 50;
-	let x = TIMER_W - (m === 0 ? 2 * digitWidth : 5 * digitWidth) >> 1;
+	let x = TIMER_W - (m === 0 ? 100 : 250) >> 1;
 	for (let i = 0; i < text.length; i++) {
 		const a = timerCharToAction(text[i]);
 		if (!isNaN(a)) {
@@ -315362,7 +315730,7 @@ function renderRankText(text) {
 	for (i = 0; i < rankingStr.length; i++) {
 		a = rankCharToAction(rankingStr[i]);
 		if (!isNaN(a)) {
-			drawActionToCanvas(_rankCtx, _rankfontAct, _rankfontSpr, a, x, RANK_Y - 6);
+			drawActionToCanvas(_rankCtx, _rankfontAct, _rankfontSpr, a, x, 46);
 			x += step;
 		}
 	}
@@ -315679,11 +316047,13 @@ function createPlayerViewEquip({ name, cssText, hasTabs, costumeRows, costumeTab
 				if (!itemEl) return;
 				const index = parseInt(itemEl.getAttribute("data-index"), 10);
 				const item = _list[index];
-				if (item) if (ItemInfo_default.uid === item.ITID) ItemInfo_default.remove();
-				else {
-					ItemInfo_default.append();
-					ItemInfo_default.uid = item.ITID;
-					ItemInfo_default.setItem(item);
+				if (item) {
+					if (ItemInfo_default.uid === item.ITID) ItemInfo_default.remove();
+					else {
+						ItemInfo_default.append();
+						ItemInfo_default.uid = item.ITID;
+						ItemInfo_default.setItem(item);
+					}
 				}
 				e.stopImmediatePropagation();
 				e.preventDefault();
@@ -316420,9 +316790,7 @@ function onStatusParameterUpdateAnswer(pkt) {
 		case StatusProperty_default.VAR_SP_CON:
 			WinStatsController.getUI().update("con", pkt.value);
 			break;
-		case StatusProperty_default.VAR_SP_CRT:
-			WinStatsController.getUI().update("crt", pkt.value);
-			break;
+		case StatusProperty_default.VAR_SP_CRT: WinStatsController.getUI().update("crt", pkt.value);
 	}
 }
 /**
@@ -316556,13 +316924,13 @@ function onParameterChange$1(pkt) {
 			if (BasicInfoController.getUI().job_exp > -1) BasicInfoController.getUI().update("jexp", BasicInfoController.getUI().job_exp, BasicInfoController.getUI().job_exp_next);
 			break;
 		case StatusProperty_default.WEIGHT:
-			SessionStorage_default.Character.weight = amount;
-			if (BasicInfoController.getUI().weight_max > -1) BasicInfoController.getUI().update("weight", SessionStorage_default.Character.weight, BasicInfoController.getUI().weight_max);
+			SessionStorage_default.Entity.weight = amount;
+			if (BasicInfoController.getUI().weight_max > -1) BasicInfoController.getUI().update("weight", SessionStorage_default.Entity.weight, BasicInfoController.getUI().weight_max);
 			break;
 		case StatusProperty_default.MAXWEIGHT:
-			SessionStorage_default.Character.max_weight = amount;
+			SessionStorage_default.Entity.max_weight = amount;
 			BasicInfoController.getUI().weight_max = amount;
-			if (BasicInfoController.getUI().weight > -1) BasicInfoController.getUI().update("weight", SessionStorage_default.Character.weight, BasicInfoController.getUI().weight_max);
+			if (BasicInfoController.getUI().weight > -1) BasicInfoController.getUI().update("weight", SessionStorage_default.Entity.weight, BasicInfoController.getUI().weight_max);
 			break;
 		case StatusProperty_default.STANDARD_STR:
 			WinStatsController.getUI().update("str3", amount);
@@ -316747,9 +317115,7 @@ function onActionFailure(pkt) {
 		case 2:
 			ChatBox_default.addText(DB.getMessage(244), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.ITEM);
 			break;
-		case 3:
-			ChatBox_default.addText(DB.getMessage(245), ChatBox_default.TYPE.BLUE, ChatBox_default.FILTER.ITEM);
-			break;
+		case 3: ChatBox_default.addText(DB.getMessage(245), ChatBox_default.TYPE.BLUE, ChatBox_default.FILTER.ITEM);
 	}
 }
 /**
@@ -316814,12 +317180,13 @@ function onRank(pkt) {
 function onRankDisplay(pkt) {
 	let message = "";
 	message += "=========== ";
-	if (typeof pkt.rankType !== "undefined") if (pkt.rankType === RankingTypes_default.BLACKSMITH) message += DB.getMessage(2386);
-	else if (pkt.rankType === RankingTypes_default.ALCHEMIST) message += DB.getMessage(2387);
-	else if (pkt.rankType === RankingTypes_default.TAEKWON) message += DB.getMessage(2388);
-	else if (pkt.rankType === RankingTypes_default.KILLER) message += DB.getMessage(2389);
-	else message += "Unknown";
-	else if (pkt instanceof PACKET.ZC.BLACKSMITH_RANK) message += DB.getMessage(2386);
+	if (typeof pkt.rankType !== "undefined") {
+		if (pkt.rankType === RankingTypes_default.BLACKSMITH) message += DB.getMessage(2386);
+		else if (pkt.rankType === RankingTypes_default.ALCHEMIST) message += DB.getMessage(2387);
+		else if (pkt.rankType === RankingTypes_default.TAEKWON) message += DB.getMessage(2388);
+		else if (pkt.rankType === RankingTypes_default.KILLER) message += DB.getMessage(2389);
+		else message += "Unknown";
+	} else if (pkt instanceof PACKET.ZC.BLACKSMITH_RANK) message += DB.getMessage(2386);
 	else if (pkt instanceof PACKET.ZC.ALCHEMIST_RANK) message += DB.getMessage(2387);
 	else if (pkt instanceof PACKET.ZC.TAEKWON_RANK) message += DB.getMessage(2388);
 	else message += "Unknown";
@@ -317174,9 +317541,7 @@ function onDynamicNPCCreateRequest(pkt) {
 		case 3:
 			ChatBox_default.addText("[Dynamic NPC] Duplicate NPC", ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			break;
-		case 4:
-			ChatBox_default.addText("[Dynamic NPC] Out of time", ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
+		case 4: ChatBox_default.addText("[Dynamic NPC] Out of time", ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	}
 }
 /**
@@ -317216,7 +317581,6 @@ function onInputAppear(pkt) {
 			case "number":
 				_pkt = new PACKET.CZ.INPUT_EDITDLG();
 				_pkt.value = data;
-				break;
 		}
 		_pkt.NAID = id;
 		Network.sendPacket(_pkt);
@@ -317308,7 +317672,6 @@ function onCutin(pkt) {
 				img.style.left = "50%";
 				img.style.marginLeft = "-" + Math.floor(img.width / 2) + "px";
 				img.style.marginTop = "-" + Math.floor(img.height / 2) + "px";
-				break;
 		}
 		document.body.appendChild(img);
 	});
@@ -317325,9 +317688,7 @@ function onMinimapMarker(pkt) {
 		case 1:
 			Controller$5.getUI().addNpcMark(pkt.id, pkt.xPos, pkt.yPos, pkt.color, Infinity);
 			break;
-		case 2:
-			Controller$5.getUI().removeNpcMark(pkt.id);
-			break;
+		case 2: Controller$5.getUI().removeNpcMark(pkt.id);
 	}
 }
 /**
@@ -317366,9 +317727,7 @@ function onSound(pkt) {
 		case 1:
 			SoundManager.play(pkt.fileName);
 			break;
-		case 2:
-			SoundManager.stop(pkt.fileName);
-			break;
+		case 2: SoundManager.stop(pkt.fileName);
 	}
 }
 /**
@@ -318402,16 +318761,14 @@ function onEntityAction(pkt) {
 						} else Damage.add(pkt.damage / div, target, Renderer.tick + pkt.attackMT + C_MULTIHIT_DELAY, srcWeapon, type);
 						break;
 					}
-					case 11:
-						dstEntity.attachments.add({
-							frame: 3,
-							file: "msg",
-							uid: "lucky",
-							play: true,
-							head: true,
-							repeat: false
-						});
-						break;
+					case 11: dstEntity.attachments.add({
+						frame: 3,
+						file: "msg",
+						uid: "lucky",
+						play: true,
+						head: true,
+						repeat: false
+					});
 				}
 			}
 			srcEntity.attack_speed = pkt.attackMT;
@@ -318482,18 +318839,16 @@ function onEntityAction(pkt) {
 				play: true
 			});
 			break;
-		case 3:
-			srcEntity.setAction({
-				action: srcEntity.ACTION.IDLE,
-				frame: 0,
-				repeat: true,
-				play: true
-			});
-			break;
+		case 3: srcEntity.setAction({
+			action: srcEntity.ACTION.IDLE,
+			frame: 0,
+			repeat: true,
+			play: true
+		});
 	}
 	if (pkt?.damage > 0) {
-		if (srcEntity.GID === SessionStorage_default.Character.GID) ChatBox_default.addText(DB.getMessage(1607).replace("%s", dstEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
-		else if (dstEntity.GID === SessionStorage_default.Character.GID) ChatBox_default.addText(DB.getMessage(1605).replace("%s", srcEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
+		if (srcEntity.GID === SessionStorage_default.Entity.GID) ChatBox_default.addText(DB.getMessage(1607).replace("%s", dstEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
+		else if (dstEntity.GID === SessionStorage_default.Entity.GID) ChatBox_default.addText(DB.getMessage(1605).replace("%s", srcEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
 		else if (srcEntity.GID === SessionStorage_default.homunId || srcEntity.GID === SessionStorage_default.merId || srcEntity.GID === SessionStorage_default.petId || srcEntity.GID === SessionStorage_default.elemId) ChatBox_default.addText(DB.getMessage(1608).replace("%s", srcEntity.display.name).replace("%s", dstEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
 		else if (dstEntity.GID === SessionStorage_default.homunId || dstEntity.GID === SessionStorage_default.merId || dstEntity.GID === SessionStorage_default.petId || dstEntity.GID === SessionStorage_default.elemId) ChatBox_default.addText(DB.getMessage(1606).replace("%s", dstEntity.display.name).replace("%s", srcEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
 		else if (controller.isGroupMember(srcEntity.display.name)) ChatBox_default.addText(DB.getMessage(1608).replace("%s", srcEntity.display.name).replace("%s", dstEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.PARTY_BATTLE);
@@ -318694,16 +319049,15 @@ function onEntityViewChange(pkt) {
 				if (entity._job_transform || entity._monster_transform || entity._active_monster_transform) entity._job = pkt.value;
 				else entity.job = pkt.value;
 				if (entity === SessionStorage_default.Entity) {
-					SessionStorage_default.Character.job = pkt.value;
 					if (PacketVerManager_default.value >= 20200520) {
 						BasicInfoController.getUI().remove();
-						BasicInfoController.selectUIVersionWithJob(DB.getJobClass(SessionStorage_default.Character.job));
+						BasicInfoController.selectUIVersionWithJob(DB.getJobClass(pkt.value));
 						BasicInfoController.getUI().prepare();
-						BasicInfoController.getUI().update("blvl", SessionStorage_default.Character.level);
-						BasicInfoController.getUI().update("jlvl", SessionStorage_default.Character.joblevel);
-						BasicInfoController.getUI().update("zeny", SessionStorage_default.Character.money);
-						BasicInfoController.getUI().update("name", SessionStorage_default.Character.name);
-						BasicInfoController.getUI().update("bexp", SessionStorage_default.Character.exp, BasicInfoController.getUI().base_exp_next);
+						BasicInfoController.getUI().update("blvl", SessionStorage_default.Entity.clevel);
+						BasicInfoController.getUI().update("jlvl", SessionStorage_default.Entity.joblevel);
+						BasicInfoController.getUI().update("zeny", SessionStorage_default.Entity.money);
+						BasicInfoController.getUI().update("name", SessionStorage_default.Entity.display.name);
+						BasicInfoController.getUI().update("bexp", BasicInfoController.getUI().base_exp, BasicInfoController.getUI().base_exp_next);
 						BasicInfoController.getUI().append();
 					}
 					BasicInfoController.getUI().update("job", pkt.value);
@@ -318778,10 +319132,7 @@ function onEntityViewChange(pkt) {
 		case 12:
 			entity.robe = pkt.value;
 			break;
-		case 13:
-			entity.body = pkt.value;
-			break;
-		case 14: break;
+		case 13: entity.body = pkt.value;
 	}
 }
 /**
@@ -318805,11 +319156,13 @@ function onEntityUseSkill(pkt) {
 		if (!SkillNameDisplayExclude.includes(pkt.SKID)) srcEntity.dialog.set((SkillInfo[pkt.SKID] && SkillInfo[pkt.SKID].SkillName || "Unknown Skill") + " !!", "white");
 	}
 	if (srcEntity) {
-		if (srcEntity.action !== srcEntity.ACTION.DIE && srcEntity.action !== srcEntity.ACTION.SIT) if (pkt.SKID in SkillAction) {
-			const action = SkillAction[pkt.SKID];
-			if (action) srcEntity.setAction(action(srcEntity, Renderer.tick));
-		} else if (DB.isDoram(srcEntity.job)) srcEntity.setAction(SkillAction["DEFAULT_DORAM"](srcEntity, Renderer.tick));
-		else srcEntity.setAction(SkillAction["DEFAULT"](srcEntity, Renderer.tick));
+		if (srcEntity.action !== srcEntity.ACTION.DIE && srcEntity.action !== srcEntity.ACTION.SIT) {
+			if (pkt.SKID in SkillAction) {
+				const action = SkillAction[pkt.SKID];
+				if (action) srcEntity.setAction(action(srcEntity, Renderer.tick));
+			} else if (DB.isDoram(srcEntity.job)) srcEntity.setAction(SkillAction["DEFAULT_DORAM"](srcEntity, Renderer.tick));
+			else srcEntity.setAction(SkillAction["DEFAULT"](srcEntity, Renderer.tick));
+		}
 	}
 	if (dstEntity) {
 		if (srcEntity && dstEntity !== srcEntity) srcEntity.lookTo(dstEntity.position[0], dstEntity.position[1]);
@@ -319053,9 +319406,7 @@ function onEntityCastSkill(pkt) {
 			case 8:
 				EF_Init_Par.effectId = EffectConst_default.EF_BEGINSPELL6;
 				break;
-			case 9:
-				EF_Init_Par.effectId = EffectConst_default.EF_DARKCASTING;
-				break;
+			case 9: EF_Init_Par.effectId = EffectConst_default.EF_DARKCASTING;
 		}
 		EffectManager.spam(EF_Init_Par);
 	}
@@ -319126,7 +319477,7 @@ function onEntityStatusChange(pkt) {
 	switch (pkt.index) {
 		case StatusConst_default.CLAIRVOYANCE:
 			if (entity === SessionStorage_default.Entity) {
-				SessionStorage_default.Character.intravision = pkt.state;
+				SessionStorage_default.Entity.intravision = pkt.state;
 				EntityManager.forEach((_entity) => {
 					/** @type {*} Intentional self-assignment to trigger effectState updates. */
 					_entity.effectState = _entity.effectState;
@@ -319426,13 +319777,11 @@ function onEntityStatusChange(pkt) {
 			});
 			break;
 		}
-		case StatusConst_default.CLAN_INFO:
-			DB.loadClanEmblem(pkt.val[1], (image) => {
-				entity.clanId = pkt.val[1];
-				entity.setEntityGuildEmblem(image);
-				updateEntityStyle(entity);
-			});
-			break;
+		case StatusConst_default.CLAN_INFO: DB.loadClanEmblem(pkt.val[1], (image) => {
+			entity.clanId = pkt.val[1];
+			entity.setEntityGuildEmblem(image);
+			updateEntityStyle(entity);
+		});
 	}
 	processBlockStatus(entity, pkt);
 	if (entity === SessionStorage_default.Entity) StatusIcons_default.update(pkt.index, pkt.state, pkt.RemainMS);
@@ -319538,9 +319887,7 @@ function onEntityCreateRoom(pkt) {
 					break;
 				case 1: break;
 				case 2: break;
-				case 3:
-					title = pkt.title;
-					break;
+				case 3: title = pkt.title;
 			}
 			entity.room.title = pkt.title;
 			entity.room.limit = pkt.maxcount;
@@ -319613,10 +319960,8 @@ function onNotifyExp(pkt) {
 			if (pkt.varID === 1) ChatBox_default.addText(DB.getMessage(1613).replace("%d", pkt.amount), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.EXP);
 			else if (pkt.varID === 2) ChatBox_default.addText(DB.getMessage(1614).replace("%d", pkt.amount), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.EXP);
 			break;
-		case 1:
-			if (pkt.varID === 1) ChatBox_default.addText("Experience gained from Quest, Base:" + pkt.amount, null, ChatBox_default.FILTER.EXP, "#A442DC");
-			else if (pkt.varID === 2) ChatBox_default.addText("Experience gained from Quest, Job:" + pkt.amount, null, ChatBox_default.FILTER.EXP, "#A442DC");
-			break;
+		case 1: if (pkt.varID === 1) ChatBox_default.addText("Experience gained from Quest, Base:" + pkt.amount, null, ChatBox_default.FILTER.EXP, "#A442DC");
+		else if (pkt.varID === 2) ChatBox_default.addText("Experience gained from Quest, Job:" + pkt.amount, null, ChatBox_default.FILTER.EXP, "#A442DC");
 	}
 }
 /**
@@ -320056,7 +320401,7 @@ var init_ItemObtain = __esmMin((() => {
 	*/
 	ItemObtain.needFocus = false;
 	_timer = 0;
-	_life = 5 * 1e3;
+	_life = 5e3;
 	/**
 	* Initialize component
 	*/
@@ -320547,9 +320892,7 @@ var init_MakeItemSelection = __esmMin((() => {
 		if (this.material.length < 3 && (validMultipleMaterials.includes(item.ITID) || validSingleMaterials.includes(item.ITID) && !singleMatUsed)) {
 			if (this.addItemSub(item)) {
 				switch (from) {
-					case "Inventory":
-						InventoryController.getUI().removeItem(item.index, 1);
-						break;
+					case "Inventory": InventoryController.getUI().removeItem(item.index, 1);
 				}
 				this.material.push(item);
 			}
@@ -321578,7 +321921,6 @@ function onItemCompositionResult(pkt) {
 			}
 			break;
 		}
-		case 1: break;
 	}
 }
 /**
@@ -321601,9 +321943,7 @@ function onRefineResult(pkt) {
 			case 1:
 				ChatBox_default.addText(DB.getMessage(499), ChatBox_default.TYPE.BLUE, ChatBox_default.FILTER.PUBLIC_LOG);
 				break;
-			case 2:
-				ChatBox_default.addText(DB.getMessage(1537), ChatBox_default.TYPE.BLUE, ChatBox_default.FILTER.PUBLIC_LOG);
-				break;
+			case 2: ChatBox_default.addText(DB.getMessage(1537), ChatBox_default.TYPE.BLUE, ChatBox_default.FILTER.PUBLIC_LOG);
 		}
 	}
 }
@@ -321641,9 +321981,7 @@ function onAckAddItemToCart(pkt) {
 		case 0:
 			ChatBox_default.addText(DB.getMessage(220), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.ITEM);
 			break;
-		case 1:
-			ChatBox_default.addText(DB.getMessage(221), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.ITEM);
-			break;
+		case 1: ChatBox_default.addText(DB.getMessage(221), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.ITEM);
 	}
 }
 /**
@@ -322503,8 +322841,10 @@ function onPrivateMessageSent(pkt) {
 	const user = ChatBox_default.PrivateMessageStorage.nick;
 	const msg = ChatBox_default.PrivateMessageStorage.msg;
 	if (pkt.result === 0) {
-		if (user && msg) if (getShouldOpenWhisperBox(user)) WhisperBox.addText(user, SessionStorage_default.Character.name + " : " + msg, "#ffff00");
-		else ChatBox_default.addText("[ To <span class=\"nickname-link\" data-nickname=\"" + user + "\" style=\"cursor:pointer; text-decoration:underline;\">" + user + "</span> ] : " + msg, ChatBox_default.TYPE.PRIVATE, ChatBox_default.FILTER.WHISPER);
+		if (user && msg) {
+			if (getShouldOpenWhisperBox(user)) WhisperBox.addText(user, SessionStorage_default.Entity.display.name + " : " + msg, "#ffff00");
+			else ChatBox_default.addText("[ To <span class=\"nickname-link\" data-nickname=\"" + user + "\" style=\"cursor:pointer; text-decoration:underline;\">" + user + "</span> ] : " + msg, ChatBox_default.TYPE.PRIVATE, ChatBox_default.FILTER.WHISPER);
+		}
 	} else {
 		const errorMsg = "(" + user + ") : " + DB.getMessage(147 + pkt.result);
 		ChatBox_default.addText(errorMsg, ChatBox_default.TYPE.PRIVATE, ChatBox_default.FILTER.WHISPER);
@@ -323275,9 +323615,7 @@ function onSkillResult(pkt) {
 		case SkillConst_default.TF_STEAL:
 			error = 205;
 			break;
-		case SkillConst_default.TF_POISON:
-			error = 207;
-			break;
+		case SkillConst_default.TF_POISON: error = 207;
 	}
 	if (pkt.SKID == SkillConst_default.CG_TAROTCARD) error = 204;
 	else switch (pkt.cause) {
@@ -323314,9 +323652,7 @@ function onSkillResult(pkt) {
 		case 13:
 			error = 1398;
 			break;
-		case 83:
-			error = 661;
-			break;
+		case 83: error = 661;
 	}
 	if (error) ChatBox_default.addText(DB.getMessage(error), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.SKILL_FAIL);
 }
@@ -323396,9 +323732,7 @@ function onIdentifyResult(pkt) {
 			}
 			break;
 		}
-		case 1:
-			ChatBox_default.addText(DB.getMessage(492), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.ITEM);
-			break;
+		case 1: ChatBox_default.addText(DB.getMessage(492), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.ITEM);
 	}
 }
 /**
@@ -323488,9 +323822,7 @@ function onTeleportResult(pkt) {
 		case 0:
 			ChatBox_default.addText(DB.getMessage(500), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.SKILL_FAIL);
 			break;
-		case 1:
-			ChatBox_default.addText(DB.getMessage(501), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.SKILL_FAIL);
-			break;
+		case 1: ChatBox_default.addText(DB.getMessage(501), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.SKILL_FAIL);
 	}
 }
 /**
@@ -323506,9 +323838,7 @@ function onMemoResult(pkt) {
 		case 1:
 			ChatBox_default.addText(DB.getMessage(214), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.SKILL_FAIL);
 			break;
-		case 2:
-			ChatBox_default.addText(DB.getMessage(216), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.SKILL_FAIL);
-			break;
+		case 2: ChatBox_default.addText(DB.getMessage(216), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.SKILL_FAIL);
 	}
 }
 /**
@@ -323874,9 +324204,7 @@ function onCreateRoomResult(pkt) {
 		case 1:
 			ChatBox_default.addText(DB.getMessage(65), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			break;
-		case 2:
-			ChatBox_default.addText(DB.getMessage(66), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
+		case 2: ChatBox_default.addText(DB.getMessage(66), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	}
 }
 /**
@@ -323913,9 +324241,7 @@ function onEnterRoomResult(pkt) {
 		case 6:
 			error = 433;
 			break;
-		case 7:
-			error = 434;
-			break;
+		case 7: error = 434;
 	}
 	ChatBox_default.addText(DB.getMessage(error), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 }
@@ -324270,10 +324596,7 @@ function onPetEvolveResult(pkt) {
 		case 5:
 			ChatBox_default.addText(DB.getMessage(2576), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			break;
-		case 6:
-			if (PetEvolution._host) PetEvolution._host.style.display = "none";
-			break;
-		default: break;
+		case 6: if (PetEvolution._host) PetEvolution._host.style.display = "none";
 	}
 }
 var PetEvolution, currentMaterials, targetEvoPetEggId, _preferences$3, PetEvolution_default;
@@ -324606,7 +324929,6 @@ function onPetInformationUpdate(pkt) {
 			});
 			break;
 		}
-		case 5:
 	}
 }
 /**
@@ -324836,7 +325158,6 @@ function onHomunInformationUpdate(pkt) {
 			entity.life.hunger = pkt.data;
 			entity.life.hunger_max = 100;
 			entity.life.update();
-			break;
 	}
 }
 /**
@@ -325044,7 +325365,6 @@ function onParameterChange(pkt) {
 			entity.life.sp_max = pkt.value;
 			entity.life.update();
 			EntityManager.storeLife(SessionStorage_default.mercId, { sp_max: pkt.value });
-			break;
 	}
 }
 /**
@@ -325714,7 +326034,6 @@ var init_NpcStore = __esmMin((() => {
 			case NpcStore.Type.CASH_SHOP:
 				_hideAll(root, ".WinSell, .WinVendingStore, .WinBuyingStore, .AvailableItemsWindow, .PurchaseResult, .total");
 				_showAll(root, ".WinBuy");
-				break;
 		}
 		_type = type;
 		const currentPref = getCurrentPref();
@@ -325913,7 +326232,7 @@ var init_NpcStore = __esmMin((() => {
 					const currencyItemWeight = parseInt(inputCurrency.getAttribute("data-weight"), 10);
 					const currencyAmount = parseInt(inputCurrencyDiv.textContent, 10);
 					const additionalWeight = currencyItemWeight * (outputItem.count - originalCount);
-					if (SessionStorage_default.Character.weight + NpcStore.calculateWeight() + additionalWeight > SessionStorage_default.Character.max_weight) {
+					if (SessionStorage_default.Entity.weight + NpcStore.calculateWeight() + additionalWeight > SessionStorage_default.Entity.max_weight) {
 						ChatBox_default.addText(DB.getMessage(56), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 						outputItem.count -= count;
 						return;
@@ -325978,9 +326297,10 @@ var init_NpcStore = __esmMin((() => {
 		const outputWindow = root.querySelector(".OutputWindow");
 		InputBox_default.remove();
 		let pkt;
-		if (PacketVerManager_default.value < 20131223) if (type === NpcStore.Type.SELL) pkt = new PACKET.CZ.PC_SELL_ITEMLIST();
-		else pkt = new PACKET.CZ.PC_PURCHASE_ITEMLIST();
-		else switch (type) {
+		if (PacketVerManager_default.value < 20131223) {
+			if (type === NpcStore.Type.SELL) pkt = new PACKET.CZ.PC_SELL_ITEMLIST();
+			else pkt = new PACKET.CZ.PC_PURCHASE_ITEMLIST();
+		} else switch (type) {
 			case NpcStore.Type.MARKETSHOP:
 				pkt = new PACKET.CZ.NPC_MARKET_CLOSE();
 				inputWindow.style.display = "";
@@ -326190,9 +326510,7 @@ function onBuyResult(pkt) {
 		case 14:
 			ChatBox_default.addText(DB.getMessage(3556), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			break;
-		default:
-			ChatBox_default.addText(DB.getMessage(57), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
+		default: ChatBox_default.addText(DB.getMessage(57), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	}
 	if (NpcStore_default.getCurrentType() >= 4 && NpcStore_default.getCurrentType() != NpcStore_default.Type.CASH_SHOP) NpcStore_default.closeStore();
 }
@@ -326229,9 +326547,7 @@ function onBuyCashResult(pkt) {
 		case 7:
 			ChatBox_default.addText(DB.getMessage(1813), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			break;
-		default:
-			ChatBox_default.addText(DB.getMessage(1814), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
+		default: ChatBox_default.addText(DB.getMessage(1814), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	}
 	NpcStore_default.ui.find(".cashuser .cashpoints").text(pkt.KafraPoint);
 }
@@ -326248,9 +326564,7 @@ function onSellToBuyingStoreResult(pkt) {
 		case 7:
 			ChatBox_default.addText(DB.getMessage(1740), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			break;
-		default:
-			ChatBox_default.addText(DB.getMessage(57), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
+		default: ChatBox_default.addText(DB.getMessage(57), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	}
 }
 /**
@@ -326413,8 +326727,6 @@ function onMarketShopResult(pkt) {
 		case 1:
 			ChatBox_default.addText(DB.getMessage(54), ChatBox_default.TYPE.BLUE, ChatBox_default.FILTER.PUBLIC_LOG);
 			NpcStore_default.onMarketShopResultUI(pkt.itemList);
-			break;
-		default: break;
 	}
 }
 /**
@@ -326518,10 +326830,7 @@ function onTradeRequestAnswer(pkt) {
 			if ("level" in pkt && "GID" in pkt) Trade_default.title += `  Lv${pkt.level} (${tradeGIDEncoding(pkt.GID)})`;
 			Trade_default.append();
 			break;
-		case 4:
-			ChatBox_default.addText(DB.getMessage(74), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
-		case 5: break;
+		case 4: ChatBox_default.addText(DB.getMessage(74), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	}
 }
 /**
@@ -326534,9 +326843,7 @@ function onAddItemResult(pkt) {
 		case 1:
 			ChatBox_default.addText(DB.getMessage(73), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			break;
-		case 2:
-			ChatBox_default.addText(DB.getMessage(74), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
+		case 2: ChatBox_default.addText(DB.getMessage(74), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	}
 	Trade_default.addItemFromInventory(pkt.Index, pkt.result === 0);
 }
@@ -326803,42 +327110,43 @@ function onUpdateMissionHunt(pkt) {
 	for (let i = 0; i < pkt.questCount; i++) {
 		const local_hunt = pkt.hunt[i];
 		const ID = local_hunt.huntID ? local_hunt.huntID : local_hunt.mobGID;
-		if (local_hunt.questID !== void 0) if (Controller$3.getUI().questExists(local_hunt.questID)) Controller$3.getUI().updateMissionHunt(local_hunt, local_hunt.questID, ID);
-		else {
-			const quest_info = DB.getQuestInfo(local_hunt.questID);
-			const local_quest = {
-				questID: local_hunt.questID,
-				title: quest_info.Title ? sanitizeHtml(quest_info.Title) : "",
-				summary: quest_info.Summary ? sanitizeHtml(quest_info.Summary) : "",
-				description: quest_info.Description ? sanitizeHtml(quest_info.Description) : "",
-				icon: quest_info.IconName ? quest_info.IconName : "ico_nq.bmp",
-				npc_spr: quest_info.NpcSpr || null,
-				npc_navi: quest_info.NpcNavi || null,
-				npc_pos_x: quest_info.NpcPosX || null,
-				npc_pos_y: quest_info.NpcPosY || null,
-				reward_item_list: quest_info.RewardItemList || [],
-				reward_exp_base: quest_info.RewardEXP || 0,
-				reward_exp_job: quest_info.RewardJEXP || 0,
-				active: 1,
-				start_time: null,
-				end_time: null,
-				count: 1,
-				hunt_list: []
-			};
-			local_quest.hunt_list[ID] = {
-				huntID: local_hunt.huntID || null,
-				huntIDCount: local_hunt.huntIDCount || 0,
-				mobType: local_hunt.mobType || null,
-				mobGID: local_hunt.mobGID || null,
-				lvlMin: local_hunt.lvlMin || null,
-				lvlMax: local_hunt.lvlMax || null,
-				huntCount: local_hunt.huntCount || 0,
-				maxCount: local_hunt.maxCount || 0,
-				mobName: local_hunt.mobName || ""
-			};
-			Controller$3.getUI().addQuest(local_quest, local_quest.questID);
-		}
-		else {
+		if (local_hunt.questID !== void 0) {
+			if (Controller$3.getUI().questExists(local_hunt.questID)) Controller$3.getUI().updateMissionHunt(local_hunt, local_hunt.questID, ID);
+			else {
+				const quest_info = DB.getQuestInfo(local_hunt.questID);
+				const local_quest = {
+					questID: local_hunt.questID,
+					title: quest_info.Title ? sanitizeHtml(quest_info.Title) : "",
+					summary: quest_info.Summary ? sanitizeHtml(quest_info.Summary) : "",
+					description: quest_info.Description ? sanitizeHtml(quest_info.Description) : "",
+					icon: quest_info.IconName ? quest_info.IconName : "ico_nq.bmp",
+					npc_spr: quest_info.NpcSpr || null,
+					npc_navi: quest_info.NpcNavi || null,
+					npc_pos_x: quest_info.NpcPosX || null,
+					npc_pos_y: quest_info.NpcPosY || null,
+					reward_item_list: quest_info.RewardItemList || [],
+					reward_exp_base: quest_info.RewardEXP || 0,
+					reward_exp_job: quest_info.RewardJEXP || 0,
+					active: 1,
+					start_time: null,
+					end_time: null,
+					count: 1,
+					hunt_list: []
+				};
+				local_quest.hunt_list[ID] = {
+					huntID: local_hunt.huntID || null,
+					huntIDCount: local_hunt.huntIDCount || 0,
+					mobType: local_hunt.mobType || null,
+					mobGID: local_hunt.mobGID || null,
+					lvlMin: local_hunt.lvlMin || null,
+					lvlMax: local_hunt.lvlMax || null,
+					huntCount: local_hunt.huntCount || 0,
+					maxCount: local_hunt.maxCount || 0,
+					mobName: local_hunt.mobName || ""
+				};
+				Controller$3.getUI().addQuest(local_quest, local_quest.questID);
+			}
+		} else {
 			const quest_saved_id = Controller$3.getUI().getQuestIDByServerID(ID);
 			if (quest_saved_id > 0) Controller$3.getUI().updateMissionHunt(local_hunt, quest_saved_id, ID);
 		}
@@ -327473,9 +327781,7 @@ function onRecvRouletteItem(pkt) {
 			case 2:
 				errorMsg = "Item count exceeded";
 				break;
-			case 3:
-				errorMsg = "Overweight";
-				break;
+			case 3: errorMsg = "Overweight";
 		}
 		console.error("[Roulette]", errorMsg);
 	}
@@ -327573,9 +327879,7 @@ function onAckApply(pkt) {
 		case 2:
 			ChatBox_default.addText(DB.getMessage(2879), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 			break;
-		default:
-			ChatBox_default.addText("Unknown status: " + pkt.status, ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
+		default: ChatBox_default.addText("Unknown status: " + pkt.status, ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	}
 }
 /**
@@ -327628,9 +327932,7 @@ function onClose(pkt) {
 	switch (pkt.status) {
 		case 0: break;
 		case 1: break;
-		case 2:
-			CaptchaAnswer_default.showSuccessMessage();
-			break;
+		case 2: CaptchaAnswer_default.showSuccessMessage();
 	}
 }
 /**
@@ -327953,8 +328255,6 @@ function onBankDepoUpdate(pkt) {
 		case 3:
 			Bank_default.setError(DB.getMessage(2783));
 			ChatBox_default.addText(DB.getMessage(2787), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
-		default: break;
 	}
 	Bank_default.clearInput();
 }
@@ -327969,9 +328269,6 @@ function onBankWithdrawUpdate(pkt) {
 		case 1:
 			Bank_default.setError(DB.getMessage(2786));
 			ChatBox_default.addText(DB.getMessage(2455), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
-		case 2: break;
-		default: break;
 	}
 }
 var BankEngine;
@@ -328151,7 +328448,8 @@ function onConfigNotify(pkt) {
 * @param {object} pkt - PACKET.ZC.AID
 */
 function onReceiveAccountID(pkt) {
-	SessionStorage_default.Character.GID = pkt.AID;
+	SessionStorage_default.AID = pkt.AID;
+	SessionStorage_default.Entity.GID = pkt.AID;
 }
 /**
 * Map accept us to enter the map
@@ -328159,7 +328457,6 @@ function onReceiveAccountID(pkt) {
 * @param {object} pkt - PACKET.ZC.ACCEPT_ENTER
 */
 function onConnectionAccepted$2(pkt) {
-	SessionStorage_default.Entity = new Entity(SessionStorage_default.Character);
 	SessionStorage_default.Entity.onWalkEnd = onWalkEnd;
 	if ("sex" in pkt && pkt.sex < 2) SessionStorage_default.Entity.sex = pkt.sex;
 	SessionStorage_default.petId = 0;
@@ -328168,7 +328465,6 @@ function onConnectionAccepted$2(pkt) {
 	SessionStorage_default.hasGuild = false;
 	SessionStorage_default.guildRight = 0;
 	SessionStorage_default.homunId = 0;
-	SessionStorage_default.Entity.clevel = SessionStorage_default.Character.level;
 	SessionStorage_default.mapState = {
 		property: 0,
 		type: 0,
@@ -328184,14 +328480,14 @@ function onConnectionAccepted$2(pkt) {
 		isBattleField: false
 	};
 	if (PacketVerManager_default.value >= 20200520) {
-		BasicInfoController.selectUIVersionWithJob(DB.getJobClass(SessionStorage_default.Character.job));
+		BasicInfoController.selectUIVersionWithJob(DB.getJobClass(SessionStorage_default.Entity.job));
 		BasicInfoController.getUI().prepare();
 	}
-	BasicInfoController.getUI().update("blvl", SessionStorage_default.Character.level);
-	BasicInfoController.getUI().update("jlvl", SessionStorage_default.Character.joblevel);
-	BasicInfoController.getUI().update("zeny", SessionStorage_default.Character.money);
-	BasicInfoController.getUI().update("name", SessionStorage_default.Character.name);
-	BasicInfoController.getUI().update("job", SessionStorage_default.Character.job);
+	BasicInfoController.getUI().update("blvl", SessionStorage_default.Entity.clevel);
+	BasicInfoController.getUI().update("jlvl", SessionStorage_default.Entity.joblevel);
+	BasicInfoController.getUI().update("zeny", SessionStorage_default.Entity.money);
+	BasicInfoController.getUI().update("name", SessionStorage_default.Entity.display.name);
+	BasicInfoController.getUI().update("job", SessionStorage_default.Entity.job);
 	onMapChange({
 		xPos: pkt.PosDir[0],
 		yPos: pkt.PosDir[1],
@@ -328219,7 +328515,7 @@ function onMapChange(pkt) {
 				pkt.yPos,
 				0
 			],
-			GID: SessionStorage_default.Character.GID
+			GID: SessionStorage_default.AID
 		});
 		EntityManager.add(SessionStorage_default.Entity);
 		if (SessionStorage_default.Entity.effectState & StatusState_default.EffectState.FALCON) {
@@ -328330,12 +328626,34 @@ function onServerChange(pkt) {
 	MapEngine.init(pkt.addr.ip, pkt.addr.port, pkt.mapName);
 }
 /**
+* Resets the per-character UI state shared by the exit and restart flows.
+* Components that were never prepared have no root element to clean.
+*/
+function cleanGameUI() {
+	WhisperBox.clearAll();
+	const tasks = [
+		[BasicInfoController, "remove"],
+		[PlayerViewEquipController, "remove"],
+		[StatusIcons_default, "clean"],
+		[ChatBox_default, "clean"],
+		[ShortCut_default, "clean"],
+		[Controller$3, "clean"],
+		[controller, "clean"],
+		[CashShop_default, "clean"]
+	];
+	for (const [target, method] of tasks) {
+		const component = typeof target.getUI === "function" ? target.getUI() : target;
+		if (component && component.__loaded && typeof component[method] === "function") component[method]();
+	}
+}
+/**
 * Ask the server to disconnect
 */
 function onExitRequest$2() {
 	const pkt = new PACKET.CZ.REQUEST_QUIT();
 	Network.sendPacket(pkt);
-	Events.setTimeout(() => {
+	_exitTimer = Events.setTimeout(() => {
+		_exitTimer = null;
 		onExitSuccess();
 	}, 1e3);
 }
@@ -328353,8 +328671,17 @@ function onExitFail(pkt) {
 * @param {object} pkt - PACKET.ZC.REFUSE_QUIT
 */
 function onExitSuccess() {
+	if (_exiting) return;
+	_exiting = true;
+	if (_exitTimer !== null) {
+		Events.clearTimeout(_exitTimer);
+		_exitTimer = null;
+	}
 	if (PacketVerManager_default.value >= 20170315 && SessionStorage_default.WebToken) ShortCut_default.saveToServer();
-	WhisperBox.clearAll();
+	GuildEngine.guild_id = 0;
+	cleanGameUI();
+	SessionStorage_default.Achievement = null;
+	Mouse.intersect = false;
 	UIManager.removeComponents();
 	Network.close();
 	Renderer.stop();
@@ -328394,16 +328721,8 @@ function onResurectionRequest() {
 function onRestartAnswer(pkt) {
 	if (!pkt.type) ChatBox_default.addText(DB.getMessage(502), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	else {
-		WhisperBox.clearAll();
 		GuildEngine.guild_id = 0;
-		BasicInfoController.getUI().remove();
-		PlayerViewEquipController.getUI().remove();
-		StatusIcons_default.clean();
-		ChatBox_default.clean();
-		ShortCut_default.clean();
-		Controller$3.getUI().clean();
-		controller.getUI().clean();
-		CashShop_default.clean();
+		cleanGameUI();
 		SessionStorage_default.Achievement = null;
 		Mouse.intersect = false;
 		MapRenderer.free();
@@ -328418,21 +328737,10 @@ function onRestartAnswer(pkt) {
 function onDisconnectAnswer(pkt) {
 	switch (pkt.result) {
 		case 0:
-			WhisperBox.clearAll();
-			BasicInfoController.getUI().remove();
-			PlayerViewEquipController.getUI().remove();
-			StatusIcons_default.clean();
-			ChatBox_default.clean();
-			ShortCut_default.clean();
-			Controller$3.getUI().clean();
-			controller.getUI().clean();
 			Renderer.stop();
 			onExitSuccess();
 			break;
-		case 1:
-			ChatBox_default.addText(DB.getMessage(502), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
-			break;
-		default:
+		case 1: ChatBox_default.addText(DB.getMessage(502), ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
 	}
 }
 /**
@@ -328468,14 +328776,16 @@ function onRequestTalk(user, text, target) {
 	pkt.msg = SessionStorage_default.Entity.display.name + " : " + text;
 	Network.sendPacket(pkt);
 	if (chatLines > 7 && DB.isSuperNovice(SessionStorage_default.Entity._job)) {
-		if (Math.floor(BasicInfoController.getUI().base_exp / BasicInfoController.getUI().base_exp_next * 1e3) % 100 == 0) if (text == DB.getMessage(790)) snCounter = 1;
-		else if (snCounter == 1 && text == DB.getMessage(791) + " " + SessionStorage_default.Entity.display.name + " " + DB.getMessage(792)) snCounter = 2;
-		else if (snCounter == 2 && text == DB.getMessage(793)) snCounter = 3;
-		else if (snCounter == 3) {
-			snCounter = 0;
-			pkt = new PACKET.CZ.CHOPOKGI();
-			Network.sendPacket(pkt);
-		} else snCounter = 0;
+		if (Math.floor(BasicInfoController.getUI().base_exp / BasicInfoController.getUI().base_exp_next * 1e3) % 100 == 0) {
+			if (text == DB.getMessage(790)) snCounter = 1;
+			else if (snCounter == 1 && text == DB.getMessage(791) + " " + SessionStorage_default.Entity.display.name + " " + DB.getMessage(792)) snCounter = 2;
+			else if (snCounter == 2 && text == DB.getMessage(793)) snCounter = 3;
+			else if (snCounter == 3) {
+				snCounter = 0;
+				pkt = new PACKET.CZ.CHOPOKGI();
+				Network.sendPacket(pkt);
+			} else snCounter = 0;
+		}
 	}
 }
 /**
@@ -328688,7 +328998,7 @@ function onReassemblyAuth(pkt) {
 		return;
 	}
 }
-var _mapName, _isInitialised, snCounter, chatLines, packetMap, MapEngine, _walkTimer, _walkLastTick;
+var _mapName, _isInitialised, _exiting, _exitTimer, snCounter, chatLines, packetMap, MapEngine, _walkTimer, _walkLastTick;
 var init_MapEngine = __esmMin((() => {
 	init_DBManager();
 	init_Configs();
@@ -328801,6 +329111,8 @@ var init_MapEngine = __esmMin((() => {
 	init_preload_helper();
 	_mapName = "";
 	_isInitialised = false;
+	_exiting = false;
+	_exitTimer = null;
 	snCounter = 0;
 	chatLines = 0;
 	packetMap = /* @__PURE__ */ new Map();
@@ -328818,6 +329130,8 @@ var init_MapEngine = __esmMin((() => {
 		*/
 		static init(ip, port, mapName) {
 			_mapName = mapName;
+			_exiting = false;
+			_exitTimer = null;
 			const forceAddress = Configs.get("forceUseAddress");
 			const server_info = Configs.getServer();
 			const current_ip = forceAddress ? server_info.address : Network.utils.longToIP(ip);
@@ -328837,7 +329151,10 @@ var init_MapEngine = __esmMin((() => {
 				pkt.Sex = SessionStorage_default.Sex;
 				Network.sendPacket(pkt);
 				Network.read((fp) => {
-					if (PacketVerManager_default.value < 20070521) SessionStorage_default.Character.GID = fp.readLong();
+					if (PacketVerManager_default.value < 20070521) {
+						SessionStorage_default.AID = fp.readLong();
+						SessionStorage_default.Entity.GID = SessionStorage_default.AID;
+					}
 				});
 				const hbt = new PACKET.CZ.HBT();
 				const is_sec_hbt = Configs.get("sec_HBT", null);
@@ -329108,15 +329425,16 @@ function encryptPincode(pincode) {
 	let strCode = "";
 	let out = "";
 	intCode = Number.parseInt(pincode);
-	if (isNaN(intCode) === false && Number.isSafeInteger(intCode) === true) if (intCode >= 0 && intCode < 1e6 && pincode.length >= 4 && pincode.length <= 6) {
-		for (let ic = pincode.length - 1; ic > 0; ic--) if (intCode < Math.pow(10, ic)) strCode += "0";
-		strCode += intCode.toString();
-		for (let i = 0; i < strCode.length; i++) {
-			const x = Number(strCode[i]);
-			out += PincodeWindow._keypad[x].toString();
-		}
-	} else console.error("ERROR: PincodeWindow.encryptPincode(): Pincode length invalid.");
-	else console.error("ERROR: PincodeWindow.encryptPincode(): Unsafe Int.");
+	if (isNaN(intCode) === false && Number.isSafeInteger(intCode) === true) {
+		if (intCode >= 0 && intCode < 1e6 && pincode.length >= 4 && pincode.length <= 6) {
+			for (let ic = pincode.length - 1; ic > 0; ic--) if (intCode < Math.pow(10, ic)) strCode += "0";
+			strCode += intCode.toString();
+			for (let i = 0; i < strCode.length; i++) {
+				const x = Number(strCode[i]);
+				out += PincodeWindow._keypad[x].toString();
+			}
+		} else console.error("ERROR: PincodeWindow.encryptPincode(): Pincode length invalid.");
+	} else console.error("ERROR: PincodeWindow.encryptPincode(): Unsafe Int.");
 	return out;
 }
 function success() {
@@ -329131,9 +329449,7 @@ function success() {
 		case 2:
 			PincodeWindow.onPincodeReset(passEnc, newPassEnc);
 			break;
-		default:
-			PincodeWindow.onPincodeCheckRequest(passEnc);
-			break;
+		default: PincodeWindow.onPincodeCheckRequest(passEnc);
 	}
 	PincodeWindow.resetPins();
 }
@@ -329154,9 +329470,7 @@ function keyNum(num) {
 		default:
 			PincodeWindow._pass += num;
 			break;
-		case 2:
-			PincodeWindow._checkpass += num;
-			break;
+		case 2: PincodeWindow._checkpass += num;
 	}
 }
 function render() {
@@ -329206,9 +329520,7 @@ var init_PincodeWindow = __esmMin((() => {
 			default:
 				PincodeWindow._pass = "";
 				break;
-			case 2:
-				PincodeWindow._checkpass = "";
-				break;
+			case 2: PincodeWindow._checkpass = "";
 		}
 	};
 	PincodeWindow.resetPins = function resetPins() {
@@ -329324,7 +329636,6 @@ var init_PincodeWindow = __esmMin((() => {
 				newpassEl.style.backgroundColor = inactive;
 				checkpassEl.style.backgroundColor = inactive;
 				passEl.style.backgroundColor = active;
-				break;
 		}
 	};
 	/**
@@ -329340,36 +329651,39 @@ var init_PincodeWindow = __esmMin((() => {
 	PincodeWindow.onParentPincodeResetReq = function onParentPincodeResetReq() {
 		const root = PincodeWindow.getRoot();
 		if (!root) return;
-		if (PincodeWindow._resetstate === 3) if (typeof PincodeWindow.onPincodeReset === "function" && PincodeWindow._pass !== PincodeWindow._newpass && PincodeWindow._newpass.length > 3 && PincodeWindow._newpass.length < 7 && PincodeWindow._newpass === PincodeWindow._checkpass) success();
-		else UIManager.showMessageBox(DB.getMessage(1887), "ok");
-		else if (PincodeWindow._resetstate === 2) if (PincodeWindow._newpass.length > 3 && PincodeWindow._newpass.length < 7 && PincodeWindow._pass !== PincodeWindow._newpass) {
-			PincodeWindow.selectInput(2);
-			PincodeWindow.clearPin();
-			PincodeWindow._resetstate = 3;
-			const verifyBtn = root.querySelector(".btn2.verify");
-			const okBtn = root.querySelector(".btn2.ok");
-			if (verifyBtn) {
-				verifyBtn.disabled = true;
-				verifyBtn.style.display = "none";
+		if (PincodeWindow._resetstate === 3) {
+			if (typeof PincodeWindow.onPincodeReset === "function" && PincodeWindow._pass !== PincodeWindow._newpass && PincodeWindow._newpass.length > 3 && PincodeWindow._newpass.length < 7 && PincodeWindow._newpass === PincodeWindow._checkpass) success();
+			else UIManager.showMessageBox(DB.getMessage(1887), "ok");
+		} else if (PincodeWindow._resetstate === 2) {
+			if (PincodeWindow._newpass.length > 3 && PincodeWindow._newpass.length < 7 && PincodeWindow._pass !== PincodeWindow._newpass) {
+				PincodeWindow.selectInput(2);
+				PincodeWindow.clearPin();
+				PincodeWindow._resetstate = 3;
+				const verifyBtn = root.querySelector(".btn2.verify");
+				const okBtn = root.querySelector(".btn2.ok");
+				if (verifyBtn) {
+					verifyBtn.disabled = true;
+					verifyBtn.style.display = "none";
+				}
+				if (okBtn) {
+					okBtn.disabled = false;
+					okBtn.style.display = "";
+				}
+				advanceVisualSeed();
+			} else {
+				UIManager.showMessageBox(DB.getMessage(1887), "ok");
+				if (PincodeWindow._newpass.length < 4 || PincodeWindow._newpass.length > 6) PincodeWindow._newpass = "";
 			}
-			if (okBtn) {
-				okBtn.disabled = false;
-				okBtn.style.display = "";
+		} else if (PincodeWindow._resetstate === 1) {
+			if (PincodeWindow._pass.length > 3 && PincodeWindow._pass.length < 7) {
+				PincodeWindow.selectInput(1);
+				PincodeWindow._resetstate = 2;
+				advanceVisualSeed();
+			} else {
+				UIManager.showMessageBox(DB.getMessage(1887), "ok");
+				PincodeWindow.clearPin();
 			}
-			advanceVisualSeed();
 		} else {
-			UIManager.showMessageBox(DB.getMessage(1887), "ok");
-			if (PincodeWindow._newpass.length < 4 || PincodeWindow._newpass.length > 6) PincodeWindow._newpass = "";
-		}
-		else if (PincodeWindow._resetstate === 1) if (PincodeWindow._pass.length > 3 && PincodeWindow._pass.length < 7) {
-			PincodeWindow.selectInput(1);
-			PincodeWindow._resetstate = 2;
-			advanceVisualSeed();
-		} else {
-			UIManager.showMessageBox(DB.getMessage(1887), "ok");
-			PincodeWindow.clearPin();
-		}
-		else {
 			const okBtn = root.querySelector(".btn2.ok");
 			const changeBtn = root.querySelector(".btn2.change");
 			const verifyBtn = root.querySelector(".btn2.verify");
@@ -329401,35 +329715,38 @@ var init_PincodeWindow = __esmMin((() => {
 	PincodeWindow.userChangePin = function userChangePin() {
 		const root = PincodeWindow.getRoot();
 		if (!root) return;
-		if (PincodeWindow._resetstate === 3) if (typeof PincodeWindow.onPincodeReset === "function" && PincodeWindow._pass !== PincodeWindow._newpass && PincodeWindow._newpass.length > 3 && PincodeWindow._newpass.length < 7 && PincodeWindow._newpass === PincodeWindow._checkpass) success();
-		else UIManager.showMessageBox(DB.getMessage(1887), "ok");
-		else if (PincodeWindow._resetstate === 2) if (PincodeWindow._newpass.length > 3 && PincodeWindow._newpass.length < 7 && PincodeWindow._pass !== PincodeWindow._newpass) {
-			PincodeWindow.selectInput(2);
-			PincodeWindow._resetstate = 3;
-			const verifyBtn = root.querySelector(".btn2.verify");
-			const okBtn = root.querySelector(".btn2.ok");
-			if (verifyBtn) {
-				verifyBtn.disabled = true;
-				verifyBtn.style.display = "none";
+		if (PincodeWindow._resetstate === 3) {
+			if (typeof PincodeWindow.onPincodeReset === "function" && PincodeWindow._pass !== PincodeWindow._newpass && PincodeWindow._newpass.length > 3 && PincodeWindow._newpass.length < 7 && PincodeWindow._newpass === PincodeWindow._checkpass) success();
+			else UIManager.showMessageBox(DB.getMessage(1887), "ok");
+		} else if (PincodeWindow._resetstate === 2) {
+			if (PincodeWindow._newpass.length > 3 && PincodeWindow._newpass.length < 7 && PincodeWindow._pass !== PincodeWindow._newpass) {
+				PincodeWindow.selectInput(2);
+				PincodeWindow._resetstate = 3;
+				const verifyBtn = root.querySelector(".btn2.verify");
+				const okBtn = root.querySelector(".btn2.ok");
+				if (verifyBtn) {
+					verifyBtn.disabled = true;
+					verifyBtn.style.display = "none";
+				}
+				if (okBtn) {
+					okBtn.disabled = false;
+					okBtn.style.display = "";
+				}
+				advanceVisualSeed();
+			} else {
+				UIManager.showMessageBox(DB.getMessage(1887), "ok");
+				if (PincodeWindow._newpass.length < 4 || PincodeWindow._newpass.length > 6) PincodeWindow._newpass = "";
 			}
-			if (okBtn) {
-				okBtn.disabled = false;
-				okBtn.style.display = "";
+		} else if (PincodeWindow._resetstate === 1) {
+			if (PincodeWindow._pass.length > 3 && PincodeWindow._pass.length < 7) {
+				PincodeWindow.selectInput(1);
+				PincodeWindow._resetstate = 2;
+				advanceVisualSeed();
+			} else {
+				UIManager.showMessageBox(DB.getMessage(1887), "ok");
+				PincodeWindow.clearPin();
 			}
-			advanceVisualSeed();
 		} else {
-			UIManager.showMessageBox(DB.getMessage(1887), "ok");
-			if (PincodeWindow._newpass.length < 4 || PincodeWindow._newpass.length > 6) PincodeWindow._newpass = "";
-		}
-		else if (PincodeWindow._resetstate === 1) if (PincodeWindow._pass.length > 3 && PincodeWindow._pass.length < 7) {
-			PincodeWindow.selectInput(1);
-			PincodeWindow._resetstate = 2;
-			advanceVisualSeed();
-		} else {
-			UIManager.showMessageBox(DB.getMessage(1887), "ok");
-			PincodeWindow.clearPin();
-		}
-		else {
 			const okBtn = root.querySelector(".btn2.ok");
 			const changeBtn = root.querySelector(".btn2.change");
 			const verifyBtn = root.querySelector(".btn2.verify");
@@ -329808,9 +330125,7 @@ function createCharSelect(config) {
 				return;
 			}
 			default:
-			case 0:
-				UIManager.showMessageBox(DB.getMessage(301), "ok");
-				break;
+			case 0: UIManager.showMessageBox(DB.getMessage(301), "ok");
 		}
 	};
 	/**
@@ -329907,15 +330222,17 @@ function createCharSelect(config) {
 	* Press "cancel" or ESCAPE key
 	*/
 	function cancel() {
-		if (_disable_UI === false) if (gridLayout) {
-			UIManager.showPromptBox(DB.getMessage(17), "ok", "cancel", () => {
+		if (_disable_UI === false) {
+			if (gridLayout) {
+				UIManager.showPromptBox(DB.getMessage(17), "ok", "cancel", () => {
+					Component.onExitRequest();
+					Component.clearAllSlots();
+				}, null);
+				stopCountdownInterval();
+			} else UIManager.showPromptBox(DB.getMessage(17), "ok", "cancel", () => {
 				Component.onExitRequest();
-				Component.clearAllSlots();
 			}, null);
-			stopCountdownInterval();
-		} else UIManager.showPromptBox(DB.getMessage(17), "ok", "cancel", () => {
-			Component.onExitRequest();
-		}, null);
+		}
 	}
 	/**
 	* Jumping to Character creation window
@@ -330156,7 +330473,7 @@ function createCharSelect(config) {
 			const pagebtn = root.querySelector(".pageinfo .pagebtn");
 			pagebtn.textContent = "";
 			for (let i = 1; i <= _maxSlots / 3; i++) drawBall(pagebtn, i, Math.floor(_index / 3) + 1 === i);
-			root.querySelector(".pageinfo").style.left = `${576 / 2 - _maxSlots / 3 * 8}px`;
+			root.querySelector(".pageinfo").style.left = `${288 - _maxSlots / 3 * 8}px`;
 			let mix = (index + 1) % 3 === 0 ? index + 1 - 3 : index + 1 - (index + 1) % 3;
 			mix = mix >= _maxSlots ? 0 : mix;
 			for (let i = 1; i <= 3; i++) {
@@ -330169,25 +330486,26 @@ function createCharSelect(config) {
 			info = _slots[tmpIndex];
 			entity = _entitySlots[tmpIndex];
 			const countdown = root.querySelector(`.timedelete.slot${tmpIndex % 3 + 1}`);
-			if (info && entity) if (info.DeleteDate && (!packetverGatedDelete || PacketVerManager_default.value >= 20100803)) {
-				countdown.dataset.datetime = info.DeleteDate;
-				countdown.textContent = formatDatetime(info.DeleteDate);
-				countdown.style.display = "block";
-				if (Math.floor(Date.now() / 1e3) > info.DeleteDate) {
-					countdown.classList.remove("waitdelete");
-					countdown.classList.add("candelete");
+			if (info && entity) {
+				if (info.DeleteDate && (!packetverGatedDelete || PacketVerManager_default.value >= 20100803)) {
+					countdown.dataset.datetime = info.DeleteDate;
+					countdown.textContent = formatDatetime(info.DeleteDate);
+					countdown.style.display = "block";
+					if (Math.floor(Date.now() / 1e3) > info.DeleteDate) {
+						countdown.classList.remove("waitdelete");
+						countdown.classList.add("candelete");
+					} else {
+						countdown.classList.remove("candelete");
+						countdown.classList.add("waitdelete");
+					}
+					entity.action = entity.ACTION.SIT;
 				} else {
-					countdown.classList.remove("candelete");
-					countdown.classList.add("waitdelete");
+					countdown.dataset.datetime = 0;
+					countdown.textContent = formatDatetime("");
+					countdown.style.display = "none";
+					entity.action = entity.ACTION.IDLE;
 				}
-				entity.action = entity.ACTION.SIT;
 			} else {
-				countdown.dataset.datetime = 0;
-				countdown.textContent = formatDatetime("");
-				countdown.style.display = "none";
-				entity.action = entity.ACTION.IDLE;
-			}
-			else {
 				countdown.dataset.datetime = 0;
 				countdown.textContent = formatDatetime("");
 				countdown.style.display = "none";
@@ -330555,7 +330873,7 @@ var init_CharSelectV4$2 = __esmMin((() => {
 //#region src/UI/Components/CharSelect/CharSelectV4/CharSelectV4.css?raw
 var CharSelectV4_default$1;
 var init_CharSelectV4$1 = __esmMin((() => {
-	CharSelectV4_default$1 = ":host {\r\n	min-width: 100%;\r\n	min-height: 100%;\r\n}\r\n\r\n#CharSelectV4 {\r\n	position: absolute;\r\n	min-width: 100%;\r\n	min-height: 100%;\r\n	top: 0;\r\n	left: 0;\r\n	display: flex;\r\n	justify-content: center;\r\n	align-items: center;\r\n	flex-direction: column;\r\n}\r\n\r\n#CharSelectV4 .char_select_container {\r\n	position: absolute;\r\n	display: flex;\r\n	flex-direction: row;\r\n	background-color: rgba(0, 0, 0, 0.1);\r\n	border-radius: 5px;\r\n	padding-top: 20px;\r\n	padding-left: 5px;\r\n}\r\n\r\n/** Box **/\r\n#CharSelectV4 .char_list {\r\n	flex: 1;\r\n	max-width: 800px;\r\n	min-width: 157px;\r\n	height: 595px;\r\n	max-height: 80vh;\r\n	display: flex;\r\n	flex-direction: row;\r\n	flex-wrap: wrap;\r\n	overflow-y: auto;\r\n}\r\n\r\n#CharSelectV4 .box_select {\r\n	position: absolute;\r\n	width: 157px;\r\n	height: 159px;\r\n	top: 40px;\r\n	margin-left: -5px;\r\n}\r\n#CharSelectV4 .char_canvas {\r\n	width: 157px;\r\n	height: 195px;\r\n	position: relative;\r\n	z-index: 10;\r\n}\r\n#CharSelectV4 .char_canvas .name {\r\n	position: absolute;\r\n	bottom: 17px;\r\n	width: 100%;\r\n	text-align: center;\r\n	font-weight: bold;\r\n	color: #15154a;\r\n}\r\n\r\n#CharSelectV4 .char_canvas .job_icon {\r\n	position: absolute;\r\n	top: 15px;\r\n	right: 12px;\r\n	width: 25px;\r\n	height: 25px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n}\r\n\r\n/** Slot info **/\r\n#CharSelectV4 .slotinfo {\r\n	position: absolute;\r\n	top: 195px;\r\n	right: 10px;\r\n	height: 20px;\r\n	display: block;\r\n	border: 1px solid #c6cee7;\r\n	border-radius: 4px;\r\n	padding-left: 10px;\r\n	padding-right: 10px;\r\n}\r\n#CharSelectV4 .slotinfo .number {\r\n	color: #58709e;\r\n	font-weight: bold;\r\n	margin-right: 10px;\r\n}\r\n#CharSelectV4 .slotinfo .content {\r\n	color: #555;\r\n	top: 6px;\r\n	right: 8px;\r\n}\r\n\r\n/** Page info **/\r\n#CharSelectV4 .pageinfo {\r\n	position: absolute;\r\n	left: 275px;\r\n	top: 185px;\r\n	font-weight: bold;\r\n	color: #646464;\r\n}\r\n#CharSelectV4 .pageinfo .current {\r\n	color: #fe3b7d;\r\n}\r\n\r\n/** Characters infos **/\r\n#CharSelectV4 .charinfo {\r\n	height: 585px;\r\n	max-height: 80vh;\r\n	width: 185px;\r\n	background-repeat: no-repeat;\r\n	margin-top: 10px;\r\n	margin-left: 10px;\r\n	position: relative;\r\n}\r\n#CharSelectV4 .charinfo div {\r\n	position: absolute;\r\n	width: 90px;\r\n	height: 13px;\r\n}\r\n#CharSelectV4 .charinfo .name {\r\n	left: 52px;\r\n	top: 2px;\r\n	white-space: nowrap;\r\n}\r\n#CharSelectV4 .charinfo .job {\r\n	left: 60px;\r\n	top: 105px;\r\n}\r\n#CharSelectV4 .charinfo .lvl {\r\n	left: 60px;\r\n	top: 123px;\r\n}\r\n#CharSelectV4 .charinfo .exp {\r\n	left: 60px;\r\n	top: 140px;\r\n}\r\n#CharSelectV4 .charinfo .hp {\r\n	left: 60px;\r\n	top: 157px;\r\n}\r\n#CharSelectV4 .charinfo .sp {\r\n	left: 60px;\r\n	top: 174px;\r\n}\r\n#CharSelectV4 .charinfo .map {\r\n	left: 60px;\r\n	top: 89px;\r\n	white-space: nowrap;\r\n	overflow: hidden;\r\n	text-overflow: ellipsis;\r\n}\r\n#CharSelectV4 .charinfo .str {\r\n	left: 60px;\r\n	top: 191px;\r\n}\r\n#CharSelectV4 .charinfo .agi {\r\n	left: 60px;\r\n	top: 208px;\r\n}\r\n#CharSelectV4 .charinfo .vit {\r\n	left: 60px;\r\n	top: 225px;\r\n}\r\n#CharSelectV4 .charinfo .int {\r\n	left: 60px;\r\n	top: 242px;\r\n}\r\n#CharSelectV4 .charinfo .dex {\r\n	left: 60px;\r\n	top: 259px;\r\n}\r\n#CharSelectV4 .charinfo .luk {\r\n	left: 60px;\r\n	top: 276px;\r\n}\r\n\r\n/** Buttons **/\r\n#CharSelectV4 .btn.delete {\r\n	position: absolute;\r\n	width: 131px;\r\n	height: 24px;\r\n}\r\n\r\n#CharSelectV4 .btn.canceldelete {\r\n	position: absolute;\r\n	width: 131px;\r\n	height: 24px;\r\n}\r\n\r\n#CharSelectV4 .btn.finaldelete {\r\n	position: absolute;\r\n	width: 131px;\r\n	height: 24px;\r\n}\r\n\r\n#CharSelectV4 .btn.delete,\r\n#CharSelectV4 .btn.canceldelete,\r\n#CharSelectV4 .btn.finaldelete {\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n	border: 0;\r\n	text-align: center;\r\n	line-height: 24px;\r\n}\r\n\r\n#CharSelectV4 .btn.ok {\r\n	position: absolute;\r\n	width: 165px;\r\n	height: 110px;\r\n	color: white;\r\n	padding-top: 20px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n	border: 0;\r\n	text-align: center;\r\n}\r\n\r\n#CharSelectV4 .btn.ok:hover {\r\n	text-shadow: #000 1px 1px;\r\n}\r\n\r\n#CharSelectV4 .ok,\r\n#CharSelectV4 .make {\r\n	right: 15px;\r\n	top: 380px;\r\n}\r\n#CharSelectV4 .cancel {\r\n	position: absolute;\r\n	top: 5px;\r\n	right: 5px;\r\n	width: 17px;\r\n	height: 18px;\r\n}\r\n#CharSelectV4 .delete {\r\n	right: 33px;\r\n	top: 300px;\r\n}\r\n\r\n#CharSelectV4 .canceldelete {\r\n	right: 33px;\r\n	top: 300px;\r\n}\r\n\r\n#CharSelectV4 .finaldelete {\r\n	right: 33px;\r\n	top: 330px;\r\n}\r\n\r\n#CharSelectV4 .timedelete {\r\n	position: relative;\r\n	height: 20px;\r\n	width: 100px;\r\n	top: -150px;\r\n	left: 55px;\r\n}\r\n\r\n#CharSelectV4 .hidden {\r\n	display: none;\r\n}\r\n";
+	CharSelectV4_default$1 = ":host {\r\n	top: 0;\r\n	left: 0;\r\n	min-width: 100%;\r\n	min-height: 100%;\r\n}\r\n\r\n#CharSelectV4 {\r\n	position: absolute;\r\n	min-width: 100%;\r\n	min-height: 100%;\r\n	top: 0;\r\n	left: 0;\r\n	display: flex;\r\n	justify-content: center;\r\n	align-items: center;\r\n	flex-direction: column;\r\n}\r\n\r\n#CharSelectV4 .char_select_container {\r\n	position: absolute;\r\n	display: flex;\r\n	flex-direction: row;\r\n	background-color: rgba(0, 0, 0, 0.1);\r\n	border-radius: 5px;\r\n	padding-top: 20px;\r\n	padding-left: 5px;\r\n}\r\n\r\n/** Box **/\r\n#CharSelectV4 .char_list {\r\n	flex: 1;\r\n	max-width: 800px;\r\n	min-width: 157px;\r\n	height: 595px;\r\n	max-height: 80vh;\r\n	display: flex;\r\n	flex-direction: row;\r\n	flex-wrap: wrap;\r\n	overflow-y: auto;\r\n}\r\n\r\n#CharSelectV4 .box_select {\r\n	position: absolute;\r\n	width: 157px;\r\n	height: 159px;\r\n	top: 40px;\r\n	margin-left: -5px;\r\n}\r\n#CharSelectV4 .char_canvas {\r\n	width: 157px;\r\n	height: 195px;\r\n	position: relative;\r\n	z-index: 10;\r\n}\r\n#CharSelectV4 .char_canvas .name {\r\n	position: absolute;\r\n	bottom: 17px;\r\n	width: 100%;\r\n	text-align: center;\r\n	font-weight: bold;\r\n	color: #15154a;\r\n}\r\n\r\n#CharSelectV4 .char_canvas .job_icon {\r\n	position: absolute;\r\n	top: 15px;\r\n	right: 12px;\r\n	width: 25px;\r\n	height: 25px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n}\r\n\r\n/** Slot info **/\r\n#CharSelectV4 .slotinfo {\r\n	position: absolute;\r\n	top: 195px;\r\n	right: 10px;\r\n	height: 20px;\r\n	display: block;\r\n	border: 1px solid #c6cee7;\r\n	border-radius: 4px;\r\n	padding-left: 10px;\r\n	padding-right: 10px;\r\n}\r\n#CharSelectV4 .slotinfo .number {\r\n	color: #58709e;\r\n	font-weight: bold;\r\n	margin-right: 10px;\r\n}\r\n#CharSelectV4 .slotinfo .content {\r\n	color: #555;\r\n	top: 6px;\r\n	right: 8px;\r\n}\r\n\r\n/** Page info **/\r\n#CharSelectV4 .pageinfo {\r\n	position: absolute;\r\n	left: 275px;\r\n	top: 185px;\r\n	font-weight: bold;\r\n	color: #646464;\r\n}\r\n#CharSelectV4 .pageinfo .current {\r\n	color: #fe3b7d;\r\n}\r\n\r\n/** Characters infos **/\r\n#CharSelectV4 .charinfo {\r\n	height: 585px;\r\n	max-height: 80vh;\r\n	width: 185px;\r\n	background-repeat: no-repeat;\r\n	margin-top: 10px;\r\n	margin-left: 10px;\r\n	position: relative;\r\n}\r\n#CharSelectV4 .charinfo div {\r\n	position: absolute;\r\n	width: 90px;\r\n	height: 13px;\r\n}\r\n#CharSelectV4 .charinfo .name {\r\n	left: 52px;\r\n	top: 2px;\r\n	white-space: nowrap;\r\n}\r\n#CharSelectV4 .charinfo .job {\r\n	left: 60px;\r\n	top: 105px;\r\n}\r\n#CharSelectV4 .charinfo .lvl {\r\n	left: 60px;\r\n	top: 123px;\r\n}\r\n#CharSelectV4 .charinfo .exp {\r\n	left: 60px;\r\n	top: 140px;\r\n}\r\n#CharSelectV4 .charinfo .hp {\r\n	left: 60px;\r\n	top: 157px;\r\n}\r\n#CharSelectV4 .charinfo .sp {\r\n	left: 60px;\r\n	top: 174px;\r\n}\r\n#CharSelectV4 .charinfo .map {\r\n	left: 60px;\r\n	top: 89px;\r\n	white-space: nowrap;\r\n	overflow: hidden;\r\n	text-overflow: ellipsis;\r\n}\r\n#CharSelectV4 .charinfo .str {\r\n	left: 60px;\r\n	top: 191px;\r\n}\r\n#CharSelectV4 .charinfo .agi {\r\n	left: 60px;\r\n	top: 208px;\r\n}\r\n#CharSelectV4 .charinfo .vit {\r\n	left: 60px;\r\n	top: 225px;\r\n}\r\n#CharSelectV4 .charinfo .int {\r\n	left: 60px;\r\n	top: 242px;\r\n}\r\n#CharSelectV4 .charinfo .dex {\r\n	left: 60px;\r\n	top: 259px;\r\n}\r\n#CharSelectV4 .charinfo .luk {\r\n	left: 60px;\r\n	top: 276px;\r\n}\r\n\r\n/** Buttons **/\r\n#CharSelectV4 .btn.delete {\r\n	position: absolute;\r\n	width: 131px;\r\n	height: 24px;\r\n}\r\n\r\n#CharSelectV4 .btn.canceldelete {\r\n	position: absolute;\r\n	width: 131px;\r\n	height: 24px;\r\n}\r\n\r\n#CharSelectV4 .btn.finaldelete {\r\n	position: absolute;\r\n	width: 131px;\r\n	height: 24px;\r\n}\r\n\r\n#CharSelectV4 .btn.delete,\r\n#CharSelectV4 .btn.canceldelete,\r\n#CharSelectV4 .btn.finaldelete {\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n	border: 0;\r\n	text-align: center;\r\n	line-height: 24px;\r\n}\r\n\r\n#CharSelectV4 .btn.ok {\r\n	position: absolute;\r\n	width: 165px;\r\n	height: 110px;\r\n	color: white;\r\n	padding-top: 20px;\r\n	background-repeat: no-repeat;\r\n	background-color: transparent;\r\n	border: 0;\r\n	text-align: center;\r\n}\r\n\r\n#CharSelectV4 .btn.ok:hover {\r\n	text-shadow: #000 1px 1px;\r\n}\r\n\r\n#CharSelectV4 .ok,\r\n#CharSelectV4 .make {\r\n	right: 15px;\r\n	top: 380px;\r\n}\r\n#CharSelectV4 .cancel {\r\n	position: absolute;\r\n	top: 5px;\r\n	right: 5px;\r\n	width: 17px;\r\n	height: 18px;\r\n}\r\n#CharSelectV4 .delete {\r\n	right: 33px;\r\n	top: 300px;\r\n}\r\n\r\n#CharSelectV4 .canceldelete {\r\n	right: 33px;\r\n	top: 300px;\r\n}\r\n\r\n#CharSelectV4 .finaldelete {\r\n	right: 33px;\r\n	top: 330px;\r\n}\r\n\r\n#CharSelectV4 .timedelete {\r\n	position: relative;\r\n	height: 20px;\r\n	width: 100px;\r\n	top: -150px;\r\n	left: 55px;\r\n}\r\n\r\n#CharSelectV4 .hidden {\r\n	display: none;\r\n}\r\n";
 }));
 //#endregion
 //#region src/UI/Components/CharSelect/CharSelectV4/CharSelectV4.js
@@ -330756,12 +331074,14 @@ function createCharCreate(config) {
 		const input = this.getRoot().querySelector(nameInputSelector);
 		input.value = "";
 		input.focus();
-		if (hasRace) if (gridHairstyle) {
-			_race = "human";
-			_gender = "male";
-			updateRace();
-			cleanup();
-		} else setDefault();
+		if (hasRace) {
+			if (gridHairstyle) {
+				_race = "human";
+				_gender = "male";
+				updateRace();
+				cleanup();
+			} else setDefault();
+		}
 		Renderer.render(render);
 		if (hasStats) updateGraphic();
 	};
@@ -330826,8 +331146,10 @@ function createCharCreate(config) {
 	* Exit the window
 	*/
 	function cancel() {
-		if (hasRace) if (gridHairstyle) cleanup();
-		else setDefault();
+		if (hasRace) {
+			if (gridHairstyle) cleanup();
+			else setDefault();
+		}
 		Component.onExitRequest();
 	}
 	/**
@@ -330848,7 +331170,6 @@ function createCharCreate(config) {
 			case "headpalette":
 				_chargen.entity.headpalette += increment;
 				_chargen.entity.headpalette %= 10;
-				break;
 		}
 		render();
 	}
@@ -331093,7 +331414,6 @@ function createCharCreate(config) {
 				updateCharacterCap(TYPE.RACE, RACE.HUMAN);
 				updateCharacterCap(TYPE.GENDER, GENDER.MALE);
 				_model.entity.headpalette = 0;
-				break;
 		}
 	}
 	function initRaceGrid(root) {
@@ -331204,10 +331524,8 @@ function createCharCreate(config) {
 				if (value === 1) _gender = "male";
 				else _gender = "female";
 				break;
-			case "race":
-				if (value === 0) _race = "human";
-				else _race = "doram";
-				break;
+			case "race": if (value === 0) _race = "human";
+			else _race = "doram";
 		}
 		Client.loadFile(`${DB.INTERFACE_PATH}make_character_ver2/bt_male_off.bmp`, (dataURI) => {
 			root.querySelector("#male_container").style.backgroundImage = `url(${dataURI})`;
@@ -331280,7 +331598,6 @@ function createCharCreate(config) {
 				_model.entity.job = 0;
 				_model.entity.head = 1;
 				_model.entity.headpalette = 0;
-				break;
 		}
 	}
 	/**
@@ -331542,6 +331859,13 @@ var init_CharCreate = __esmMin((() => {
 	Controller$1 = UIVersionManager.getUIController(publicName$1, versionInfo$1);
 }));
 //#endregion
+//#region src/Renderer/Entity/Player.js
+var Player;
+var init_Player = __esmMin((() => {
+	init_Entity$1();
+	Player = class extends Entity {};
+}));
+//#endregion
 //#region src/Engine/CharEngine.js
 var CharEngine_exports = /* @__PURE__ */ __exportAll({ default: () => CharEngine });
 /**
@@ -331577,6 +331901,7 @@ function onConnectionAccepted$1(pkt) {
 	});
 	SessionStorage_default.Playing = false;
 	SessionStorage_default.hasCart = false;
+	SessionStorage_default.Entity = null;
 	const Announce = UIManager.getComponent("Announce");
 	if (Announce) Announce.remove();
 	const MapName = UIManager.getComponent("MapName");
@@ -331633,9 +331958,7 @@ function onSelectionRefused(pkt) {
 		case 5:
 			msg_id = 1364;
 			break;
-		default:
-			msg_id = 2;
-			break;
+		default: msg_id = 2;
 	}
 	UIManager.showErrorBox(DB.getMessage(msg_id));
 }
@@ -331659,9 +331982,7 @@ function onConnectionRefused$1(pkt) {
 		case 119:
 			msg_id = 2929;
 			break;
-		default:
-			msg_id = 2;
-			break;
+		default: msg_id = 2;
 	}
 	UIManager.showErrorBox(DB.getMessage(msg_id));
 }
@@ -331885,9 +332206,7 @@ function onCreationFail(pkt) {
 			msg_id = 1355;
 			break;
 		default:
-		case 255:
-			msg_id = 11;
-			break;
+		case 255: msg_id = 11;
 	}
 	UIManager.showMessageBox(DB.getMessage(msg_id), "ok");
 }
@@ -332008,7 +332327,6 @@ function onPincodeCheckSuccess(pkt) {
 		default:
 			console.log("PINCODE: Received unknown state from server: " + pkt.State);
 			PincodeWindow_default.append();
-			break;
 	}
 }
 /**
@@ -332020,7 +332338,7 @@ function onConnectRequest(entity) {
 	SoundManager.play("¹öÆ°¼Ò¸®.wav");
 	Controller$2.getUI().remove();
 	UIManager.getComponent("WinLoading").append();
-	SessionStorage_default.Character = entity;
+	SessionStorage_default.Entity = new Player(entity);
 	const pkt = new PACKET.CH.SELECT_CHAR();
 	pkt.CharNum = entity.CharNum;
 	Network.sendPacket(pkt);
@@ -332079,6 +332397,7 @@ var init_CharEngine = __esmMin((() => {
 	init_JoystickUI();
 	init_CharSelect();
 	init_CharCreate();
+	init_Player();
 	init_preload_helper();
 	_server$1 = null;
 	_creationSlot = 0;
@@ -332256,9 +332575,7 @@ var init_WinList = __esmMin((() => {
 			case KEYS.UP:
 				this.setIndex(this.index - 1);
 				break;
-			case KEYS.DOWN:
-				this.setIndex(this.index + 1);
-				break;
+			case KEYS.DOWN: this.setIndex(this.index + 1);
 		}
 		event.stopImmediatePropagation();
 	};
@@ -334903,7 +335220,6 @@ var require_rijndael_block = /* @__PURE__ */ __commonJSMin(((exports, module) =>
 						for (let j = 0; j < blockSize; j++) ciphertext[start + j] = encrypted[j];
 						iv = encrypted.slice();
 					}
-					break;
 			}
 			return ciphertext;
 		}
@@ -334943,7 +335259,6 @@ var require_rijndael_block = /* @__PURE__ */ __commonJSMin(((exports, module) =>
 						for (let j = 0; j < blockSize; j++) plaintext[start + j] = decrypted[j] ^ iv[j];
 						iv = block.slice();
 					}
-					break;
 			}
 			return plaintext;
 		}
@@ -335046,6 +335361,1433 @@ var init_WinLogin$2 = __esmMin((() => {
 	WinLogin_default$1 = ":host {\r\n	width: 280px;\r\n	height: 120px;\r\n	top: 60%;\r\n	left: calc(50% - 140px);\r\n}\r\n\r\n#WinLogin {\r\n	position: absolute;\r\n	width: 280px;\r\n	height: 120px;\r\n}\r\n#WinLogin input {\r\n	position: absolute;\r\n	left: 91px;\r\n	height: 18px;\r\n	width: 127px;\r\n	border: none;\r\n	background-color: transparent;\r\n	padding-left: 2px;\r\n	outline: none;\r\n}\r\n#WinLogin input.user {\r\n	top: 29px;\r\n}\r\n#WinLogin input.pass {\r\n	top: 61px;\r\n}\r\n#WinLogin .save {\r\n	position: absolute;\r\n	top: 32px;\r\n	right: 10px;\r\n	display: block;\r\n	width: 38px;\r\n	height: 10px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n}\r\n#WinLogin .btn {\r\n	position: absolute;\r\n	border: 0;\r\n	width: 42px;\r\n	height: 20px;\r\n	bottom: 4px;\r\n	background-color: transparent;\r\n}\r\n#WinLogin .btn.connect {\r\n	right: 50px;\r\n}\r\n#WinLogin .btn.signup {\r\n	left: 5px;\r\n}\r\n#WinLogin .btn.exit {\r\n	right: 5px;\r\n}\r\n\r\n/* Override browser autofill styles */\r\n#WinLogin input:-webkit-autofill,\r\n#WinLogin input:-webkit-autofill:hover,\r\n#WinLogin input:-webkit-autofill:focus,\r\n#WinLogin input:-webkit-autofill:active,\r\n#WinLogin input:-internal-autofill-selected,\r\n#WinLogin input:-internal-autofill-previewed {\r\n	-webkit-background-clip: text;\r\n	transition: background-color 5000sease-in-out 0s;\r\n	box-shadow: inset 0 0 20px 20px #ffffff00;\r\n}\r\n";
 }));
 //#endregion
+//#region src/Engine/Replay/ReplayTypes.js
+/**
+* Informational replay logging, only emitted in development builds.
+* Warnings and errors are reported unconditionally.
+*
+* @param {...*} args
+*/
+function replayLog(...args) {
+	if (Configs.get("development", false)) console.log(...args);
+}
+var ContainerType, ContainerTypeNames, ItemChunkKind, ItemRecordTag, ReplayOpCodes, ReplayOpCodeName, ReplayState;
+var init_ReplayTypes = __esmMin((() => {
+	init_Configs();
+	ContainerType = {
+		None: 0,
+		PacketStream: 1,
+		ReplayData: 2,
+		Session: 3,
+		Status: 4,
+		Quests: 6,
+		GroupAndFriends: 7,
+		Items: 8,
+		Companions: 9,
+		InitialPackets: 14,
+		InitialEntities: 15,
+		InitialFloorItems: 16,
+		Efst: 17,
+		EfstList: 18,
+		EntitiesInfo: 21
+	};
+	ContainerTypeNames = {};
+	for (const [name, code] of Object.entries(ContainerType)) ContainerTypeNames[code] = name;
+	ItemChunkKind = {
+		INVENTORY: 4510,
+		CART: 4516,
+		CART_MIRROR: 4518,
+		EQUIPPED: 4601,
+		EQUIPPED_COSTUME: 4603
+	};
+	ItemRecordTag = {
+		START_CHAIN: 281,
+		END_CHAIN: 282,
+		POS: 285,
+		WEAR_STATE: 286,
+		QTY: 287,
+		CARDS: 290,
+		NAMEID: 291,
+		REFINE: 295,
+		SPRITE: 298,
+		GRADE: 299,
+		OPTIONS_COUNT: 300,
+		OPTIONS: 301
+	};
+	ReplayOpCodes = {
+		ZC_ROOM_NEWENTRY: 201,
+		ZC_STORE_ENTRY: 202,
+		ZC_PROGRESS: 203,
+		ZC_BUYING_STORE_ENTRY: 204,
+		ZC_ITEM_ENTRY: 207,
+		ZC_NOTIFY_MOVEENTRY8: 208,
+		ZC_NOTIFY_STANDENTRY7: 210,
+		ZC_NOTIFY_MOVEENTRY11: 214,
+		ZC_NOTIFY_STANDENTRY11: 217,
+		Begin_950: 950,
+		End_950: 951,
+		Region: 961,
+		Service: 962,
+		Sex: 963,
+		Charactername: 964,
+		Mapname: 965,
+		Maptype: 966,
+		PosX: 967,
+		PosY: 968,
+		Direction: 969,
+		Length: 970,
+		Begin_1000: 1e3,
+		End_1000: 1001,
+		Aid: 1010,
+		Gid: 1011,
+		Job: 1014,
+		Exp: 1015,
+		Level: 1016,
+		JobPoint: 1017,
+		NextExp: 1018,
+		JobLevel: 1019,
+		SkillPoint: 1020,
+		Str: 1024,
+		Agi: 1025,
+		Vit: 1026,
+		Int: 1027,
+		Dex: 1028,
+		Luk: 1029,
+		PlusStr: 1030,
+		PlusAgi: 1031,
+		PlusVit: 1032,
+		PlusInt: 1033,
+		PlusDex: 1034,
+		PlusLuk: 1035,
+		ASPD: 1036,
+		AttackPower: 1037,
+		MDefPower: 1038,
+		PlusASPD: 1039,
+		ItemDefPower: 1040,
+		PlusDefPower: 1041,
+		RefiningPower: 1042,
+		MaxMattPower: 1043,
+		MinMattPower: 1044,
+		PlusMDefPower: 1045,
+		HitSuccessValue: 1046,
+		AvoidSuccessValue: 1047,
+		CriticalSuccessValue: 1048,
+		PlusAvoidSuccessValue: 1049,
+		EquipArrowIndex: 1050,
+		Money: 1051,
+		Speed: 1052,
+		Honor: 1053,
+		NextJobExp: 1054,
+		JobExp: 1055,
+		Virtue: 1056,
+		Head: 1060,
+		Weapon: 1061,
+		Shield: 1062,
+		BodyPalette: 1063,
+		HeadPalette: 1064,
+		Accessory: 1065,
+		Accessory2: 1066,
+		Accessory3: 1067,
+		EffectState: 1070,
+		RobePalette: 1071,
+		CartCurCount: 1086,
+		CartMaxCount: 1087,
+		CartCurWeight: 1088,
+		CartMaxWeight: 1089,
+		Begin_2000: 2e3,
+		End_2000: 2001,
+		BonusStr: 2010,
+		BonusAgi: 2011,
+		BonusVit: 2012,
+		BonusInt: 2013,
+		BonusDex: 2014,
+		BonusLuk: 2015,
+		CurWeight: 2017,
+		MaxWeight: 2018,
+		Hp: 2029,
+		MaxHp: 2030,
+		Sp: 2031,
+		MaxSp: 2032,
+		Begin_3500: 3500,
+		End_3500: 3501,
+		QuestInfo: 3510,
+		Begin_4000: 4e3,
+		End_4000: 4001,
+		GroupName: 4014,
+		GroupInfo: 4015,
+		FriendInfo: 4016,
+		Begin_4500: 4500,
+		End_4500: 4501,
+		InventoryItems: 4510,
+		EquippedItems: 4601,
+		EquippedShadowItems: 4603,
+		CartItems: 4516,
+		Begin_5000: 5e3,
+		End_5000: 5001,
+		Begin_5300: 5300,
+		PetGid: 5301,
+		PetIsNameModified: 5302,
+		PetName: 5303,
+		PetAccessory: 5304,
+		PetJob: 5305,
+		PetLevel: 5306,
+		PetFullness: 5307,
+		PetRelation: 5308,
+		PetEggIndex: 5309,
+		PetOldFullness: 5310,
+		Begin_5500: 5500,
+		End_5500: 5501,
+		Begin_6500: 6500,
+		End_6500: 6501,
+		Begin_7000: 7e3,
+		End_7000: 7001,
+		Begin_8000: 8e3,
+		End_8000: 8001,
+		Begin_10000: 1e4,
+		End_10000: 10001,
+		Begin_13000: 13e3,
+		NameList: 13003,
+		End_13000: 13001,
+		Begin_14000: 14e3,
+		End_14000: 14001,
+		Begin_15000: 15e3,
+		End_15000: 15001,
+		Begin_17000: 17e3,
+		End_17000: 17001,
+		Begin_19000: 19e3,
+		End_19000: 19001,
+		EfstInfo: 19011,
+		Begin_20000: 2e4,
+		End_20000: 20001,
+		Begin_25000: 25e3,
+		End_25000: 25001,
+		Begin_26000: 26e3,
+		End_26000: 26001
+	};
+	ReplayOpCodeName = {};
+	for (const [name, code] of Object.entries(ReplayOpCodes)) ReplayOpCodeName[code] = name;
+	ReplayState = {
+		IDLE: "IDLE",
+		LOADING_REPLAY: "LOADING_REPLAY",
+		APPLYING_SESSION: "APPLYING_SESSION",
+		LOADING_MAP: "LOADING_MAP",
+		PLAYING_INITIAL_DATA: "PLAYING_INITIAL_DATA",
+		INITIAL_DATA_COMPLETE: "INITIAL_DATA_COMPLETE",
+		PLAYING_PACKET_STREAM: "PLAYING_PACKET_STREAM",
+		REPLAY_FINISHED: "REPLAY_FINISHED"
+	};
+}));
+//#endregion
+//#region src/Engine/Replay/ReplaySocket.js
+var ReplaySocket;
+var init_ReplaySocket = __esmMin((() => {
+	ReplaySocket = class {
+		constructor(host, port) {
+			this.host = host;
+			this.port = port;
+			this.connected = false;
+			this.onMessage = null;
+			this.onClose = null;
+			this.onError = null;
+			this.onComplete = null;
+			setTimeout(() => {
+				this.connected = true;
+				if (this.onComplete) this.onComplete(true);
+			}, 10);
+		}
+		send(buffer) {}
+		close() {
+			this.connected = false;
+			if (this.onClose) this.onClose();
+		}
+		/**
+		* Feed data into NetworkManager
+		* @param {Uint8Array|ArrayBuffer} data
+		*/
+		push(data) {
+			if (!this.connected || !this.onMessage || !data) return;
+			let buffer;
+			if (data instanceof Uint8Array) buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+			else if (data instanceof ArrayBuffer) buffer = data;
+			else return;
+			this.onMessage(buffer);
+		}
+	};
+}));
+//#endregion
+//#region src/Engine/Replay/ReplayParser.js
+var HEADER_BYTES, DESCRIPTOR_BYTES, DESCRIPTOR_COUNT, ReplayParser;
+var init_ReplayParser = __esmMin((() => {
+	init_BinaryReader();
+	init_ItemType();
+	init_EquipmentLocation();
+	init_ReplayTypes();
+	HEADER_BYTES = 112;
+	DESCRIPTOR_BYTES = 10;
+	DESCRIPTOR_COUNT = 24;
+	ReplayParser = class {
+		constructor(fileBuffer) {
+			this.fp = new BinaryReader(fileBuffer);
+			this.header = {};
+			this.containers = [];
+			this.size = fileBuffer.byteLength;
+		}
+		parse() {
+			this.readHeader();
+			replayLog("[ReplayParser] Header parsed:", this.header);
+			if (this.header.version === 5) this.readContainersV5();
+			else console.warn(`[ReplayParser] Unsupported version: ${this.header.version}`);
+			return this.buildBuffers();
+		}
+		readHeader() {
+			if (this.size < HEADER_BYTES) throw new Error(`Replay file is truncated: ${this.size} bytes, expected at least ${HEADER_BYTES}`);
+			this.fp.seek(0, 0);
+			this.header.rawPrefix = this.fp.readBinaryString(100);
+			this.header.version = this.fp.readUByte();
+			this.header.sig = this.fp.readBinaryString(3);
+			this.header.recordedAt = {
+				year: this.fp.readShort(),
+				month: this.fp.readUByte(),
+				day: this.fp.readUByte()
+			};
+			this.header.dateUnused = this.fp.readUByte();
+			this.header.recordedAt.hour = this.fp.readUByte();
+			this.header.recordedAt.minute = this.fp.readUByte();
+			this.header.recordedAt.second = this.fp.readUByte();
+			this.header.date = this.header.recordedAt;
+			this.keys = this.deriveKeys(this.header.recordedAt);
+		}
+		deriveKeys(d) {
+			const view = /* @__PURE__ */ new DataView(/* @__PURE__ */ new ArrayBuffer(4));
+			view.setInt16(0, d.year, true);
+			view.setUint8(2, d.month);
+			view.setUint8(3, d.day);
+			const k1 = view.getInt32(0, true) >> 5;
+			view.setUint8(0, 0);
+			view.setUint8(1, d.hour);
+			view.setUint8(2, d.minute);
+			view.setUint8(3, d.second);
+			return {
+				k1,
+				k2: view.getInt32(0, true) >> 3
+			};
+		}
+		decryptChunk(data, size) {
+			const out = new Uint8Array(data.length);
+			out.set(data);
+			const view = new DataView(out.buffer, out.byteOffset, out.byteLength);
+			const wordCount = Math.floor(size / 4);
+			for (let cursor = 0; cursor < wordCount; cursor++) {
+				const old = view.getInt32(cursor * 4, true);
+				const xorVal = Math.imul(this.keys.k1 + cursor + 1, this.keys.k2);
+				view.setInt32(cursor * 4, old ^ xorVal, true);
+			}
+			return out;
+		}
+		readContainersV5() {
+			const tableOffset = HEADER_BYTES;
+			const tableEnd = 352;
+			if (this.size < tableEnd) throw new Error(`Replay descriptor table is truncated: ${this.size} bytes, expected at least ${tableEnd}`);
+			for (let i = 0; i < DESCRIPTOR_COUNT; i++) {
+				this.fp.seek(tableOffset + i * DESCRIPTOR_BYTES, 0);
+				const type = this.fp.readUShort();
+				const declaredLength = this.fp.readLong();
+				const offset = this.fp.readLong();
+				let realLength = declaredLength;
+				if (realLength === 0 && offset > 0) realLength = this.size - offset;
+				const container = {
+					type,
+					declaredLength,
+					offset,
+					realLength,
+					data: []
+				};
+				this.containers.push(container);
+				if (offset === 0 && declaredLength === 0) continue;
+				if (offset < 0 || offset >= this.size || realLength <= 0 || offset + realLength > this.size) {
+					console.warn(`[ReplayParser] Skipping out of bounds container ${ContainerTypeNames[type] || type} at ${offset} (${realLength} bytes)`);
+					continue;
+				}
+				this.fp.seek(offset, 0);
+				const body = new Uint8Array(this.fp.buffer, offset, realLength);
+				if (type === ContainerType.PacketStream) this.parsePacketStream(container, body);
+				else this.parseGenericContainer(container, body, declaredLength);
+			}
+		}
+		parsePacketStream(container, body) {
+			const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
+			let ptr = 0;
+			while (ptr + 10 <= body.byteLength) {
+				const id = view.getInt32(ptr, true);
+				const time = view.getInt32(ptr + 4, true);
+				const length = view.getUint16(ptr + 8, true);
+				const dataStart = ptr + 10;
+				const dataEnd = dataStart + length;
+				if (dataEnd > body.byteLength) break;
+				const encrypted = body.subarray(dataStart, dataEnd);
+				const decrypted = this.decryptChunk(encrypted, length);
+				const packetId = decrypted.length >= 2 ? decrypted[0] | decrypted[1] << 8 : 0;
+				container.data.push({
+					id,
+					time,
+					length,
+					data: decrypted,
+					packetId
+				});
+				ptr = dataEnd;
+			}
+		}
+		parseGenericContainer(container, body, declaredLength) {
+			if (declaredLength <= 0) return;
+			const decrypted = this.decryptChunk(body, declaredLength);
+			const view = new DataView(decrypted.buffer, decrypted.byteOffset, decrypted.byteLength);
+			let ptr = 0;
+			while (ptr + 6 <= declaredLength) {
+				const id = view.getInt16(ptr, true);
+				const length = view.getInt32(ptr + 2, true);
+				const dataStart = ptr + 6;
+				const dataEnd = dataStart + length;
+				if (length < 0 || dataEnd > decrypted.byteLength) break;
+				const data = decrypted.subarray(dataStart, dataEnd);
+				container.data.push({
+					id,
+					length,
+					data
+				});
+				ptr = dataEnd;
+			}
+		}
+		buildBuffers() {
+			const sessionBuffer = this.buildSessionBuffer();
+			const itemsBuffer = this.buildItemsBuffer();
+			const petBuffer = this.buildPetBuffer();
+			const statusBuffer = this.buildStatusBuffer();
+			const efstListBuffer = this.buildEfstListBuffer();
+			Object.assign(sessionBuffer, statusBuffer);
+			if (petBuffer) sessionBuffer.pet = petBuffer;
+			const initialBuffer = [];
+			const initialTypes = [
+				ContainerType.InitialPackets,
+				ContainerType.InitialEntities,
+				ContainerType.InitialFloorItems
+			];
+			for (const container of this.containers) {
+				if (!initialTypes.includes(container.type)) continue;
+				if (container.data.length === 0) continue;
+				const typeName = ContainerTypeNames[container.type] || `Unknown(${container.type})`;
+				const chunks = container.data.filter((chunk) => chunk.data && chunk.data.byteLength > 0).map((chunk) => chunk.data);
+				if (chunks.length > 0) {
+					initialBuffer.push({
+						type: container.type,
+						typeName,
+						chunks
+					});
+					replayLog(`[Replay] Loaded ${typeName} (${container.type}): ${chunks.length} packets`);
+				}
+			}
+			const packetStreamContainer = this.containers.find((c) => c.type === ContainerType.PacketStream);
+			const packetStreamBuffer = packetStreamContainer ? packetStreamContainer.data : [];
+			replayLog(`[Replay] Packet stream loaded: ${packetStreamBuffer.length} chunks`);
+			let lastPacketTime = 0;
+			if (packetStreamBuffer.length > 0) lastPacketTime = packetStreamBuffer[packetStreamBuffer.length - 1].time || 0;
+			const durationMs = Math.max(sessionBuffer.durationMs || 0, lastPacketTime);
+			sessionBuffer.durationMs = durationMs;
+			return {
+				header: this.header,
+				sessionBuffer,
+				itemsBuffer,
+				petBuffer,
+				statusBuffer,
+				efstListBuffer,
+				initialBuffer,
+				packetStreamBuffer,
+				durationMs
+			};
+		}
+		buildSessionBuffer() {
+			const buf = {};
+			const readU8 = (chunk) => new DataView(chunk.data.buffer, chunk.data.byteOffset, chunk.data.byteLength).getUint8(0);
+			const readU16 = (chunk) => new DataView(chunk.data.buffer, chunk.data.byteOffset, chunk.data.byteLength).getUint16(0, true);
+			const readU32 = (chunk) => new DataView(chunk.data.buffer, chunk.data.byteOffset, chunk.data.byteLength).getUint32(0, true);
+			const readStringById = (container, id) => {
+				const ch = container.data.find((c) => c.id === id);
+				if (!ch || ch.data.byteLength === 0) return null;
+				return this.readString(ch.data);
+			};
+			const readU32ById = (container, id) => {
+				const ch = container.data.find((c) => c.id === id);
+				if (!ch || ch.data.byteLength < 4) return null;
+				return readU32(ch);
+			};
+			const readU16ById = (container, id) => {
+				const ch = container.data.find((c) => c.id === id);
+				if (!ch || ch.data.byteLength < 2) return null;
+				return readU16(ch);
+			};
+			const readU8ById = (container, id) => {
+				const ch = container.data.find((c) => c.id === id);
+				if (!ch || ch.data.byteLength < 1) return null;
+				return readU8(ch);
+			};
+			const replayData = this.containers.find((c) => c.type === ContainerType.ReplayData);
+			if (replayData) {
+				const sexVal = readU32ById(replayData, 963) ?? readU8ById(replayData, 963);
+				if (sexVal !== null) buf.sex = sexVal === 0 || sexVal === 1 ? sexVal : 0;
+				let name = readStringById(replayData, 964);
+				if (!name && replayData.data.length > 4 && replayData.data[4].data?.byteLength > 0) name = this.readString(replayData.data[4].data);
+				if (name) buf.characterName = name;
+				let mapName = readStringById(replayData, 965);
+				if (!mapName && replayData.data.length > 5 && replayData.data[5].data?.byteLength > 0) mapName = this.readString(replayData.data[5].data);
+				if (mapName) {
+					if (!mapName.endsWith(".rsw")) mapName += ".rsw";
+					buf.mapName = mapName;
+				}
+				const gx = readU32ById(replayData, 967);
+				if (gx !== null) buf.startX = gx;
+				const gy = readU32ById(replayData, 968);
+				if (gy !== null) buf.startY = gy;
+				const dir = readU32ById(replayData, 969) ?? readU8ById(replayData, 969);
+				if (dir !== null) buf.startDir = dir;
+				const lengthMs = readU32ById(replayData, 970);
+				if (lengthMs !== null) buf.durationMs = lengthMs;
+			}
+			const sessionContainer = this.containers.find((c) => c.type === ContainerType.Session);
+			if (sessionContainer) {
+				if (!buf.characterName) {
+					const charName = readStringById(sessionContainer, 964);
+					if (charName) buf.characterName = charName;
+				}
+				const aid = readU32ById(sessionContainer, 1010);
+				if (aid !== null) {
+					buf.AID = aid;
+					buf.GID = aid;
+				}
+				const gid = readU32ById(sessionContainer, 1011);
+				if (gid !== null) buf.GID = gid;
+				const job = readU32ById(sessionContainer, 1014);
+				if (job !== null) buf.job = job;
+				const exp = readU32ById(sessionContainer, 1015);
+				if (exp !== null) buf.exp = exp;
+				const level = readU32ById(sessionContainer, 1016);
+				if (level !== null) {
+					buf.level = level;
+					buf.clevel = level;
+				}
+				const jobPoint = readU32ById(sessionContainer, 1017);
+				if (jobPoint !== null) buf.jobPoint = jobPoint;
+				const nextExp = readU32ById(sessionContainer, 1018);
+				if (nextExp !== null) buf.exp_next = nextExp;
+				const jobLevel = readU32ById(sessionContainer, 1019);
+				if (jobLevel !== null) buf.joblevel = jobLevel;
+				const skillPoint = readU32ById(sessionContainer, 1020);
+				if (skillPoint !== null) buf.skillPoint = skillPoint;
+				const str = readU32ById(sessionContainer, 1024);
+				if (str !== null) buf.str = str;
+				const agi = readU32ById(sessionContainer, 1025);
+				if (agi !== null) buf.agi = agi;
+				const vit = readU32ById(sessionContainer, 1026);
+				if (vit !== null) buf.vit = vit;
+				const intVal = readU32ById(sessionContainer, 1027);
+				if (intVal !== null) buf.int = intVal;
+				const dex = readU32ById(sessionContainer, 1028);
+				if (dex !== null) buf.dex = dex;
+				const luk = readU32ById(sessionContainer, 1029);
+				if (luk !== null) buf.luk = luk;
+				const plusStr = readU32ById(sessionContainer, 1030);
+				if (plusStr !== null) {
+					buf.plusStr = plusStr;
+					buf.str_bonus = plusStr;
+				}
+				const plusAgi = readU32ById(sessionContainer, 1031);
+				if (plusAgi !== null) {
+					buf.plusAgi = plusAgi;
+					buf.agi_bonus = plusAgi;
+				}
+				const plusVit = readU32ById(sessionContainer, 1032);
+				if (plusVit !== null) {
+					buf.plusVit = plusVit;
+					buf.vit_bonus = plusVit;
+				}
+				const plusInt = readU32ById(sessionContainer, 1033);
+				if (plusInt !== null) {
+					buf.plusInt = plusInt;
+					buf.int_bonus = plusInt;
+				}
+				const plusDex = readU32ById(sessionContainer, 1034);
+				if (plusDex !== null) {
+					buf.plusDex = plusDex;
+					buf.dex_bonus = plusDex;
+				}
+				const plusLuk = readU32ById(sessionContainer, 1035);
+				if (plusLuk !== null) {
+					buf.plusLuk = plusLuk;
+					buf.luk_bonus = plusLuk;
+				}
+				const aspd = readU32ById(sessionContainer, 1036);
+				if (aspd !== null) {
+					buf.aspd = aspd;
+					buf.attack_speed = aspd;
+				}
+				const atk = readU32ById(sessionContainer, 1037);
+				if (atk !== null) buf.atk = atk;
+				const mdef = readU32ById(sessionContainer, 1038);
+				if (mdef !== null) buf.mdef = mdef;
+				const plusAspd = readU32ById(sessionContainer, 1039);
+				if (plusAspd !== null) buf.plusAspd = plusAspd;
+				const def = readU32ById(sessionContainer, 1040);
+				if (def !== null) buf.def = def;
+				const plusDef = readU32ById(sessionContainer, 1041);
+				if (plusDef !== null) buf.plusDef = plusDef;
+				const refiningPower = readU32ById(sessionContainer, 1042);
+				if (refiningPower !== null) buf.refiningPower = refiningPower;
+				const maxMatk = readU32ById(sessionContainer, 1043);
+				if (maxMatk !== null) buf.maxMatk = maxMatk;
+				const minMatk = readU32ById(sessionContainer, 1044);
+				if (minMatk !== null) buf.minMatk = minMatk;
+				const plusMdef = readU32ById(sessionContainer, 1045);
+				if (plusMdef !== null) buf.plusMdef = plusMdef;
+				const hit = readU32ById(sessionContainer, 1046);
+				if (hit !== null) buf.hit = hit;
+				const flee = readU32ById(sessionContainer, 1047);
+				if (flee !== null) buf.flee = flee;
+				const crit = readU32ById(sessionContainer, 1048);
+				if (crit !== null) buf.crit = crit;
+				const plusFlee = readU32ById(sessionContainer, 1049);
+				if (plusFlee !== null) buf.plusFlee = plusFlee;
+				const equipArrowIndex = readU16ById(sessionContainer, 1050);
+				if (equipArrowIndex !== null) buf.equipArrowIndex = equipArrowIndex;
+				const money = readU32ById(sessionContainer, 1051);
+				if (money !== null) buf.money = money;
+				const speed = readU32ById(sessionContainer, 1052);
+				if (speed !== null) buf.speed = speed;
+				const honor = readU32ById(sessionContainer, 1053);
+				if (honor !== null) buf.honor = honor;
+				const nextJobExp = readU32ById(sessionContainer, 1054);
+				if (nextJobExp !== null) buf.job_exp_next = nextJobExp;
+				const jobExp = readU32ById(sessionContainer, 1055);
+				if (jobExp !== null) buf.job_exp = jobExp;
+				const virtue = readU32ById(sessionContainer, 1056);
+				if (virtue !== null) buf.virtue = virtue;
+				const hairStyle = readU32ById(sessionContainer, 1060);
+				if (hairStyle !== null) buf.head = hairStyle;
+				const weapon = readU32ById(sessionContainer, 1061);
+				if (weapon !== null) buf.weapon = weapon;
+				const shield = readU32ById(sessionContainer, 1062);
+				if (shield !== null) buf.shield = shield;
+				const clothesColor = readU32ById(sessionContainer, 1063);
+				if (clothesColor !== null) buf.bodypalette = clothesColor;
+				const hairColor = readU32ById(sessionContainer, 1064);
+				if (hairColor !== null) buf.headpalette = hairColor;
+				const accessory = readU32ById(sessionContainer, 1065);
+				if (accessory !== null) buf.accessory = accessory;
+				const accessory2 = readU32ById(sessionContainer, 1066);
+				if (accessory2 !== null) buf.accessory2 = accessory2;
+				const accessory3 = readU32ById(sessionContainer, 1067);
+				if (accessory3 !== null) buf.accessory3 = accessory3;
+				const option = readU32ById(sessionContainer, 1070);
+				if (option !== null) {
+					buf.effectState = option;
+					buf.option = option;
+				}
+				const robe = readU32ById(sessionContainer, 1071);
+				if (robe !== null) buf.robe = robe;
+				const cartCurCount = readU16ById(sessionContainer, 1086);
+				if (cartCurCount !== null) buf.cartCurCount = cartCurCount;
+				const cartMaxCount = readU16ById(sessionContainer, 1087);
+				if (cartMaxCount !== null) buf.cartMaxCount = cartMaxCount;
+				const cartCurWeight = readU32ById(sessionContainer, 1088);
+				if (cartCurWeight !== null) buf.cartCurWeight = cartCurWeight;
+				const cartMaxWeight = readU32ById(sessionContainer, 1089);
+				if (cartMaxWeight !== null) buf.cartMaxWeight = cartMaxWeight;
+				buf.hasCart = (buf.cartMaxCount || 0) > 0 || (buf.cartMaxWeight || 0) > 0;
+			}
+			return buf;
+		}
+		buildStatusBuffer() {
+			const buf = {};
+			const statusContainer = this.containers.find((c) => c.type === ContainerType.Status);
+			if (!statusContainer) return buf;
+			const readU32 = (chunk) => new DataView(chunk.data.buffer, chunk.data.byteOffset, chunk.data.byteLength).getUint32(0, true);
+			const readU32ById = (container, id) => {
+				const ch = container.data.find((c) => c.id === id);
+				if (!ch || ch.data.byteLength < 4) return null;
+				return readU32(ch);
+			};
+			const bonusStr = readU32ById(statusContainer, 2010);
+			if (bonusStr !== null) buf.str_bonus = bonusStr;
+			const bonusAgi = readU32ById(statusContainer, 2011);
+			if (bonusAgi !== null) buf.agi_bonus = bonusAgi;
+			const bonusVit = readU32ById(statusContainer, 2012);
+			if (bonusVit !== null) buf.vit_bonus = bonusVit;
+			const bonusInt = readU32ById(statusContainer, 2013);
+			if (bonusInt !== null) buf.int_bonus = bonusInt;
+			const bonusDex = readU32ById(statusContainer, 2014);
+			if (bonusDex !== null) buf.dex_bonus = bonusDex;
+			const bonusLuk = readU32ById(statusContainer, 2015);
+			if (bonusLuk !== null) buf.luk_bonus = bonusLuk;
+			const curWeight = readU32ById(statusContainer, 2017);
+			if (curWeight !== null) buf.weight = curWeight;
+			const maxWeight = readU32ById(statusContainer, 2018);
+			if (maxWeight !== null) buf.max_weight = maxWeight;
+			const hp = readU32ById(statusContainer, 2029);
+			if (hp !== null) buf.hp = hp;
+			const maxHp = readU32ById(statusContainer, 2030);
+			if (maxHp !== null) buf.maxHp = maxHp;
+			const sp = readU32ById(statusContainer, 2031);
+			if (sp !== null) buf.sp = sp;
+			const maxSp = readU32ById(statusContainer, 2032);
+			if (maxSp !== null) buf.maxSp = maxSp;
+			return buf;
+		}
+		buildPetBuffer() {
+			const compContainer = this.containers.find((c) => c.type === ContainerType.Companions);
+			if (!compContainer) return null;
+			const readU32 = (chunk) => new DataView(chunk.data.buffer, chunk.data.byteOffset, chunk.data.byteLength).getUint32(0, true);
+			const readU32ById = (id) => {
+				const ch = compContainer.data.find((c) => c.id === id);
+				if (!ch || ch.data.byteLength < 4) return null;
+				return readU32(ch);
+			};
+			const readStringById = (id) => {
+				const ch = compContainer.data.find((c) => c.id === id);
+				if (!ch || ch.data.byteLength === 0) return "";
+				return this.readString(ch.data);
+			};
+			const aid = readU32ById(ReplayOpCodes.PetGid);
+			if (!aid) return null;
+			const name = readStringById(ReplayOpCodes.PetName);
+			const viewRaw = readU32ById(ReplayOpCodes.PetJob) ?? 0;
+			const level = readU32ById(ReplayOpCodes.PetLevel) ?? 1;
+			const hunger = readU32ById(ReplayOpCodes.PetFullness) ?? 0;
+			const intimacy = readU32ById(ReplayOpCodes.PetRelation) ?? 0;
+			return {
+				aid,
+				name,
+				view: viewRaw === 4294967295 ? -1 : viewRaw,
+				job: viewRaw === 4294967295 ? -1 : viewRaw,
+				level,
+				hunger,
+				intimacy
+			};
+		}
+		buildEfstListBuffer() {
+			const efstContainer = this.containers.find((c) => c.type === ContainerType.EfstList);
+			if (!efstContainer) return [];
+			const result = [];
+			for (const chunk of efstContainer.data) {
+				if (!chunk.data || chunk.data.byteLength < 4) continue;
+				const efstId = new DataView(chunk.data.buffer, chunk.data.byteOffset, 4).getUint32(0, true);
+				if (efstId > 0 && efstId <= 3e3) result.push(efstId);
+			}
+			return result;
+		}
+		buildItemsBuffer() {
+			const itemsContainer = this.containers.find((c) => c.type === ContainerType.Items);
+			if (!itemsContainer) return {
+				inventory: [],
+				cart: [],
+				equipped: [],
+				equippedCostume: []
+			};
+			const out = {
+				inventory: [],
+				cart: [],
+				equipped: [],
+				equippedCostume: []
+			};
+			const SKIP_CHUNKS = /* @__PURE__ */ new Set([
+				4602,
+				4604,
+				4605,
+				4606
+			]);
+			const RECORD_SIZES = [221, 172];
+			const NAMEID_OFFSET = 104;
+			const detectRecordSize = (view, byteLength) => {
+				const plausible = (id) => id > 0 && id < 5e6;
+				for (const size of RECORD_SIZES) {
+					if (byteLength < size || byteLength % size !== 0) continue;
+					let anyValid = false;
+					let ok = true;
+					for (let r = 0; r < byteLength / size; r++) {
+						const id = view.getInt32(r * size + NAMEID_OFFSET, true);
+						if (id === 0) continue;
+						if (!plausible(id)) {
+							ok = false;
+							break;
+						}
+						anyValid = true;
+					}
+					if (ok && anyValid) return size;
+				}
+				return 0;
+			};
+			const readTlvFields = (view, base, recordSize) => {
+				const fields = /* @__PURE__ */ new Map();
+				let o = 0;
+				while (o + 6 <= recordSize) {
+					const tag = view.getUint16(base + o, true);
+					const length = view.getUint32(base + o + 2, true);
+					if (o + 6 + length > recordSize) return null;
+					fields.set(tag, {
+						offset: o + 6,
+						length
+					});
+					o += 6 + length;
+				}
+				return o === recordSize ? fields : null;
+			};
+			const readTlvNumber = (view, base, fields, tag, fallback = 0) => {
+				const field = fields.get(tag);
+				if (!field) return fallback;
+				switch (field.length) {
+					case 1: return view.getUint8(base + field.offset);
+					case 2: return view.getUint16(base + field.offset, true);
+					case 4: return view.getInt32(base + field.offset, true);
+					default: return fallback;
+				}
+			};
+			const parseItemChunk = (chunk, targetArray) => {
+				if (!chunk.data || chunk.data.byteLength === 0) return;
+				const view = new DataView(chunk.data.buffer, chunk.data.byteOffset, chunk.data.byteLength);
+				const recordSize = detectRecordSize(view, chunk.data.byteLength);
+				if (recordSize === 0) {
+					console.warn(`[ReplayParser] Unrecognized item record layout in chunk ${chunk.id} (${chunk.data.byteLength} bytes), items skipped`);
+					return;
+				}
+				const recordCount = Math.floor(chunk.data.byteLength / recordSize);
+				for (let r = 0; r < recordCount; r++) {
+					const base = r * recordSize;
+					const fields = readTlvFields(view, base, recordSize);
+					let slot = 0;
+					let equipped = 0;
+					let qty = 0;
+					let itemId = 0;
+					let refine = 0;
+					let grade = 0;
+					const cards = [
+						0,
+						0,
+						0,
+						0
+					];
+					const options = [];
+					if (fields) {
+						slot = readTlvNumber(view, base, fields, ItemRecordTag.POS, 0);
+						equipped = readTlvNumber(view, base, fields, ItemRecordTag.WEAR_STATE, 0);
+						qty = readTlvNumber(view, base, fields, ItemRecordTag.QTY, 0);
+						itemId = readTlvNumber(view, base, fields, ItemRecordTag.NAMEID, 0);
+						refine = readTlvNumber(view, base, fields, ItemRecordTag.REFINE, 0);
+						grade = readTlvNumber(view, base, fields, ItemRecordTag.GRADE, 0);
+						const cardsField = fields.get(ItemRecordTag.CARDS);
+						if (cardsField && cardsField.length >= 16) for (let c = 0; c < 4; c++) cards[c] = view.getInt32(base + cardsField.offset + c * 4, true);
+						const optField = fields.get(ItemRecordTag.OPTIONS);
+						if (optField && optField.length >= 5) {
+							const optCount = Math.min(5, Math.floor(optField.length / 5));
+							for (let o = 0; o < optCount; o++) {
+								const optOffset = base + optField.offset + o * 5;
+								const optId = view.getUint16(optOffset, true);
+								if (optId > 0) {
+									const optVal = view.getInt16(optOffset + 2, true);
+									const optParam = view.getUint8(optOffset + 4);
+									options.push({
+										id: optId,
+										value: optVal,
+										param: optParam
+									});
+								}
+							}
+						}
+					} else {
+						slot = view.getInt16(base + 22, true);
+						equipped = view.getInt32(base + 42, true);
+						qty = view.getInt16(base + 52, true);
+						for (let c = 0; c < 4; c++) cards[c] = view.getInt32(base + 82 + c * 4, true);
+						itemId = view.getInt32(base + 104, true);
+						refine = view.getUint8(base + 134);
+						if (recordSize >= 221) for (let o = 0; o < 5; o++) {
+							const optOffset = base + 190 + o * 5;
+							const optId = view.getUint16(optOffset, true);
+							if (optId > 0) {
+								const optVal = view.getInt16(optOffset + 2, true);
+								const optParam = view.getUint8(optOffset + 4);
+								options.push({
+									id: optId,
+									value: optVal,
+									param: optParam
+								});
+							}
+						}
+					}
+					if (itemId > 0) {
+						let itemType = ItemType_default.ETC;
+						if (chunk.id === ItemChunkKind.EQUIPPED_COSTUME || equipped & (EquipmentLocation_default.COSTUME_HEAD_TOP | EquipmentLocation_default.COSTUME_HEAD_MID | EquipmentLocation_default.COSTUME_HEAD_BOTTOM | EquipmentLocation_default.COSTUME_ROBE | EquipmentLocation_default.COSTUME_FLOOR | EquipmentLocation_default.SHADOW_ARMOR | EquipmentLocation_default.SHADOW_WEAPON | EquipmentLocation_default.SHADOW_SHIELD | EquipmentLocation_default.SHADOW_SHOES | EquipmentLocation_default.SHADOW_R_ACCESSORY_SHADOW | EquipmentLocation_default.SHADOW_L_ACCESSORY_SHADOW)) itemType = ItemType_default.SHADOWGEAR;
+						else if (equipped & EquipmentLocation_default.WEAPON) itemType = ItemType_default.WEAPON;
+						else if (equipped & EquipmentLocation_default.AMMO) itemType = ItemType_default.AMMO;
+						else if (equipped > 0) itemType = ItemType_default.ARMOR;
+						else if (refine > 0 || grade > 0) itemType = ItemType_default.ARMOR;
+						else if (itemId >= 501 && itemId <= 600) itemType = ItemType_default.HEALING;
+						else if (itemId >= 601 && itemId <= 700) itemType = ItemType_default.USABLE;
+						else if (itemId >= 4001 && itemId <= 4700) itemType = ItemType_default.CARD;
+						else if (itemId >= 1101 && itemId <= 2100) itemType = ItemType_default.WEAPON;
+						else if (itemId >= 2101 && itemId <= 2999) itemType = ItemType_default.ARMOR;
+						targetArray.push({
+							index: slot + 2,
+							ITID: itemId,
+							count: qty > 0 ? qty : 1,
+							type: itemType,
+							IsIdentified: true,
+							IsDamaged: false,
+							PlaceETCTab: false,
+							WearState: equipped,
+							location: equipped,
+							RefiningLevel: refine,
+							enchantgrade: grade,
+							slot: {
+								card1: cards[0] || 0,
+								card2: cards[1] || 0,
+								card3: cards[2] || 0,
+								card4: cards[3] || 0
+							},
+							cards: [
+								cards[0] || 0,
+								cards[1] || 0,
+								cards[2] || 0,
+								cards[3] || 0
+							],
+							Options: options.map((opt) => ({
+								index: opt.id,
+								value: opt.value,
+								param: opt.param
+							})),
+							HireExpireDate: 0,
+							bindOnEquipType: 0,
+							wItemSpriteNumber: 0,
+							itemId,
+							qty: qty > 0 ? qty : 1,
+							slotIndex: slot,
+							refine,
+							grade,
+							options
+						});
+					}
+				}
+			};
+			for (const chunk of itemsContainer.data) {
+				if (SKIP_CHUNKS.has(chunk.id)) continue;
+				switch (chunk.id) {
+					case ItemChunkKind.INVENTORY:
+						parseItemChunk(chunk, out.inventory);
+						break;
+					case ItemChunkKind.CART:
+					case ItemChunkKind.CART_MIRROR:
+						if (out.cart.length === 0) parseItemChunk(chunk, out.cart);
+						break;
+					case ItemChunkKind.EQUIPPED:
+						parseItemChunk(chunk, out.equipped);
+						break;
+					case ItemChunkKind.EQUIPPED_COSTUME: parseItemChunk(chunk, out.equippedCostume);
+				}
+			}
+			return out;
+		}
+		toNetworkPacket(chunk) {
+			return chunk.data;
+		}
+		readString(uint8array) {
+			let length = 0;
+			while (length < uint8array.length && uint8array[length] !== 0) length++;
+			return new TextDecoder("euc-kr").decode(uint8array.subarray(0, length));
+		}
+		dumpContainers() {
+			console.log("=== REPLAY CONTAINERS DUMP ===");
+			for (let i = 0; i < this.containers.length; i++) {
+				const container = this.containers[i];
+				const containerName = ContainerTypeNames[container.type] || `Unknown(${container.type})`;
+				console.log(`\n--- Container [${i}] Type: ${container.type} (${containerName}) | DeclaredLen: ${container.declaredLength} | Offset: ${container.offset} | RealLen: ${container.realLength} | Chunks: ${container.data.length} ---`);
+				container.data.forEach((chunk, index) => {
+					const data = chunk.data;
+					const size = data ? data.byteLength : 0;
+					const opName = chunk.id !== void 0 ? ReplayOpCodeName[chunk.id] || "" : "";
+					const packetInfo = chunk.packetId !== void 0 ? ` | PacketID: 0x${chunk.packetId.toString(16).padStart(4, "0")} (${chunk.packetId})` : "";
+					const chunkHeader = `Chunk [${index}] ID: ${chunk.id ?? "N/A"}${opName ? ` (${opName})` : ""}${packetInfo}${chunk.time !== void 0 ? ` | Time: ${chunk.time}` : ""} | Data Size: ${size}`;
+					console.log(chunkHeader);
+					if (!data || size === 0) {
+						console.log("  [Empty Content]");
+						return;
+					}
+					if (size === 1) {
+						const val = new DataView(data.buffer, data.byteOffset, data.byteLength).getUint8(0);
+						console.log(`  Char: ${val} (0x${val.toString(16).padStart(2, "0")})`);
+					} else if (size === 2) {
+						const val = new DataView(data.buffer, data.byteOffset, data.byteLength).getUint16(0, true);
+						console.log(`  uint16: ${val} (0x${val.toString(16).padStart(4, "0")})`);
+					} else if (size === 4) {
+						const val = new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(0, true);
+						console.log(`  uint32: ${val} (0x${val.toString(16).padStart(8, "0")})`);
+					} else if (size === 8) {
+						const val = new DataView(data.buffer, data.byteOffset, data.byteLength).getBigUint64(0, true);
+						console.log(`  uint64: ${val} (0x${val.toString(16).padStart(16, "0")})`);
+					}
+					this.dumpHex(data);
+				});
+			}
+			console.log("=== END OF REPLAY CONTAINERS DUMP ===");
+		}
+		dumpHex(uint8Array) {
+			const lines = [];
+			for (let offset = 0; offset < uint8Array.length; offset += 16) {
+				const chunk = uint8Array.subarray(offset, offset + 16);
+				const hexParts = [];
+				const asciiParts = [];
+				for (let i = 0; i < 16; i++) if (i < chunk.length) {
+					const byte = chunk[i];
+					hexParts.push(byte.toString(16).padStart(2, "0"));
+					asciiParts.push(byte >= 32 && byte <= 126 ? String.fromCharCode(byte) : ".");
+				} else {
+					hexParts.push("  ");
+					asciiParts.push(" ");
+				}
+				const hexStr = hexParts.slice(0, 8).join(" ") + "  " + hexParts.slice(8, 16).join(" ");
+				const asciiStr = asciiParts.join("");
+				const offsetStr = offset.toString(16).padStart(4, "0");
+				lines.push(`  ${offsetStr}: ${hexStr}  |${asciiStr}|`);
+			}
+			console.log(lines.join("\n"));
+		}
+	};
+}));
+//#endregion
+//#region src/Engine/Replay/ReplayPlayer.js
+var ReplayPlayer_exports = /* @__PURE__ */ __exportAll({ default: () => ReplayPlayer });
+var ReplayPlayer;
+var init_ReplayPlayer = __esmMin((() => {
+	init_DBManager();
+	init_NetworkManager();
+	init_MapRenderer();
+	init_SessionStorage();
+	init_MapEngine();
+	init_Player();
+	init_BasicInfo();
+	init_WinStats();
+	init_Inventory();
+	init_CartItems();
+	init_ReplayTypes();
+	init_ReplaySocket();
+	init_ReplayParser();
+	ReplayPlayer = class {
+		constructor() {
+			this.parser = null;
+			this.socket = null;
+			this.playing = false;
+			this.speed = 1;
+			this.startTime = 0;
+			this.lastTickTime = 0;
+			this.durationMs = 0;
+			this._state = ReplayState.IDLE;
+			this._sessionData = null;
+			this._itemsBuffer = null;
+			this._petBuffer = null;
+			this._statusBuffer = null;
+			this._efstListBuffer = [];
+			this._initialBuffer = [];
+			this._packetStreamBuffer = [];
+			this._initialGroupIndex = 0;
+			this._initialChunkIndex = 0;
+			this._streamChunkIndex = 0;
+			this._firstStreamTime = 0;
+			this._logicalTime = 0;
+			this._onTick = this.tick.bind(this);
+			this._animate = false;
+			this._retryCount = 0;
+		}
+		async load(file) {
+			this._setState(ReplayState.LOADING_REPLAY);
+			replayLog("[Replay] Loading RRF...");
+			const buffer = await file.arrayBuffer();
+			this.parser = new ReplayParser(buffer);
+			const result = this.parser.parse();
+			this._sessionData = result.sessionBuffer;
+			this._itemsBuffer = result.itemsBuffer;
+			this._petBuffer = result.petBuffer;
+			this._statusBuffer = result.statusBuffer;
+			this._efstListBuffer = result.efstListBuffer || [];
+			this._initialBuffer = result.initialBuffer;
+			this._packetStreamBuffer = result.packetStreamBuffer;
+			this.durationMs = result.durationMs || 0;
+			this._setState(ReplayState.IDLE);
+			if (this._packetStreamBuffer.length === 0) throw new Error("The replay contains no recorded packets, the file is truncated or corrupt.");
+		}
+		start() {
+			if (!this.parser || !this._sessionData) {
+				console.error("[ReplayPlayer] No replay loaded");
+				throw new Error("No replay loaded");
+			}
+			if (!DB.isLoaded) {
+				if (!DB.startedLazyInit) {
+					DB.lazyInit();
+					DB.startedLazyInit = true;
+				}
+				this._retryCount = (this._retryCount || 0) + 1;
+				if (this._retryCount > 600) {
+					console.error("[Replay] Failed loading databases.");
+					this._retryCount = 0;
+					DB.startedLazyInit = false;
+					return;
+				}
+				setTimeout(() => this.start(), 100);
+				return;
+			}
+			this._retryCount = 0;
+			DB.startedLazyInit = false;
+			this._initialGroupIndex = 0;
+			this._initialChunkIndex = 0;
+			this._streamChunkIndex = 0;
+			this.playing = true;
+			this.startTime = 0;
+			this.lastTickTime = Date.now();
+			Network.setSocketFactory((host, port) => {
+				this.socket = new ReplaySocket(host, port);
+				return this.socket;
+			});
+			Network.close();
+			this._applySession();
+		}
+		pause() {
+			this.playing = false;
+		}
+		resume() {
+			this.playing = true;
+			this._syncTimeOrigin();
+		}
+		stop() {
+			this.playing = false;
+			this._animate = false;
+			Network.setSocketFactory(null);
+			if (this.socket) {
+				Network.close();
+				this.socket = null;
+			}
+			if (this._state !== ReplayState.REPLAY_FINISHED) this._setState(ReplayState.IDLE);
+		}
+		setSpeed(speed) {
+			this.speed = speed;
+			this._syncTimeOrigin();
+		}
+		/**
+		* Recompute the wall clock origin so playback continues from the logical time
+		* reached so far. Inverse of the formula used in _tickPacketStream().
+		*/
+		_syncTimeOrigin() {
+			const firstStreamTime = this._firstStreamTime || 0;
+			const logicalTime = Math.max(this._logicalTime || 0, firstStreamTime);
+			this.startTime = Date.now() - (logicalTime - firstStreamTime) / this.speed;
+		}
+		_setState(newState) {
+			this._state = newState;
+		}
+		/**
+		* Applies session data directly to Session and Session.Entity.
+		* Called BEFORE MapEngine.init so map name and character are available.
+		*/
+		_applySession() {
+			this._setState(ReplayState.APPLYING_SESSION);
+			const s = this._sessionData;
+			const charName = s.characterName || "Replay";
+			const sex = s.sex === 0 || s.sex === 1 ? s.sex : 0;
+			const aid = s.AID || 0;
+			const gid = s.GID || aid;
+			const playerInitData = {
+				name: charName,
+				sex,
+				job: s.job !== void 0 ? s.job : 0,
+				clevel: s.level !== void 0 ? s.level : s.clevel || 1,
+				joblevel: s.joblevel !== void 0 ? s.joblevel : 1,
+				exp: s.exp || 0,
+				exp_next: s.exp_next || 0,
+				job_exp: s.job_exp || 0,
+				job_exp_next: s.job_exp_next || 0,
+				str: s.str || 1,
+				agi: s.agi || 1,
+				vit: s.vit || 1,
+				int: s.int || 1,
+				dex: s.dex || 1,
+				luk: s.luk || 1,
+				str_bonus: s.str_bonus || s.plusStr || 0,
+				agi_bonus: s.agi_bonus || s.plusAgi || 0,
+				vit_bonus: s.vit_bonus || s.plusVit || 0,
+				int_bonus: s.int_bonus || s.plusInt || 0,
+				dex_bonus: s.dex_bonus || s.plusDex || 0,
+				luk_bonus: s.luk_bonus || s.plusLuk || 0,
+				money: s.money || 0,
+				weight: s.weight || 0,
+				max_weight: s.max_weight || 0,
+				speed: s.speed || 150,
+				attack_speed: s.attack_speed || s.aspd || 300,
+				head: s.head || 0,
+				weapon: s.weapon || 0,
+				shield: s.shield || 0,
+				bodypalette: s.bodypalette || 0,
+				headpalette: s.headpalette || 0,
+				accessory: s.accessory || 0,
+				accessory2: s.accessory2 || 0,
+				accessory3: s.accessory3 || 0,
+				robe: s.robe || 0,
+				AID: aid,
+				GID: gid
+			};
+			SessionStorage_default.AID = aid;
+			SessionStorage_default.GID = gid;
+			SessionStorage_default.Sex = sex;
+			SessionStorage_default.zeny = s.money || 0;
+			SessionStorage_default.hasCart = s.hasCart || false;
+			SessionStorage_default.CartNum = s.CartNum || 0;
+			if (s.pet && s.pet.aid) {
+				SessionStorage_default.petId = s.pet.aid;
+				SessionStorage_default.pet = s.pet;
+			} else {
+				SessionStorage_default.petId = 0;
+				SessionStorage_default.pet = {};
+			}
+			SessionStorage_default.Entity = new Player(playerInitData);
+			SessionStorage_default.Entity.display.name = charName;
+			SessionStorage_default.Entity.sex = sex;
+			SessionStorage_default.Entity._sex = sex;
+			SessionStorage_default.Entity.job = playerInitData.job;
+			SessionStorage_default.Entity._job = playerInitData.job;
+			SessionStorage_default.Entity.clevel = playerInitData.clevel;
+			SessionStorage_default.Entity.level = playerInitData.clevel;
+			SessionStorage_default.Entity.joblevel = playerInitData.joblevel;
+			SessionStorage_default.Entity.money = playerInitData.money;
+			SessionStorage_default.Entity.weight = playerInitData.weight;
+			SessionStorage_default.Entity.max_weight = playerInitData.max_weight;
+			SessionStorage_default.Entity.speed = playerInitData.speed;
+			SessionStorage_default.Entity.attack_speed = playerInitData.attack_speed;
+			SessionStorage_default.Entity.str = playerInitData.str;
+			SessionStorage_default.Entity.agi = playerInitData.agi;
+			SessionStorage_default.Entity.vit = playerInitData.vit;
+			SessionStorage_default.Entity.int = playerInitData.int;
+			SessionStorage_default.Entity.dex = playerInitData.dex;
+			SessionStorage_default.Entity.luk = playerInitData.luk;
+			SessionStorage_default.Entity.str_bonus = playerInitData.str_bonus;
+			SessionStorage_default.Entity.agi_bonus = playerInitData.agi_bonus;
+			SessionStorage_default.Entity.vit_bonus = playerInitData.vit_bonus;
+			SessionStorage_default.Entity.int_bonus = playerInitData.int_bonus;
+			SessionStorage_default.Entity.dex_bonus = playerInitData.dex_bonus;
+			SessionStorage_default.Entity.luk_bonus = playerInitData.luk_bonus;
+			SessionStorage_default.Entity.head = playerInitData.head;
+			SessionStorage_default.Entity._head = playerInitData.head;
+			SessionStorage_default.Entity.headpalette = playerInitData.headpalette;
+			SessionStorage_default.Entity._headpalette = playerInitData.headpalette;
+			SessionStorage_default.Entity.bodypalette = playerInitData.bodypalette;
+			SessionStorage_default.Entity._bodypalette = playerInitData.bodypalette;
+			SessionStorage_default.Entity.weapon = playerInitData.weapon;
+			SessionStorage_default.Entity._weapon = playerInitData.weapon;
+			SessionStorage_default.Entity.shield = playerInitData.shield;
+			SessionStorage_default.Entity._shield = playerInitData.shield;
+			SessionStorage_default.Entity.accessory = playerInitData.accessory;
+			SessionStorage_default.Entity._accessory = playerInitData.accessory;
+			SessionStorage_default.Entity.accessory2 = playerInitData.accessory2;
+			SessionStorage_default.Entity._accessory2 = playerInitData.accessory2;
+			SessionStorage_default.Entity.accessory3 = playerInitData.accessory3;
+			SessionStorage_default.Entity._accessory3 = playerInitData.accessory3;
+			SessionStorage_default.Entity.robe = playerInitData.robe;
+			const hp = s.hp !== void 0 ? s.hp : s.maxHp !== void 0 ? s.maxHp : 100;
+			const maxHp = s.maxHp !== void 0 ? s.maxHp : hp;
+			const sp = s.sp !== void 0 ? s.sp : s.maxSp !== void 0 ? s.maxSp : 100;
+			const maxSp = s.maxSp !== void 0 ? s.maxSp : sp;
+			SessionStorage_default.Entity.life.hp = hp;
+			SessionStorage_default.Entity.life.hp_max = maxHp;
+			SessionStorage_default.Entity.life.sp = sp;
+			SessionStorage_default.Entity.life.sp_max = maxSp;
+			const option = s.effectState !== void 0 ? s.effectState : s.option || 0;
+			SessionStorage_default.Entity.effectState = option;
+			SessionStorage_default.Entity._effectState = option;
+			SessionStorage_default.Entity.option = option;
+			SessionStorage_default.Entity.hasCart = SessionStorage_default.hasCart;
+			SessionStorage_default.Entity.CartNum = SessionStorage_default.CartNum;
+			this._mapName = s.mapName || "prontera.rsw";
+			this._startX = s.startX || 0;
+			this._startY = s.startY || 0;
+			this._startDir = s.startDir !== void 0 ? s.startDir : 4;
+			SessionStorage_default.Entity.position[0] = this._startX;
+			SessionStorage_default.Entity.position[1] = this._startY;
+			SessionStorage_default.Entity.position[2] = 0;
+			SessionStorage_default.Entity.direction = this._startDir;
+			replayLog(`[Replay] Session applied — name: ${charName}, sex: ${SessionStorage_default.Entity.sex}, head: ${SessionStorage_default.Entity.head}, job: ${SessionStorage_default.Entity.job}, map: ${this._mapName}, HP: ${hp}/${maxHp}, SP: ${sp}/${maxSp}`);
+			this._loadMap();
+		}
+		_loadMap() {
+			this._setState(ReplayState.LOADING_MAP);
+			this._acceptEnterSent = false;
+			this._mapLoadStarted = false;
+			MapEngine.init("127.0.0.1", 6900, this._mapName);
+			this._animate = true;
+			this.lastTickTime = Date.now();
+			this._onTick();
+		}
+		/**
+		* Synthesizes the ZC_ACCEPT_ENTER (0x0073) packet that MapEngine needs
+		* to register the player entity and trigger the full map initialisation sequence.
+		*/
+		_sendAcceptEnter() {
+			const pkt = /* @__PURE__ */ new Uint8Array(11);
+			const view = new DataView(pkt.buffer);
+			view.setUint16(0, 115, true);
+			view.setUint32(2, Date.now(), true);
+			const x = this._startX;
+			const y = this._startY;
+			const dir = this._startDir;
+			const p = x << 14 | y << 4 | dir & 15;
+			view.setUint8(6, p >> 16 & 255);
+			view.setUint8(7, p >> 8 & 255);
+			view.setUint8(8, p & 255);
+			this._pushPacket(pkt);
+		}
+		/**
+		* Synthesizes a ZC_MSG_STATE_CHANGE (0x0196) packet for an active EFST buff.
+		*/
+		_sendStateChange(statusId, isOn = true) {
+			const pkt = /* @__PURE__ */ new Uint8Array(9);
+			const view = new DataView(pkt.buffer);
+			view.setUint16(0, 406, true);
+			view.setUint16(2, statusId, true);
+			view.setUint32(4, SessionStorage_default.AID, true);
+			view.setUint8(8, isOn ? 1 : 0);
+			this._pushPacket(pkt);
+		}
+		tick() {
+			if (this._animate) requestAnimationFrame(this._onTick);
+			if (!this.playing || !this.socket || !this.socket.connected) {
+				this.lastTickTime = Date.now();
+				return;
+			}
+			const now = Date.now();
+			switch (this._state) {
+				case ReplayState.LOADING_MAP:
+					if (!this._acceptEnterSent) {
+						MapRenderer.currentMap = "";
+						this._sendAcceptEnter();
+						this._acceptEnterSent = true;
+						this._mapLoadStarted = false;
+					}
+					if (this._acceptEnterSent && MapRenderer.loading) this._mapLoadStarted = true;
+					if (this._mapLoadStarted && !MapRenderer.loading) {
+						this._mapLoadStarted = false;
+						this._setState(ReplayState.PLAYING_INITIAL_DATA);
+					}
+					this.startTime += now - this.lastTickTime;
+					this.lastTickTime = now;
+					break;
+				case ReplayState.PLAYING_INITIAL_DATA:
+					this.lastTickTime = now;
+					this._tickInitialData();
+					break;
+				case ReplayState.INITIAL_DATA_COMPLETE:
+					this._setState(ReplayState.PLAYING_PACKET_STREAM);
+					this.startTime = Date.now();
+					this.lastTickTime = now;
+					this._firstStreamTime = this._packetStreamBuffer.length > 0 ? this._packetStreamBuffer[0].time : 0;
+					this._logicalTime = this._firstStreamTime;
+					break;
+				case ReplayState.PLAYING_PACKET_STREAM:
+					this.lastTickTime = now;
+					this._tickPacketStream(now);
+					break;
+				default: this.lastTickTime = now;
+			}
+		}
+		/**
+		* Drains initial data (InitialPackets → InitialEntities → InitialFloorItems)
+		* and applies initial Efst buffs, items, and UI stat updates.
+		*/
+		_tickInitialData() {
+			for (const group of this._initialBuffer) for (const chunk of group.chunks) {
+				const data = chunk.data || chunk;
+				this._pushPacket(data);
+			}
+			if (this._efstListBuffer && this._efstListBuffer.length > 0) for (const efstId of this._efstListBuffer) this._sendStateChange(efstId, true);
+			if (this._itemsBuffer) {
+				const inventoryUI = InventoryController?.getUI ? InventoryController.getUI() : null;
+				if (inventoryUI && typeof inventoryUI.addItem === "function") {
+					if (inventoryUI.list) inventoryUI.list.length = 0;
+					if (inventoryUI.equippedItems) inventoryUI.equippedItems.length = 0;
+					if (this._itemsBuffer.inventory?.length > 0) for (const item of this._itemsBuffer.inventory) inventoryUI.addItem(item);
+					if (this._itemsBuffer.equipped?.length > 0) for (const item of this._itemsBuffer.equipped) inventoryUI.addItem(item);
+					if (this._itemsBuffer.equippedCostume?.length > 0) for (const item of this._itemsBuffer.equippedCostume) inventoryUI.addItem(item);
+				}
+				const cartUI = CartItems_default?.getUI ? CartItems_default.getUI() : null;
+				if (cartUI && this._itemsBuffer.cart?.length > 0) {
+					if (typeof cartUI.addItem === "function") {
+						if (cartUI.list) cartUI.list.length = 0;
+						for (const item of this._itemsBuffer.cart) cartUI.addItem(item);
+					} else if (typeof cartUI.setItems === "function") cartUI.setItems(this._itemsBuffer.cart);
+				}
+			}
+			if (SessionStorage_default.Entity) {
+				if (BasicInfoController?.getUI()?.update) {
+					BasicInfoController.getUI().update("blvl", SessionStorage_default.Entity.clevel);
+					BasicInfoController.getUI().update("jlvl", SessionStorage_default.Entity.joblevel);
+					BasicInfoController.getUI().update("zeny", SessionStorage_default.Entity.money);
+					BasicInfoController.getUI().update("name", SessionStorage_default.Entity.display.name);
+					BasicInfoController.getUI().update("job", SessionStorage_default.Entity.job);
+					BasicInfoController.getUI().update("hp", SessionStorage_default.Entity.life.hp, SessionStorage_default.Entity.life.hp_max);
+					BasicInfoController.getUI().update("sp", SessionStorage_default.Entity.life.sp, SessionStorage_default.Entity.life.sp_max);
+					BasicInfoController.getUI().update("weight", SessionStorage_default.Entity.weight, SessionStorage_default.Entity.max_weight);
+				}
+				if (WinStatsController?.getUI()?.update) {
+					WinStatsController.getUI().update("str", SessionStorage_default.Entity.str);
+					WinStatsController.getUI().update("agi", SessionStorage_default.Entity.agi);
+					WinStatsController.getUI().update("vit", SessionStorage_default.Entity.vit);
+					WinStatsController.getUI().update("int", SessionStorage_default.Entity.int);
+					WinStatsController.getUI().update("dex", SessionStorage_default.Entity.dex);
+					WinStatsController.getUI().update("luk", SessionStorage_default.Entity.luk);
+					WinStatsController.getUI().update("str2", SessionStorage_default.Entity.str_bonus);
+					WinStatsController.getUI().update("agi2", SessionStorage_default.Entity.agi_bonus);
+					WinStatsController.getUI().update("vit2", SessionStorage_default.Entity.vit_bonus);
+					WinStatsController.getUI().update("int2", SessionStorage_default.Entity.int_bonus);
+					WinStatsController.getUI().update("dex2", SessionStorage_default.Entity.dex_bonus);
+					WinStatsController.getUI().update("luk2", SessionStorage_default.Entity.luk_bonus);
+				}
+			}
+			this._setState(ReplayState.INITIAL_DATA_COMPLETE);
+		}
+		/**
+		* Time-based packet injection from the PacketStream buffer.
+		*/
+		_tickPacketStream(now) {
+			const logicalTime = (now - this.startTime) * this.speed + (this._firstStreamTime || 0);
+			this._logicalTime = logicalTime;
+			while (this._streamChunkIndex < this._packetStreamBuffer.length) {
+				const chunk = this._packetStreamBuffer[this._streamChunkIndex];
+				if (chunk.time <= logicalTime) {
+					this._pushPacket(chunk.data);
+					this._streamChunkIndex++;
+				} else break;
+			}
+			if (this._streamChunkIndex >= this._packetStreamBuffer.length) {
+				replayLog("[Replay] Replay finished");
+				this._setState(ReplayState.REPLAY_FINISHED);
+				this.stop();
+			}
+		}
+		_getCurrentStreamChunk() {
+			return this._packetStreamBuffer[this._streamChunkIndex] || null;
+		}
+		/**
+		* Injects a raw network packet buffer into the NetworkManager via the mock socket.
+		*/
+		_pushPacket(data) {
+			if (!this.socket || !this.socket.connected) return;
+			try {
+				this.socket.push(data);
+			} catch (e) {
+				console.error("[Replay] Packet injection error:", e);
+			}
+		}
+	};
+}));
+//#endregion
 //#region src/UI/Components/WinLogin/WinLoginCommon.js
 function createWinLogin({ name, htmlText, cssText }) {
 	const Component = new GUIComponent(name, cssText);
@@ -335081,6 +336823,22 @@ function createWinLogin({ name, htmlText, cssText }) {
 		root.querySelector(".signup").addEventListener("click", signup);
 		root.querySelector(".connect").addEventListener("click", connect);
 		root.querySelector(".exit").addEventListener("click", exit);
+		const replayUpload = root.querySelector(".replay-upload");
+		const replayButton = root.querySelector(".replay");
+		if (!replayUpload || !replayButton) return;
+		replayButton.addEventListener("click", () => {
+			replayUpload.click();
+		});
+		replayUpload.addEventListener("change", function() {
+			if (!this.files || !this.files.length) return;
+			const file = this.files[0];
+			this.value = "";
+			if (!file.name || !file.name.toLowerCase().endsWith(".rrf")) {
+				UIManager.showMessageBox("Please select a Ragnarok replay file (.rrf).", "ok");
+				return;
+			}
+			loadReplay(file);
+		});
 	};
 	Component.onAppend = function onAppend() {
 		_inputUsername.value = _preferences.saveID ? _preferences.ID : "";
@@ -335137,6 +336895,21 @@ function createWinLogin({ name, htmlText, cssText }) {
 		Component.onConnectionRequest(user, pass);
 		return false;
 	}
+	async function loadReplay(file) {
+		try {
+			const { default: ReplayPlayer } = await __vitePreload(async () => {
+				const { default: ReplayPlayer } = await Promise.resolve().then(() => (init_ReplayPlayer(), ReplayPlayer_exports));
+				return { default: ReplayPlayer };
+			}, void 0, import.meta.url);
+			const replay = new ReplayPlayer();
+			await replay.load(file);
+			Component.remove();
+			replay.start();
+		} catch (err) {
+			console.error("[Replay] Error loading replay", err);
+			UIManager.showMessageBox(`Could not load the replay file.\n${err.message || err}`, "ok");
+		}
+	}
 	function signup() {
 		const url = Configs.get("registrationweb");
 		if (url) UIManager.showPromptBox(DB.getMessage(662), "ok", "cancel", () => {
@@ -335157,6 +336930,7 @@ var init_WinLoginCommon = __esmMin((() => {
 	init_UIManager();
 	init_GUIComponent();
 	init_Elements();
+	init_preload_helper();
 }));
 //#endregion
 //#region src/UI/Components/WinLogin/WinLogin/WinLogin.js
@@ -335175,13 +336949,13 @@ var init_WinLogin$1 = __esmMin((() => {
 //#region src/UI/Components/WinLogin/WinLoginV2/WinLoginV2.html?raw
 var WinLoginV2_default$2;
 var init_WinLoginV2$2 = __esmMin((() => {
-	WinLoginV2_default$2 = "<div id=\"WinLogin\" class=\"win_login\">\r\n	<div class=\"win_login\">\r\n		<ui-image src=\"login_interface/bg_login.tga\"></ui-image>\r\n		<!-- User Auth -->\r\n		<input id=\"user\" class=\"user\" type=\"text\" value=\"\" />\r\n		<input id=\"pass\" class=\"pass\" type=\"password\" value=\"\" />\r\n		<button\r\n			id=\"save\"\r\n			class=\"save\"\r\n			type=\"button\"\r\n			data-background=\"login_interface/chk_saveoff.bmp\"\r\n			data-preload=\"login_interface/chk_saveon.bmp\"\r\n		></button>\r\n\r\n		<!-- Buttons -->\r\n		<button\r\n			id=\"btn_connect\"\r\n			class=\"btn connect\"\r\n			type=\"submit\"\r\n			data-background=\"login_interface/bt_start_normal.bmp\"\r\n			data-hover=\"login_interface/bt_start_over.bmp\"\r\n			data-down=\"login_interface/bt_start_press.bmp\"\r\n		></button>\r\n		<button\r\n			id=\"btn_connect\"\r\n			class=\"btn signup\"\r\n			type=\"button\"\r\n			data-background=\"login_interface/bt_join_normal.bmp\"\r\n			data-hover=\"login_interface/bt_join_over.bmp\"\r\n			data-down=\"login_interface/bt_join_press.bmp\"\r\n		>\r\n			Sign Up\r\n		</button>\r\n		<button id=\"btn_exit\" class=\"btn exit\" type=\"button\"></button>\r\n	</div>\r\n</div>\r\n";
+	WinLoginV2_default$2 = "<div id=\"WinLogin\" class=\"win_login\">\r\n	<div class=\"win_login\">\r\n		<ui-image src=\"login_interface/bg_login.tga\"></ui-image>\r\n		<!-- User Auth -->\r\n		<input id=\"user\" class=\"user\" type=\"text\" value=\"\" />\r\n		<input id=\"pass\" class=\"pass\" type=\"password\" value=\"\" />\r\n		<button\r\n			id=\"save\"\r\n			class=\"save\"\r\n			type=\"button\"\r\n			data-background=\"login_interface/chk_saveoff.bmp\"\r\n			data-preload=\"login_interface/chk_saveon.bmp\"\r\n		></button>\r\n\r\n		<!-- Buttons -->\r\n		<button\r\n			class=\"btn replay\"\r\n			type=\"button\"\r\n			data-background=\"login_interface/bt_join_normal.bmp\"\r\n			data-hover=\"login_interface/bt_join_over.bmp\"\r\n			data-down=\"login_interface/bt_join_press.bmp\"\r\n		>\r\n			Replay\r\n		</button>\r\n		<input type=\"file\" class=\"replay-upload\" accept=\".rrf\" style=\"display: none\" />\r\n		<button\r\n			id=\"btn_connect\"\r\n			class=\"btn connect\"\r\n			type=\"submit\"\r\n			data-background=\"login_interface/bt_start_normal.bmp\"\r\n			data-hover=\"login_interface/bt_start_over.bmp\"\r\n			data-down=\"login_interface/bt_start_press.bmp\"\r\n		></button>\r\n		<button\r\n			id=\"btn_connect\"\r\n			class=\"btn signup\"\r\n			type=\"button\"\r\n			data-background=\"login_interface/bt_join_normal.bmp\"\r\n			data-hover=\"login_interface/bt_join_over.bmp\"\r\n			data-down=\"login_interface/bt_join_press.bmp\"\r\n		>\r\n			Sign Up\r\n		</button>\r\n		<button id=\"btn_exit\" class=\"btn exit\" type=\"button\"></button>\r\n	</div>\r\n</div>\r\n";
 }));
 //#endregion
 //#region src/UI/Components/WinLogin/WinLoginV2/WinLoginV2.css?raw
 var WinLoginV2_default$1;
 var init_WinLoginV2$1 = __esmMin((() => {
-	WinLoginV2_default$1 = ":host {\r\n	top: 60%;\r\n	left: calc(50% - 140px);\r\n	width: 301px;\r\n	height: 132px;\r\n}\r\n\r\n#WinLogin {\r\n	position: absolute;\r\n	width: 301px;\r\n	height: 132px;\r\n}\r\n#WinLogin .win_login {\r\n	width: 100%;\r\n	height: 100%;\r\n}\r\n#WinLogin .win_login input {\r\n	position: absolute;\r\n	left: 17px;\r\n	height: 18px;\r\n	width: 127px;\r\n	border: none;\r\n	background-color: transparent;\r\n	padding-left: 2px;\r\n	outline: none;\r\n	text-align: center;\r\n}\r\n#WinLogin .win_login input.user {\r\n	top: 39px;\r\n}\r\n#WinLogin .win_login input.pass {\r\n	top: 61px;\r\n}\r\n#WinLogin .win_login .save {\r\n	position: absolute;\r\n	top: 85px;\r\n	left: 57px;\r\n	display: block;\r\n	width: 38px;\r\n	height: 10px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n}\r\n#WinLogin .win_login .btn {\r\n	position: absolute;\r\n	border: 0;\r\n	background-color: transparent;\r\n}\r\n#WinLogin .win_login .btn.connect {\r\n	width: 84px;\r\n	height: 84px;\r\n	right: 25px;\r\n	bottom: 15px;\r\n}\r\n#WinLogin .win_login .btn.signup {\r\n	width: 84px;\r\n	height: 21px;\r\n	right: 130px;\r\n	bottom: 15px;\r\n}\r\n#WinLogin .win_login .btn.exit {\r\n	width: 24px;\r\n	height: 23px;\r\n	right: 7px;\r\n	bottom: 96px;\r\n}\r\n\r\n/* Override browser autofill styles */\r\n#WinLogin .win_login input:-webkit-autofill,\r\n#WinLogin .win_login input:-webkit-autofill:hover,\r\n#WinLogin .win_login input:-webkit-autofill:focus,\r\n#WinLogin .win_login input:-webkit-autofill:active,\r\n#WinLogin .win_login input:-internal-autofill-selected,\r\n#WinLogin .win_login input:-internal-autofill-previewed {\r\n	-webkit-background-clip: text;\r\n	transition: background-color 5000sease-in-out 0s;\r\n	box-shadow: inset 0 0 20px 20px #ffffff00;\r\n}\r\n";
+	WinLoginV2_default$1 = ":host {\r\n	top: 60%;\r\n	left: calc(50% - 140px);\r\n	width: 301px;\r\n	height: 132px;\r\n}\r\n\r\n#WinLogin {\r\n	position: absolute;\r\n	width: 301px;\r\n	height: 132px;\r\n}\r\n#WinLogin .win_login {\r\n	width: 100%;\r\n	height: 100%;\r\n}\r\n#WinLogin .win_login input {\r\n	position: absolute;\r\n	left: 17px;\r\n	height: 18px;\r\n	width: 127px;\r\n	border: none;\r\n	background-color: transparent;\r\n	padding-left: 2px;\r\n	outline: none;\r\n	text-align: center;\r\n}\r\n#WinLogin .win_login input.user {\r\n	top: 39px;\r\n}\r\n#WinLogin .win_login input.pass {\r\n	top: 61px;\r\n}\r\n#WinLogin .win_login .save {\r\n	position: absolute;\r\n	top: 85px;\r\n	left: 57px;\r\n	display: block;\r\n	width: 38px;\r\n	height: 10px;\r\n	border: none;\r\n	background-color: transparent;\r\n	background-repeat: no-repeat;\r\n}\r\n#WinLogin .win_login .btn {\r\n	position: absolute;\r\n	border: 0;\r\n	background-color: transparent;\r\n}\r\n#WinLogin .win_login .btn.connect {\r\n	width: 84px;\r\n	height: 84px;\r\n	right: 25px;\r\n	bottom: 15px;\r\n}\r\n#WinLogin .win_login .btn.signup {\r\n	width: 84px;\r\n	height: 21px;\r\n	right: 120px;\r\n	bottom: 10px;\r\n}\r\n#WinLogin .btn.replay {\r\n	width: 84px;\r\n	height: 21px;\r\n	right: 210px;\r\n	bottom: 10px;\r\n}\r\n#WinLogin .win_login .btn.exit {\r\n	width: 24px;\r\n	height: 23px;\r\n	right: 7px;\r\n	bottom: 96px;\r\n}\r\n\r\n/* Override browser autofill styles */\r\n#WinLogin .win_login input:-webkit-autofill,\r\n#WinLogin .win_login input:-webkit-autofill:hover,\r\n#WinLogin .win_login input:-webkit-autofill:focus,\r\n#WinLogin .win_login input:-webkit-autofill:active,\r\n#WinLogin .win_login input:-internal-autofill-selected,\r\n#WinLogin .win_login input:-internal-autofill-previewed {\r\n	-webkit-background-clip: text;\r\n	transition: background-color 5000sease-in-out 0s;\r\n	box-shadow: inset 0 0 20px 20px #ffffff00;\r\n}\r\n";
 }));
 //#endregion
 //#region src/UI/Components/WinLogin/WinLoginV2/WinLoginV2.js
@@ -335416,9 +337190,7 @@ function onTarenConnectionRefused(pkt) {
 		case 9:
 			msg_id = 3911;
 			break;
-		default:
-			msg_id = 3202;
-			break;
+		default: msg_id = 3202;
 	}
 	UIManager.showMessageBox(DB.getMessage(msg_id), "ok", () => {
 		UIManager.removeComponents();
@@ -335466,9 +337238,7 @@ function onTarenConnectionRefused2(pkt) {
 		case 101:
 			msg_id = 449;
 			break;
-		default:
-			msg_id = 3202;
-			break;
+		default: msg_id = 3202;
 	}
 	UIManager.showMessageBox(DB.getMessage(msg_id).replace("%s", pkt.blockDate), "ok", () => {
 		UIManager.removeComponents();
@@ -335526,9 +337296,7 @@ function onInternationalConnectionRefused(pkt) {
 		case 5213:
 			msg_id = 3327;
 			break;
-		case 5214:
-			msg_id = 3328;
-			break;
+		case 5214: msg_id = 3328;
 	}
 	UIManager.showMessageBox(DB.getMessage(msg_id).replace("%d", pkt.blockDate), "ok", () => {
 		UIManager.removeComponents();
@@ -335728,9 +337496,7 @@ function onConnectionRefused(pkt) {
 		case 5300:
 			error = 3534;
 			break;
-		case 5301:
-			error = 3539;
-			break;
+		case 5301: error = 3539;
 	}
 	UIManager.showMessageBox(DB.getMessage(error).replace("%s", pkt.blockDate), "ok", () => {
 		UIManager.removeComponents();
@@ -335831,9 +337597,7 @@ function onServerClosed(pkt) {
 		case 109:
 			msg_id = 1583;
 			break;
-		case 110:
-			msg_id = 1589;
-			break;
+		case 110: msg_id = 1589;
 	}
 	UIManager.showMessageBox(DB.getMessage(msg_id), "ok", () => {
 		UIManager.removeComponents();
@@ -335985,7 +337749,7 @@ var init_Intro$2 = __esmMin((() => {
 //#region src/UI/Components/Intro/Intro.css?raw
 var Intro_default$1;
 var init_Intro$1 = __esmMin((() => {
-	Intro_default$1 = "/* ── Design Tokens ── */\r\n#intro {\r\n	--gold: #e8b84b;\r\n	--gold-bright: #f5d47c;\r\n	--gold-dark: #9a7030;\r\n	--bg-void: #060810;\r\n	--bg-deep: #0b0f1e;\r\n	--bg-panel: #111827;\r\n	--bg-card: #151d2e;\r\n	--border-dim: rgba(232, 184, 75, 0.15);\r\n	--border-glow: rgba(232, 184, 75, 0.5);\r\n	--text-light: #e2e8f0;\r\n	--text-muted: #64748b;\r\n	--radius: 12px;\r\n	--radius-sm: 8px;\r\n}\r\n\r\n/* ── Reset ── */\r\n#intro *,\r\n#intro *::before,\r\n#intro *::after {\r\n	box-sizing: border-box;\r\n}\r\n#intro button {\r\n	cursor: pointer;\r\n	font-family: inherit;\r\n}\r\n#intro .clear {\r\n	clear: both;\r\n}\r\n\r\n/* ── Main container ── */\r\n#intro .intro {\r\n	width: 800px;\r\n	height: 600px;\r\n	position: absolute;\r\n	top: 50%;\r\n	left: 50%;\r\n	margin-top: -300px;\r\n	margin-left: -400px;\r\n	overflow: hidden;\r\n	transform-origin: center center;\r\n	backface-visibility: hidden;\r\n	font-family: 'Inter', sans-serif;\r\n	color: var(--text-light);\r\n}\r\n\r\n/* ── Canvas ── */\r\n#intro canvas {\r\n	position: absolute;\r\n	top: 0;\r\n	left: 0;\r\n	z-index: -1;\r\n}\r\n\r\n/* ── Hidden file input ── */\r\n#intro input[type='file'] {\r\n	visibility: hidden;\r\n	position: absolute;\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   RIBBON — top-right corner  \r\n   ══════════════════════════════════════════ */\r\n#intro .ribbon {\r\n	width: 200px;\r\n	height: 200px;\r\n	position: absolute;\r\n	top: 0;\r\n	right: 0;\r\n	overflow: hidden;\r\n	pointer-events: none;\r\n	z-index: 10;\r\n}\r\n#intro .ribbon span {\r\n	display: block;\r\n	position: absolute;\r\n	top: 60px;\r\n	right: -80px;\r\n	width: 300px;\r\n	text-align: center;\r\n	transform: rotate(45deg);\r\n	background: linear-gradient(to bottom, var(--gold-bright), var(--gold-dark));\r\n	color: var(--bg-void);\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 10px;\r\n	font-weight: 700;\r\n	letter-spacing: 2px;\r\n	padding: 5px 0;\r\n	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   BUTTON ABOUT  \r\n   ══════════════════════════════════════════ */\r\n#intro .btn_about {\r\n	position: absolute;\r\n	top: 12px;\r\n	left: 12px;\r\n	background: rgba(60, 9, 90, 0.8);\r\n	border: 1px solid var(--border-dim);\r\n	border-radius: var(--radius-sm);\r\n	color: var(--text-muted);\r\n	font-size: 20px;\r\n	width: 40px;\r\n	height: 40px;\r\n	line-height: 38px;\r\n	text-align: center;\r\n	z-index: 5;\r\n	transition:\r\n		color 0.3s,\r\n		border-color 0.3s,\r\n		transform 0.15s;\r\n	padding: 0;\r\n}\r\n#intro .btn_about:hover {\r\n	color: var(--gold);\r\n	border-color: var(--border-glow);\r\n	transform: scale(1.1);\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   BUTTON SETTINGS  \r\n   ══════════════════════════════════════════ */\r\n#intro .btn_settings {\r\n	position: absolute;\r\n	bottom: 12px;\r\n	right: 12px;\r\n	background: rgba(60, 9, 90, 0.8);\r\n	border: 1px solid var(--border-dim);\r\n	border-radius: var(--radius-sm);\r\n	color: var(--text-muted);\r\n	font-size: 28px;\r\n	width: 44px;\r\n	height: 44px;\r\n	line-height: 42px;\r\n	text-align: center;\r\n	z-index: 5;\r\n	transition:\r\n		color 0.3s,\r\n		border-color 0.3s,\r\n		transform 0.4s ease-out;\r\n	padding: 0;\r\n}\r\n#intro .btn_settings:hover {\r\n	color: var(--gold);\r\n	border-color: var(--border-glow);\r\n	transform: rotate(360deg);\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   DROP ZONE (replaces old .box)  \r\n   ══════════════════════════════════════════ */\r\n#intro .drop-zone {\r\n	position: absolute;\r\n	top: 300px;\r\n	left: 50%;\r\n	transform: translateX(-50%);\r\n	width: 320px;\r\n	border: 2px dashed rgba(232, 184, 75, 0.25);\r\n	border-radius: var(--radius);\r\n	padding: 30px 24px;\r\n	background: rgba(21, 29, 46, 0.6);\r\n	backdrop-filter: blur(10px);\r\n	transition:\r\n		border-color 0.3s,\r\n		box-shadow 0.3s,\r\n		background 0.3s;\r\n	cursor: pointer;\r\n	text-align: center;\r\n	z-index: 5;\r\n}\r\n#intro .drop-zone:hover,\r\n#intro .drop-zone.dragover {\r\n	border-color: rgba(232, 184, 75, 0.6);\r\n	box-shadow: 0 0 30px rgba(232, 184, 75, 0.12);\r\n	background: rgba(21, 29, 46, 0.8);\r\n}\r\n#intro .drop-zone-icon {\r\n	font-size: 36px;\r\n	margin-bottom: 8px;\r\n}\r\n#intro .drop-zone-text {\r\n	color: var(--text-muted);\r\n	font-size: 13px;\r\n	line-height: 1.6;\r\n}\r\n#intro .drop-zone-text strong {\r\n	color: var(--text-light);\r\n}\r\n\r\n/* ── File status message ── */\r\n#intro .msg {\r\n	position: absolute;\r\n	top: 440px;\r\n	left: 50%;\r\n	transform: translateX(-50%);\r\n	text-align: center;\r\n	font-size: 14px;\r\n	color: var(--gold);\r\n	z-index: 6;\r\n	pointer-events: none;\r\n	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);\r\n	white-space: nowrap;\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   BUTTON PLAY  \r\n   ══════════════════════════════════════════ */\r\n#intro .btn_play {\r\n	position: absolute;\r\n	top: 470px;\r\n	left: 50%;\r\n	transform: translateX(-50%);\r\n	display: inline-flex;\r\n	align-items: center;\r\n	justify-content: center;\r\n	gap: 8px;\r\n	padding: 14px 44px;\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 14px;\r\n	font-weight: 600;\r\n	letter-spacing: 0.1em;\r\n	text-transform: uppercase;\r\n	color: var(--bg-void);\r\n	background: linear-gradient(135deg, var(--gold-bright), var(--gold), var(--gold-dark));\r\n	border: none;\r\n	border-radius: var(--radius-sm);\r\n	z-index: 5;\r\n	transition:\r\n		transform 0.2s,\r\n		box-shadow 0.3s;\r\n	box-shadow: 0 4px 20px rgba(232, 184, 75, 0.3);\r\n}\r\n#intro .btn_play:hover {\r\n	transform: translateX(-50%) translateY(-2px);\r\n	box-shadow: 0 6px 30px rgba(232, 184, 75, 0.45);\r\n}\r\n#intro .btn_play:active {\r\n	transform: translateX(-50%) translateY(0);\r\n	box-shadow: 0 2px 10px rgba(232, 184, 75, 0.2);\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   OVERLAYS  \r\n   ══════════════════════════════════════════ */\r\n#intro .overlay {\r\n	background: rgba(6, 8, 16, 0.92);\r\n	position: absolute;\r\n	z-index: 100;\r\n	top: 0;\r\n	left: 0;\r\n	width: 100%;\r\n	height: 100%;\r\n	color: var(--text-light);\r\n	opacity: 0;\r\n	display: none;\r\n	overflow-y: auto;\r\n	transition: opacity 0.2s ease;\r\n}\r\n\r\n/* ── Loading ── */\r\n#intro .loading-content {\r\n	position: absolute;\r\n	top: 50%;\r\n	left: 50%;\r\n	transform: translate(-50%, -50%);\r\n	text-align: center;\r\n	color: var(--gold, #e8b84b);\r\n}\r\n\r\n#intro .loading-spinner {\r\n	width: 48px;\r\n	height: 48px;\r\n	margin: 0 auto 16px;\r\n	border: 4px solid rgba(232, 184, 75, 0.2);\r\n	border-top-color: var(--gold, #e8b84b);\r\n	border-radius: 50%;\r\n	animation: intro-spin 0.8s linear infinite;\r\n}\r\n\r\n@keyframes intro-spin {\r\n	to {\r\n		transform: rotate(360deg);\r\n	}\r\n}\r\n\r\n#intro .loading-content p {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 14px;\r\n	letter-spacing: 2px;\r\n	text-transform: uppercase;\r\n}\r\n\r\n#intro .loading-text {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 16px;\r\n	letter-spacing: 3px;\r\n	text-transform: uppercase;\r\n	color: var(--gold, #e8b84b);\r\n}\r\n\r\n#intro .loading-text span {\r\n	display: inline-block;\r\n	animation: intro-wave 1.2s ease-in-out infinite;\r\n	animation-delay: calc(var(--i) * 0.08s);\r\n}\r\n\r\n@keyframes intro-wave {\r\n	0%,\r\n	60%,\r\n	100% {\r\n		transform: translateY(0);\r\n	}\r\n	30% {\r\n		transform: translateY(-8px);\r\n	}\r\n}\r\n\r\n/* ── About overlay ── */\r\n#intro .about-content {\r\n	max-width: 480px;\r\n	margin: 0 auto;\r\n	padding: 60px 30px 30px;\r\n	text-align: center;\r\n}\r\n#intro .emblem-icon {\r\n	font-size: 48px;\r\n	margin-bottom: 12px;\r\n	display: block;\r\n}\r\n#intro .about-title,\r\n#intro .gold-title {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 24px;\r\n	font-weight: 700;\r\n	background: linear-gradient(135deg, var(--gold-bright), var(--gold), var(--gold-dark));\r\n	-webkit-background-clip: text;\r\n	-webkit-text-fill-color: transparent;\r\n	background-clip: text;\r\n	margin: 0 0 6px;\r\n}\r\n#intro .about-subtitle {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 12px;\r\n	font-weight: 400;\r\n	color: var(--text-muted);\r\n	letter-spacing: 0.08em;\r\n	margin: 0 0 20px;\r\n}\r\n\r\n/* Ornament divider */\r\n#intro .ornament {\r\n	display: flex;\r\n	align-items: center;\r\n	gap: 12px;\r\n	margin: 0 auto 24px;\r\n	max-width: 280px;\r\n}\r\n#intro .ornament-line {\r\n	flex: 1;\r\n	height: 1px;\r\n	background: linear-gradient(to right, transparent, var(--gold-dark));\r\n}\r\n#intro .ornament-line:last-child {\r\n	background: linear-gradient(to left, transparent, var(--gold-dark));\r\n}\r\n#intro .ornament-diamond {\r\n	width: 8px;\r\n	height: 8px;\r\n	background: var(--gold);\r\n	transform: rotate(45deg);\r\n	box-shadow: 0 0 8px var(--gold);\r\n	flex-shrink: 0;\r\n}\r\n#intro .ornament-dot {\r\n	width: 4px;\r\n	height: 4px;\r\n	background: var(--gold-dark);\r\n	border-radius: 50%;\r\n	flex-shrink: 0;\r\n}\r\n\r\n#intro .about-content .info {\r\n	margin: 0 auto 24px;\r\n	text-align: left;\r\n	font-size: 14px;\r\n}\r\n#intro .about-content .info td:first-child {\r\n	color: var(--text-muted);\r\n	padding-right: 12px;\r\n	white-space: nowrap;\r\n}\r\n#intro .about-content a {\r\n	color: var(--gold);\r\n	text-decoration: none;\r\n}\r\n#intro .about-content a:hover {\r\n	text-decoration: underline;\r\n	color: var(--gold-bright);\r\n}\r\n#intro .concept {\r\n	font-size: 13px;\r\n	text-align: justify;\r\n	line-height: 1.6;\r\n	color: var(--text-muted);\r\n}\r\n#intro .concept p {\r\n	margin: 0 0 10px;\r\n}\r\n#intro .hint {\r\n	margin-top: 24px;\r\n	font-size: 11px;\r\n	color: var(--text-muted);\r\n	opacity: 0.6;\r\n}\r\n\r\n/* ── Settings overlay ── */\r\n#intro .settings-content {\r\n	max-width: 520px;\r\n	margin: 0 auto;\r\n	padding: 30px 30px 80px;\r\n}\r\n#intro .settings-title {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 22px;\r\n	font-weight: 700;\r\n	background: linear-gradient(135deg, var(--gold-bright), var(--gold), var(--gold-dark));\r\n	-webkit-background-clip: text;\r\n	-webkit-text-fill-color: transparent;\r\n	background-clip: text;\r\n	margin: 0 0 20px;\r\n	text-align: center;\r\n}\r\n\r\n/* Section headers */\r\n#intro .section-header {\r\n	display: flex;\r\n	align-items: center;\r\n	gap: 12px;\r\n	margin: 20px 0 12px;\r\n}\r\n#intro .section-header span {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 13px;\r\n	font-weight: 600;\r\n	color: var(--gold);\r\n	letter-spacing: 0.08em;\r\n	text-transform: uppercase;\r\n	white-space: nowrap;\r\n}\r\n#intro .section-header::after {\r\n	content: '';\r\n	flex: 1;\r\n	height: 1px;\r\n	background: linear-gradient(to right, var(--border-dim), transparent);\r\n}\r\n\r\n/* Tables */\r\n#intro .screen,\r\n#intro .sound {\r\n	width: 100%;\r\n	border-collapse: collapse;\r\n}\r\n#intro .screen td,\r\n#intro .sound td {\r\n	padding: 6px 4px;\r\n	font-size: 13px;\r\n	color: var(--text-light);\r\n	vertical-align: middle;\r\n}\r\n#intro .screen td:first-child,\r\n#intro .sound td:first-child {\r\n	width: 40%;\r\n	color: var(--text-muted);\r\n}\r\n\r\n/* Selects & inputs */\r\n#intro .settings-content select,\r\n#intro .settings-content input[type='text'] {\r\n	background: var(--bg-card);\r\n	border: 1px solid var(--border-dim);\r\n	border-radius: var(--radius-sm);\r\n	color: var(--text-light);\r\n	padding: 4px 8px;\r\n	font-size: 13px;\r\n	font-family: inherit;\r\n}\r\n#intro .settings-content select:focus,\r\n#intro .settings-content input[type='text']:focus {\r\n	border-color: var(--gold);\r\n	outline: none;\r\n}\r\n#intro .screensize {\r\n	width: 150px;\r\n}\r\n\r\n/* Range sliders */\r\n#intro input[type='range'] {\r\n	width: 150px;\r\n	accent-color: var(--gold);\r\n}\r\n\r\n/* Checkboxes */\r\n#intro .settings-content input[type='checkbox'] {\r\n	accent-color: var(--gold);\r\n}\r\n\r\n/* Quality result / volume result */\r\n#intro .quality_result,\r\n#intro .bgmvol_result,\r\n#intro .soundvol_result {\r\n	font-size: 12px;\r\n	color: var(--gold);\r\n	min-width: 40px;\r\n}\r\n\r\n/* Clean cache */\r\n#intro .clean {\r\n	display: none;\r\n	padding: 4px 10px;\r\n	background: var(--bg-card);\r\n	border: 1px solid var(--border-dim);\r\n	border-radius: var(--radius-sm);\r\n	color: var(--text-light);\r\n	font-size: 12px;\r\n	transition: border-color 0.2s;\r\n}\r\n#intro .clean:hover {\r\n	border-color: var(--gold);\r\n}\r\n#intro .clean-status {\r\n	color: var(--text-muted);\r\n	font-size: 12px;\r\n	margin-left: 8px;\r\n}\r\n\r\n/* ── Server list ── */\r\n#intro .serveredit dl {\r\n	margin: 0;\r\n}\r\n#intro .serveredit dt {\r\n	margin-bottom: 6px;\r\n}\r\n#intro .serveredit dd {\r\n	margin: 0 0 10px 0;\r\n}\r\n\r\n#intro .clientinfo {\r\n	background: transparent !important;\r\n	border: 1px solid transparent !important;\r\n	color: var(--gold) !important;\r\n	cursor: pointer;\r\n	text-decoration: underline;\r\n}\r\n#intro .clientinfo:focus {\r\n	cursor: text;\r\n	border: 1px solid var(--gold) !important;\r\n	background: var(--bg-card) !important;\r\n	color: var(--text-light) !important;\r\n	text-decoration: none;\r\n}\r\n\r\n#intro .settings-content span {\r\n	vertical-align: top;\r\n	margin-left: 5px;\r\n}\r\n\r\n/* Radio buttons */\r\n#intro input[type='radio'] {\r\n	margin: 0;\r\n	width: 15px;\r\n	height: 15px;\r\n	accent-color: var(--gold);\r\n	vertical-align: middle;\r\n	position: relative;\r\n	bottom: 1px;\r\n}\r\n\r\n/* Server container */\r\n#intro .servercontainer {\r\n	max-height: 70px;\r\n	overflow-y: auto;\r\n	overflow-x: hidden;\r\n	margin-top: 10px;\r\n	padding-right: 6px;\r\n}\r\n#intro .servercontainer::-webkit-scrollbar {\r\n	width: 6px;\r\n}\r\n#intro .servercontainer::-webkit-scrollbar-track {\r\n	background: var(--bg-void);\r\n	border-radius: 6px;\r\n}\r\n#intro .servercontainer::-webkit-scrollbar-thumb {\r\n	border-radius: 6px;\r\n	background: var(--gold-dark);\r\n}\r\n\r\n/* Server list table */\r\n#intro .serverlist {\r\n	border-collapse: collapse;\r\n	width: 100%;\r\n}\r\n#intro .serverlist td {\r\n	text-align: center;\r\n	height: 22px;\r\n	font-size: 12px;\r\n}\r\n#intro .serverlist thead td {\r\n	color: var(--gold-dark);\r\n	font-weight: bold;\r\n	font-size: 11px;\r\n}\r\n#intro .serverlist tbody tr:hover {\r\n	background: rgba(232, 184, 75, 0.06);\r\n}\r\n#intro .servers input {\r\n	background: transparent;\r\n	border: 1px solid transparent;\r\n	cursor: pointer;\r\n	color: var(--text-light);\r\n	text-align: center;\r\n	width: 100%;\r\n	font-size: 12px;\r\n	font-family: inherit;\r\n}\r\n#intro .servers input:focus {\r\n	cursor: text;\r\n	border: 1px solid var(--gold);\r\n	background: var(--bg-card);\r\n	color: var(--text-light);\r\n}\r\n\r\n/* Delete button */\r\n#intro .btn_delete {\r\n	width: 20px;\r\n	height: 20px;\r\n	background: rgba(239, 68, 68, 0.15);\r\n	border: 1px solid rgba(239, 68, 68, 0.3);\r\n	border-radius: 4px;\r\n	color: #ef4444;\r\n	font-size: 14px;\r\n	line-height: 18px;\r\n	text-align: center;\r\n	padding: 0;\r\n	transition: background 0.2s;\r\n}\r\n#intro .btn_delete:hover {\r\n	background: rgba(239, 68, 68, 0.3);\r\n}\r\n\r\n/* Add server button */\r\n#intro .settings .btn_add {\r\n	margin-top: 10px;\r\n	float: right;\r\n	padding: 5px 14px;\r\n	background: var(--bg-card);\r\n	border: 1px solid var(--border-dim);\r\n	border-radius: var(--radius-sm);\r\n	color: var(--text-light);\r\n	font-size: 12px;\r\n	transition: border-color 0.2s;\r\n}\r\n#intro .settings .btn_add:hover {\r\n	border-color: var(--gold);\r\n	color: var(--gold);\r\n}\r\n\r\n/* Save button */\r\n#intro .settings .btn_save {\r\n	display: block;\r\n	width: 200px;\r\n	margin: 24px auto 0;\r\n	padding: 12px 0;\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 13px;\r\n	font-weight: 600;\r\n	letter-spacing: 0.1em;\r\n	text-transform: uppercase;\r\n	color: var(--bg-void);\r\n	background: linear-gradient(135deg, var(--gold-bright), var(--gold), var(--gold-dark));\r\n	border: none;\r\n	border-radius: var(--radius-sm);\r\n	transition:\r\n		transform 0.2s,\r\n		box-shadow 0.3s;\r\n	box-shadow: 0 4px 20px rgba(232, 184, 75, 0.3);\r\n}\r\n#intro .settings .btn_save:hover {\r\n	transform: translateY(-2px);\r\n	box-shadow: 0 6px 30px rgba(232, 184, 75, 0.45);\r\n}\r\n#intro .settings .btn_save:active {\r\n	transform: translateY(0);\r\n}\r\n\r\n/* ── Aspect Ratio Fixes ── */\r\n#intro .drop-zone {\r\n	transform: translateX(-50%) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .msg {\r\n	transform: translateX(-50%) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .btn_play {\r\n	transform: translateX(-50%) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .btn_play:hover {\r\n	transform: translateX(-50%) translateY(-2px) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .btn_play:active {\r\n	transform: translateX(-50%) translateY(0) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .btn_about {\r\n	transform: scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .btn_about:hover {\r\n	transform: scale(calc(1.1 * var(--cx, 1)), calc(1.1 * var(--cy, 1)));\r\n}\r\n#intro .btn_settings {\r\n	scale: var(--cx, 1) var(--cy, 1);\r\n}\r\n#intro .btn_settings:hover {\r\n	scale: var(--cx, 1) var(--cy, 1);\r\n}\r\n#intro .loading-content {\r\n	transform: translate(-50%, -50%) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .about-content,\r\n#intro .settings-content {\r\n	scale: var(--cx, 1) var(--cy, 1);\r\n}\r\n";
+	Intro_default$1 = "/* ── Design Tokens ── */\r\n#intro {\r\n	--gold: #e8b84b;\r\n	--gold-bright: #f5d47c;\r\n	--gold-dark: #9a7030;\r\n	--bg-void: #060810;\r\n	--bg-deep: #0b0f1e;\r\n	--bg-panel: #111827;\r\n	--bg-card: #151d2e;\r\n	--border-dim: rgba(232, 184, 75, 0.15);\r\n	--border-glow: rgba(232, 184, 75, 0.5);\r\n	--text-light: #e2e8f0;\r\n	--text-muted: #64748b;\r\n	--radius: 12px;\r\n	--radius-sm: 8px;\r\n}\r\n\r\n/* ── Reset ── */\r\n#intro *,\r\n#intro *::before,\r\n#intro *::after {\r\n	box-sizing: border-box;\r\n}\r\n#intro button {\r\n	cursor: pointer;\r\n	font-family: inherit;\r\n}\r\n#intro .clear {\r\n	clear: both;\r\n}\r\n\r\n/* ── Main container ── */\r\n#intro .intro {\r\n	width: 800px;\r\n	height: 600px;\r\n	position: absolute;\r\n	top: 50%;\r\n	left: 50%;\r\n	margin-top: -300px;\r\n	margin-left: -400px;\r\n	overflow: hidden;\r\n	transform-origin: center center;\r\n	backface-visibility: hidden;\r\n	font-family: 'Inter', sans-serif;\r\n	/* Opt out of Common.css's font-size-adjust: this whole screen renders in Inter/Cinzel, whose\r\n	   x-height differs from Arial's — normalizing would rescale its headings (Cinzel ~+18%). All\r\n	   descendants inherit this reset, keeping the pre-normalization rendering. */\r\n	font-size-adjust: none;\r\n	color: var(--text-light);\r\n}\r\n\r\n/* ── Canvas ── */\r\n#intro canvas {\r\n	position: absolute;\r\n	top: 0;\r\n	left: 0;\r\n	z-index: -1;\r\n}\r\n\r\n/* ── Hidden file input ── */\r\n#intro input[type='file'] {\r\n	visibility: hidden;\r\n	position: absolute;\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   RIBBON — top-right corner  \r\n   ══════════════════════════════════════════ */\r\n#intro .ribbon {\r\n	width: 200px;\r\n	height: 200px;\r\n	position: absolute;\r\n	top: 0;\r\n	right: 0;\r\n	overflow: hidden;\r\n	pointer-events: none;\r\n	z-index: 10;\r\n}\r\n#intro .ribbon span {\r\n	display: block;\r\n	position: absolute;\r\n	top: 60px;\r\n	right: -80px;\r\n	width: 300px;\r\n	text-align: center;\r\n	transform: rotate(45deg);\r\n	background: linear-gradient(to bottom, var(--gold-bright), var(--gold-dark));\r\n	color: var(--bg-void);\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 10px;\r\n	font-weight: 700;\r\n	letter-spacing: 2px;\r\n	padding: 5px 0;\r\n	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   BUTTON ABOUT  \r\n   ══════════════════════════════════════════ */\r\n#intro .btn_about {\r\n	position: absolute;\r\n	top: 12px;\r\n	left: 12px;\r\n	background: rgba(60, 9, 90, 0.8);\r\n	border: 1px solid var(--border-dim);\r\n	border-radius: var(--radius-sm);\r\n	color: var(--text-muted);\r\n	font-size: 20px;\r\n	width: 40px;\r\n	height: 40px;\r\n	line-height: 38px;\r\n	text-align: center;\r\n	z-index: 5;\r\n	transition:\r\n		color 0.3s,\r\n		border-color 0.3s,\r\n		transform 0.15s;\r\n	padding: 0;\r\n}\r\n#intro .btn_about:hover {\r\n	color: var(--gold);\r\n	border-color: var(--border-glow);\r\n	transform: scale(1.1);\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   BUTTON SETTINGS  \r\n   ══════════════════════════════════════════ */\r\n#intro .btn_settings {\r\n	position: absolute;\r\n	bottom: 12px;\r\n	right: 12px;\r\n	background: rgba(60, 9, 90, 0.8);\r\n	border: 1px solid var(--border-dim);\r\n	border-radius: var(--radius-sm);\r\n	color: var(--text-muted);\r\n	font-size: 28px;\r\n	width: 44px;\r\n	height: 44px;\r\n	line-height: 42px;\r\n	text-align: center;\r\n	z-index: 5;\r\n	transition:\r\n		color 0.3s,\r\n		border-color 0.3s,\r\n		transform 0.4s ease-out;\r\n	padding: 0;\r\n}\r\n#intro .btn_settings:hover {\r\n	color: var(--gold);\r\n	border-color: var(--border-glow);\r\n	transform: rotate(360deg);\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   DROP ZONE (replaces old .box)  \r\n   ══════════════════════════════════════════ */\r\n#intro .drop-zone {\r\n	position: absolute;\r\n	top: 300px;\r\n	left: 50%;\r\n	transform: translateX(-50%);\r\n	width: 320px;\r\n	border: 2px dashed rgba(232, 184, 75, 0.25);\r\n	border-radius: var(--radius);\r\n	padding: 30px 24px;\r\n	background: rgba(21, 29, 46, 0.6);\r\n	backdrop-filter: blur(10px);\r\n	transition:\r\n		border-color 0.3s,\r\n		box-shadow 0.3s,\r\n		background 0.3s;\r\n	cursor: pointer;\r\n	text-align: center;\r\n	z-index: 5;\r\n}\r\n#intro .drop-zone:hover,\r\n#intro .drop-zone.dragover {\r\n	border-color: rgba(232, 184, 75, 0.6);\r\n	box-shadow: 0 0 30px rgba(232, 184, 75, 0.12);\r\n	background: rgba(21, 29, 46, 0.8);\r\n}\r\n#intro .drop-zone-icon {\r\n	font-size: 36px;\r\n	margin-bottom: 8px;\r\n}\r\n#intro .drop-zone-text {\r\n	color: var(--text-muted);\r\n	font-size: 13px;\r\n	line-height: 1.6;\r\n}\r\n#intro .drop-zone-text strong {\r\n	color: var(--text-light);\r\n}\r\n\r\n/* ── File status message ── */\r\n#intro .msg {\r\n	position: absolute;\r\n	top: 440px;\r\n	left: 50%;\r\n	transform: translateX(-50%);\r\n	text-align: center;\r\n	font-size: 14px;\r\n	color: var(--gold);\r\n	z-index: 6;\r\n	pointer-events: none;\r\n	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);\r\n	white-space: nowrap;\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   BUTTON PLAY  \r\n   ══════════════════════════════════════════ */\r\n#intro .btn_play {\r\n	position: absolute;\r\n	top: 470px;\r\n	left: 50%;\r\n	transform: translateX(-50%);\r\n	display: inline-flex;\r\n	align-items: center;\r\n	justify-content: center;\r\n	gap: 8px;\r\n	padding: 14px 44px;\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 14px;\r\n	font-weight: 600;\r\n	letter-spacing: 0.1em;\r\n	text-transform: uppercase;\r\n	color: var(--bg-void);\r\n	background: linear-gradient(135deg, var(--gold-bright), var(--gold), var(--gold-dark));\r\n	border: none;\r\n	border-radius: var(--radius-sm);\r\n	z-index: 5;\r\n	transition:\r\n		transform 0.2s,\r\n		box-shadow 0.3s;\r\n	box-shadow: 0 4px 20px rgba(232, 184, 75, 0.3);\r\n}\r\n#intro .btn_play:hover {\r\n	transform: translateX(-50%) translateY(-2px);\r\n	box-shadow: 0 6px 30px rgba(232, 184, 75, 0.45);\r\n}\r\n#intro .btn_play:active {\r\n	transform: translateX(-50%) translateY(0);\r\n	box-shadow: 0 2px 10px rgba(232, 184, 75, 0.2);\r\n}\r\n\r\n/* ══════════════════════════════════════════  \r\n   OVERLAYS  \r\n   ══════════════════════════════════════════ */\r\n#intro .overlay {\r\n	background: rgba(6, 8, 16, 0.92);\r\n	position: absolute;\r\n	z-index: 100;\r\n	top: 0;\r\n	left: 0;\r\n	width: 100%;\r\n	height: 100%;\r\n	color: var(--text-light);\r\n	opacity: 0;\r\n	display: none;\r\n	overflow-y: auto;\r\n	transition: opacity 0.2s ease;\r\n}\r\n\r\n/* ── Loading ── */\r\n#intro .loading-content {\r\n	position: absolute;\r\n	top: 50%;\r\n	left: 50%;\r\n	transform: translate(-50%, -50%);\r\n	text-align: center;\r\n	color: var(--gold, #e8b84b);\r\n}\r\n\r\n#intro .loading-spinner {\r\n	width: 48px;\r\n	height: 48px;\r\n	margin: 0 auto 16px;\r\n	border: 4px solid rgba(232, 184, 75, 0.2);\r\n	border-top-color: var(--gold, #e8b84b);\r\n	border-radius: 50%;\r\n	animation: intro-spin 0.8s linear infinite;\r\n}\r\n\r\n@keyframes intro-spin {\r\n	to {\r\n		transform: rotate(360deg);\r\n	}\r\n}\r\n\r\n#intro .loading-content p {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 14px;\r\n	letter-spacing: 2px;\r\n	text-transform: uppercase;\r\n}\r\n\r\n#intro .loading-text {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 16px;\r\n	letter-spacing: 3px;\r\n	text-transform: uppercase;\r\n	color: var(--gold, #e8b84b);\r\n}\r\n\r\n#intro .loading-text span {\r\n	display: inline-block;\r\n	animation: intro-wave 1.2s ease-in-out infinite;\r\n	animation-delay: calc(var(--i) * 0.08s);\r\n}\r\n\r\n@keyframes intro-wave {\r\n	0%,\r\n	60%,\r\n	100% {\r\n		transform: translateY(0);\r\n	}\r\n	30% {\r\n		transform: translateY(-8px);\r\n	}\r\n}\r\n\r\n/* ── About overlay ── */\r\n#intro .about-content {\r\n	max-width: 480px;\r\n	margin: 0 auto;\r\n	padding: 60px 30px 30px;\r\n	text-align: center;\r\n}\r\n#intro .emblem-icon {\r\n	font-size: 48px;\r\n	margin-bottom: 12px;\r\n	display: block;\r\n}\r\n#intro .about-title,\r\n#intro .gold-title {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 24px;\r\n	font-weight: 700;\r\n	background: linear-gradient(135deg, var(--gold-bright), var(--gold), var(--gold-dark));\r\n	-webkit-background-clip: text;\r\n	-webkit-text-fill-color: transparent;\r\n	background-clip: text;\r\n	margin: 0 0 6px;\r\n}\r\n#intro .about-subtitle {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 12px;\r\n	font-weight: 400;\r\n	color: var(--text-muted);\r\n	letter-spacing: 0.08em;\r\n	margin: 0 0 20px;\r\n}\r\n\r\n/* Ornament divider */\r\n#intro .ornament {\r\n	display: flex;\r\n	align-items: center;\r\n	gap: 12px;\r\n	margin: 0 auto 24px;\r\n	max-width: 280px;\r\n}\r\n#intro .ornament-line {\r\n	flex: 1;\r\n	height: 1px;\r\n	background: linear-gradient(to right, transparent, var(--gold-dark));\r\n}\r\n#intro .ornament-line:last-child {\r\n	background: linear-gradient(to left, transparent, var(--gold-dark));\r\n}\r\n#intro .ornament-diamond {\r\n	width: 8px;\r\n	height: 8px;\r\n	background: var(--gold);\r\n	transform: rotate(45deg);\r\n	box-shadow: 0 0 8px var(--gold);\r\n	flex-shrink: 0;\r\n}\r\n#intro .ornament-dot {\r\n	width: 4px;\r\n	height: 4px;\r\n	background: var(--gold-dark);\r\n	border-radius: 50%;\r\n	flex-shrink: 0;\r\n}\r\n\r\n#intro .about-content .info {\r\n	margin: 0 auto 24px;\r\n	text-align: left;\r\n	font-size: 14px;\r\n}\r\n#intro .about-content .info td:first-child {\r\n	color: var(--text-muted);\r\n	padding-right: 12px;\r\n	white-space: nowrap;\r\n}\r\n#intro .about-content a {\r\n	color: var(--gold);\r\n	text-decoration: none;\r\n}\r\n#intro .about-content a:hover {\r\n	text-decoration: underline;\r\n	color: var(--gold-bright);\r\n}\r\n#intro .concept {\r\n	font-size: 13px;\r\n	text-align: justify;\r\n	line-height: 1.6;\r\n	color: var(--text-muted);\r\n}\r\n#intro .concept p {\r\n	margin: 0 0 10px;\r\n}\r\n#intro .hint {\r\n	margin-top: 24px;\r\n	font-size: 11px;\r\n	color: var(--text-muted);\r\n	opacity: 0.6;\r\n}\r\n\r\n/* ── Settings overlay ── */\r\n#intro .settings-content {\r\n	max-width: 520px;\r\n	margin: 0 auto;\r\n	padding: 30px 30px 80px;\r\n}\r\n#intro .settings-title {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 22px;\r\n	font-weight: 700;\r\n	background: linear-gradient(135deg, var(--gold-bright), var(--gold), var(--gold-dark));\r\n	-webkit-background-clip: text;\r\n	-webkit-text-fill-color: transparent;\r\n	background-clip: text;\r\n	margin: 0 0 20px;\r\n	text-align: center;\r\n}\r\n\r\n/* Section headers */\r\n#intro .section-header {\r\n	display: flex;\r\n	align-items: center;\r\n	gap: 12px;\r\n	margin: 20px 0 12px;\r\n}\r\n#intro .section-header span {\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 13px;\r\n	font-weight: 600;\r\n	color: var(--gold);\r\n	letter-spacing: 0.08em;\r\n	text-transform: uppercase;\r\n	white-space: nowrap;\r\n}\r\n#intro .section-header::after {\r\n	content: '';\r\n	flex: 1;\r\n	height: 1px;\r\n	background: linear-gradient(to right, var(--border-dim), transparent);\r\n}\r\n\r\n/* Tables */\r\n#intro .screen,\r\n#intro .sound {\r\n	width: 100%;\r\n	border-collapse: collapse;\r\n}\r\n#intro .screen td,\r\n#intro .sound td {\r\n	padding: 6px 4px;\r\n	font-size: 13px;\r\n	color: var(--text-light);\r\n	vertical-align: middle;\r\n}\r\n#intro .screen td:first-child,\r\n#intro .sound td:first-child {\r\n	width: 40%;\r\n	color: var(--text-muted);\r\n}\r\n\r\n/* Selects & inputs */\r\n#intro .settings-content select,\r\n#intro .settings-content input[type='text'] {\r\n	background: var(--bg-card);\r\n	border: 1px solid var(--border-dim);\r\n	border-radius: var(--radius-sm);\r\n	color: var(--text-light);\r\n	padding: 4px 8px;\r\n	font-size: 13px;\r\n	font-family: inherit;\r\n}\r\n#intro .settings-content select:focus,\r\n#intro .settings-content input[type='text']:focus {\r\n	border-color: var(--gold);\r\n	outline: none;\r\n}\r\n#intro .screensize {\r\n	width: 150px;\r\n}\r\n\r\n/* Range sliders */\r\n#intro input[type='range'] {\r\n	width: 150px;\r\n	accent-color: var(--gold);\r\n}\r\n\r\n/* Checkboxes */\r\n#intro .settings-content input[type='checkbox'] {\r\n	accent-color: var(--gold);\r\n}\r\n\r\n/* Quality result / volume result */\r\n#intro .quality_result,\r\n#intro .bgmvol_result,\r\n#intro .soundvol_result {\r\n	font-size: 12px;\r\n	color: var(--gold);\r\n	min-width: 40px;\r\n}\r\n\r\n/* Clean cache */\r\n#intro .clean {\r\n	display: none;\r\n	padding: 4px 10px;\r\n	background: var(--bg-card);\r\n	border: 1px solid var(--border-dim);\r\n	border-radius: var(--radius-sm);\r\n	color: var(--text-light);\r\n	font-size: 12px;\r\n	transition: border-color 0.2s;\r\n}\r\n#intro .clean:hover {\r\n	border-color: var(--gold);\r\n}\r\n#intro .clean-status {\r\n	color: var(--text-muted);\r\n	font-size: 12px;\r\n	margin-left: 8px;\r\n}\r\n\r\n/* ── Server list ── */\r\n#intro .serveredit dl {\r\n	margin: 0;\r\n}\r\n#intro .serveredit dt {\r\n	margin-bottom: 6px;\r\n}\r\n#intro .serveredit dd {\r\n	margin: 0 0 10px 0;\r\n}\r\n\r\n#intro .clientinfo {\r\n	background: transparent !important;\r\n	border: 1px solid transparent !important;\r\n	color: var(--gold) !important;\r\n	cursor: pointer;\r\n	text-decoration: underline;\r\n}\r\n#intro .clientinfo:focus {\r\n	cursor: text;\r\n	border: 1px solid var(--gold) !important;\r\n	background: var(--bg-card) !important;\r\n	color: var(--text-light) !important;\r\n	text-decoration: none;\r\n}\r\n\r\n#intro .settings-content span {\r\n	vertical-align: top;\r\n	margin-left: 5px;\r\n}\r\n\r\n/* Radio buttons */\r\n#intro input[type='radio'] {\r\n	margin: 0;\r\n	width: 15px;\r\n	height: 15px;\r\n	accent-color: var(--gold);\r\n	vertical-align: middle;\r\n	position: relative;\r\n	bottom: 1px;\r\n}\r\n\r\n/* Server container */\r\n#intro .servercontainer {\r\n	max-height: 70px;\r\n	overflow-y: auto;\r\n	overflow-x: hidden;\r\n	margin-top: 10px;\r\n	padding-right: 6px;\r\n}\r\n#intro .servercontainer::-webkit-scrollbar {\r\n	width: 6px;\r\n}\r\n#intro .servercontainer::-webkit-scrollbar-track {\r\n	background: var(--bg-void);\r\n	border-radius: 6px;\r\n}\r\n#intro .servercontainer::-webkit-scrollbar-thumb {\r\n	border-radius: 6px;\r\n	background: var(--gold-dark);\r\n}\r\n\r\n/* Server list table */\r\n#intro .serverlist {\r\n	border-collapse: collapse;\r\n	width: 100%;\r\n}\r\n#intro .serverlist td {\r\n	text-align: center;\r\n	height: 22px;\r\n	font-size: 12px;\r\n}\r\n#intro .serverlist thead td {\r\n	color: var(--gold-dark);\r\n	font-weight: bold;\r\n	font-size: 11px;\r\n}\r\n#intro .serverlist tbody tr:hover {\r\n	background: rgba(232, 184, 75, 0.06);\r\n}\r\n#intro .servers input {\r\n	background: transparent;\r\n	border: 1px solid transparent;\r\n	cursor: pointer;\r\n	color: var(--text-light);\r\n	text-align: center;\r\n	width: 100%;\r\n	font-size: 12px;\r\n	font-family: inherit;\r\n}\r\n#intro .servers input:focus {\r\n	cursor: text;\r\n	border: 1px solid var(--gold);\r\n	background: var(--bg-card);\r\n	color: var(--text-light);\r\n}\r\n\r\n/* Delete button */\r\n#intro .btn_delete {\r\n	width: 20px;\r\n	height: 20px;\r\n	background: rgba(239, 68, 68, 0.15);\r\n	border: 1px solid rgba(239, 68, 68, 0.3);\r\n	border-radius: 4px;\r\n	color: #ef4444;\r\n	font-size: 14px;\r\n	line-height: 18px;\r\n	text-align: center;\r\n	padding: 0;\r\n	transition: background 0.2s;\r\n}\r\n#intro .btn_delete:hover {\r\n	background: rgba(239, 68, 68, 0.3);\r\n}\r\n\r\n/* Add server button */\r\n#intro .settings .btn_add {\r\n	margin-top: 10px;\r\n	float: right;\r\n	padding: 5px 14px;\r\n	background: var(--bg-card);\r\n	border: 1px solid var(--border-dim);\r\n	border-radius: var(--radius-sm);\r\n	color: var(--text-light);\r\n	font-size: 12px;\r\n	transition: border-color 0.2s;\r\n}\r\n#intro .settings .btn_add:hover {\r\n	border-color: var(--gold);\r\n	color: var(--gold);\r\n}\r\n\r\n/* Save button */\r\n#intro .settings .btn_save {\r\n	display: block;\r\n	width: 200px;\r\n	margin: 24px auto 0;\r\n	padding: 12px 0;\r\n	font-family: 'Cinzel', serif;\r\n	font-size: 13px;\r\n	font-weight: 600;\r\n	letter-spacing: 0.1em;\r\n	text-transform: uppercase;\r\n	color: var(--bg-void);\r\n	background: linear-gradient(135deg, var(--gold-bright), var(--gold), var(--gold-dark));\r\n	border: none;\r\n	border-radius: var(--radius-sm);\r\n	transition:\r\n		transform 0.2s,\r\n		box-shadow 0.3s;\r\n	box-shadow: 0 4px 20px rgba(232, 184, 75, 0.3);\r\n}\r\n#intro .settings .btn_save:hover {\r\n	transform: translateY(-2px);\r\n	box-shadow: 0 6px 30px rgba(232, 184, 75, 0.45);\r\n}\r\n#intro .settings .btn_save:active {\r\n	transform: translateY(0);\r\n}\r\n\r\n/* ── Aspect Ratio Fixes ── */\r\n#intro .drop-zone {\r\n	transform: translateX(-50%) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .msg {\r\n	transform: translateX(-50%) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .btn_play {\r\n	transform: translateX(-50%) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .btn_play:hover {\r\n	transform: translateX(-50%) translateY(-2px) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .btn_play:active {\r\n	transform: translateX(-50%) translateY(0) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .btn_about {\r\n	transform: scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .btn_about:hover {\r\n	transform: scale(calc(1.1 * var(--cx, 1)), calc(1.1 * var(--cy, 1)));\r\n}\r\n#intro .btn_settings {\r\n	scale: var(--cx, 1) var(--cy, 1);\r\n}\r\n#intro .btn_settings:hover {\r\n	scale: var(--cx, 1) var(--cy, 1);\r\n}\r\n#intro .loading-content {\r\n	transform: translate(-50%, -50%) scale(var(--cx, 1), var(--cy, 1));\r\n}\r\n#intro .about-content,\r\n#intro .settings-content {\r\n	scale: var(--cx, 1) var(--cy, 1);\r\n}\r\n";
 }));
 //#endregion
 //#region src/UI/Components/Intro/Particle.js
@@ -336226,8 +337990,10 @@ function apply() {
 			}
 		}
 	}
-	if (Configs.get("_serverEditMode")) if (_preferences.serverdef === "serverlist") Configs.set("servers", _preferences.serverlist);
-	else Configs.set("servers", "data/" + _preferences.serverfile);
+	if (Configs.get("_serverEditMode")) {
+		if (_preferences.serverdef === "serverlist") Configs.set("servers", _preferences.serverlist);
+		else Configs.set("servers", "data/" + _preferences.serverfile);
+	}
 	Configs.set("saveFiles", _preferences.saveFiles);
 	Configs.set("quality", GraphicsSettings.quality);
 }
@@ -336332,6 +338098,7 @@ var init_PreLoader = __esmMin((() => {
 	}  
 	#ro-preloader .pre-text {  
 		font-family: serif;  
+		font-size-adjust: none; /* keep serif's native x-height, outside body's Arial normalization */  
 		font-size: 16px;  
 		letter-spacing: 3px;  
 		text-transform: uppercase;  
@@ -336630,8 +338397,8 @@ var init_Intro = __esmMin((() => {
 		FileSystem_default.getSize((used) => {
 			if (!used) return;
 			let msg = "";
-			if (used > 1024 * 1024 * 1024) msg = (used / 1024 / 1024 / 1024).toFixed(2) + " GiB saved";
-			else if (used > 1024 * 1024) msg = (used / 1024 / 1024).toFixed(2) + " MiB saved";
+			if (used > 1073741824) msg = (used / 1024 / 1024 / 1024).toFixed(2) + " GiB saved";
+			else if (used > 1048576) msg = (used / 1024 / 1024).toFixed(2) + " MiB saved";
 			else msg = (used / 1024).toFixed(2) + " KiB saved";
 			const msgEl = root.querySelector(".msg");
 			if (msgEl) msgEl.textContent = msg;

@@ -167,7 +167,7 @@ var init_Thread = __esmMin((() => {
 		static init = () => {
 			if (!_source) _source = new Worker(new URL(
 				/* @vite-ignore */
-				"" + new URL("ThreadEventHandler.js", import.meta.url).href,
+				new URL("ThreadEventHandler.js", import.meta.url).href,
 				"" + import.meta.url
 			), { type: "module" });
 			if (_source instanceof Worker) _source.addEventListener("message", Thread.receive, false);
@@ -309,8 +309,8 @@ var init_iconv_lite = __esmMin((() => {
 				var arr = new Arr(_byteLength(b64, validLen, placeHoldersLen));
 				var curByte = 0;
 				var len2 = placeHoldersLen > 0 ? validLen - 4 : validLen;
-				var i2;
-				for (i2 = 0; i2 < len2; i2 += 4) {
+				var i2 = 0;
+				for (; i2 < len2; i2 += 4) {
 					tmp = revLookup[b64.charCodeAt(i2)] << 18 | revLookup[b64.charCodeAt(i2 + 1)] << 12 | revLookup[b64.charCodeAt(i2 + 2)] << 6 | revLookup[b64.charCodeAt(i2 + 3)];
 					arr[curByte++] = tmp >> 16 & 255;
 					arr[curByte++] = tmp >> 8 & 255;
@@ -861,8 +861,8 @@ var init_iconv_lite = __esmMin((() => {
 				}
 				const strLen = string.length;
 				if (length > strLen / 2) length = strLen / 2;
-				let i;
-				for (i = 0; i < length; ++i) {
+				let i = 0;
+				for (; i < length; ++i) {
 					const parsed = parseInt(string.substr(i * 2, 2), 16);
 					if (numberIsNaN(parsed)) return i;
 					buf[offset + i] = parsed;
@@ -1643,8 +1643,8 @@ var init_iconv_lite = __esmMin((() => {
 				return base64.toByteArray(base64clean(str));
 			}
 			function blitBuffer(src, dst, offset, length) {
-				let i;
-				for (i = 0; i < length; ++i) {
+				let i = 0;
+				for (; i < length; ++i) {
 					if (i + offset >= dst.length || i >= src.length) break;
 					dst[i + offset] = src[i];
 				}
@@ -77847,7 +77847,7 @@ var init_preload_helper = __esmMin((() => {
 					link.addEventListener("load", res);
 					link.addEventListener("error", () => rej(/* @__PURE__ */ new Error(`Unable to preload CSS for ${dep}`)));
 				});
-			}));
+			}).filter((p) => p !== void 0));
 		}
 		function handlePreloadError(err) {
 			const e = new Event("vite:preloadError", { cancelable: true });
@@ -78806,8 +78806,8 @@ var init_Action = __esmMin((() => {
 			const layers = new Array(count);
 			let layer;
 			const version = this.version;
-			let i;
-			for (i = 0; i < count; ++i) {
+			let i = 0;
+			for (; i < count; ++i) {
 				layer = layers[i] = {
 					pos: [fp.readLong(), fp.readLong()],
 					index: fp.readLong(),
@@ -83723,7 +83723,13 @@ var init_Altitude = __esmMin((() => {
 		* @return {Array} cell
 		*/
 		static getCell(x, y) {
-			const index = (Math.floor(x) + Math.floor(y) * Altitude.width) * 5;
+			const cx = Math.floor(x);
+			const cy = Math.floor(y);
+			if (!_cells || cx < 0 || cy < 0 || cx >= Altitude.width || cy >= Altitude.height) {
+				tmp[0] = tmp[1] = tmp[2] = tmp[3] = tmp[4] = 0;
+				return tmp;
+			}
+			const index = (cx + cy * Altitude.width) * 5;
 			tmp[0] = _cells[index + 0];
 			tmp[1] = _cells[index + 1];
 			tmp[2] = _cells[index + 2];
@@ -83739,6 +83745,7 @@ var init_Altitude = __esmMin((() => {
 		* @return {number} cell type
 		*/
 		static getCellType(x, y) {
+			if (!_types$1 || x < 0 || y < 0 || x >= Altitude.width || y >= Altitude.height) return Altitude.TYPE.NONE;
 			return _types$1[x + y * Altitude.width];
 		}
 		/**
@@ -83752,7 +83759,10 @@ var init_Altitude = __esmMin((() => {
 			if (!_cells) return 0;
 			x += .5;
 			y += .5;
-			const index = (Math.floor(x) + Math.floor(y) * Altitude.width) * 5;
+			const cx = Math.floor(x);
+			const cy = Math.floor(y);
+			if (cx < 0 || cy < 0 || cx >= Altitude.width || cy >= Altitude.height) return 0;
+			const index = (cx + cy * Altitude.width) * 5;
 			x %= 1;
 			y %= 1;
 			const x1 = _cells[index + 0] + (_cells[index + 1] - _cells[index + 0]) * x;
@@ -83794,6 +83804,7 @@ var init_Altitude = __esmMin((() => {
 				_from[0] += _unit[0];
 				_from[1] += _unit[1];
 				_from[2] += _unit[2];
+				if (_from[0] < 0 || _from[2] < 0 || _from[0] >= Altitude.width || _from[2] >= Altitude.height) continue;
 				if (Math.abs(Altitude.getCellHeight(_from[0], _from[2]) + _from[1]) < .5) {
 					out[0] = _from[0];
 					out[1] = _from[2];
@@ -83834,34 +83845,41 @@ var init_Altitude = __esmMin((() => {
 				default: buffer = new Float32Array(size * size * 30);
 			}
 			for (x = -middle; x <= middle; ++x) for (y = -middle; y <= middle; ++y, i += 30) {
-				index = (pos_x + x + (pos_y + y) * Altitude.width) * 5;
+				const gx = pos_x + x;
+				const gy = pos_y + y;
+				const oob = gx < 0 || gy < 0 || gx >= Altitude.width || gy >= Altitude.height;
+				index = oob ? -1 : (gx + gy * Altitude.width) * 5;
+				const h0 = oob ? 0 : _cells[index + 0];
+				const h1 = oob ? 0 : _cells[index + 1];
+				const h2 = oob ? 0 : _cells[index + 2];
+				const h3 = oob ? 0 : _cells[index + 3];
 				buffer[i + 0] = pos_x + x + 0;
-				buffer[i + 1] = _cells[index + 0];
+				buffer[i + 1] = h0;
 				buffer[i + 2] = pos_y + y + 0;
 				buffer[i + 3] = (x + 0 + middle) / size;
 				buffer[i + 4] = (y + 0 + middle) / size;
 				buffer[i + 5] = pos_x + x + 1;
-				buffer[i + 6] = _cells[index + 1];
+				buffer[i + 6] = h1;
 				buffer[i + 7] = pos_y + y + 0;
 				buffer[i + 8] = (x + 1 + middle) / size;
 				buffer[i + 9] = (y + 0 + middle) / size;
 				buffer[i + 10] = pos_x + x + 1;
-				buffer[i + 11] = _cells[index + 3];
+				buffer[i + 11] = h3;
 				buffer[i + 12] = pos_y + y + 1;
 				buffer[i + 13] = (x + 1 + middle) / size;
 				buffer[i + 14] = (y + 1 + middle) / size;
 				buffer[i + 15] = pos_x + x + 1;
-				buffer[i + 16] = _cells[index + 3];
+				buffer[i + 16] = h3;
 				buffer[i + 17] = pos_y + y + 1;
 				buffer[i + 18] = (x + 1 + middle) / size;
 				buffer[i + 19] = (y + 1 + middle) / size;
 				buffer[i + 20] = pos_x + x + 0;
-				buffer[i + 21] = _cells[index + 2];
+				buffer[i + 21] = h2;
 				buffer[i + 22] = pos_y + y + 1;
 				buffer[i + 23] = (x + 0 + middle) / size;
 				buffer[i + 24] = (y + 1 + middle) / size;
 				buffer[i + 25] = pos_x + x + 0;
-				buffer[i + 26] = _cells[index + 0];
+				buffer[i + 26] = h0;
 				buffer[i + 27] = pos_y + y + 0;
 				buffer[i + 28] = (x + 0 + middle) / size;
 				buffer[i + 29] = (y + 0 + middle) / size;
@@ -147664,8 +147682,8 @@ var init_bson = __esmMin((() => {
 		getNumBitsAbs() {
 			if (this.isNegative()) return this.eq(Long.MIN_VALUE) ? 64 : this.neg().getNumBitsAbs();
 			const val = this.high !== 0 ? this.high : this.low;
-			let bit;
-			for (bit = 31; bit > 0; bit--) if ((val & 1 << bit) !== 0) break;
+			let bit = 31;
+			for (; bit > 0; bit--) if ((val & 1 << bit) !== 0) break;
 			return this.high !== 0 ? bit + 33 : bit + 1;
 		}
 		greaterThan(other) {
@@ -157476,6 +157494,15 @@ var init_PacketStructure = __esmMin((() => {
 		pkt_buf.writeULong(this.AID);
 		pkt_buf.writeULong(this.MyAID);
 		pkt_buf.writeULong(this.MyGID);
+		return pkt_buf;
+	};
+	PACKET.CZ.REQ_JOIN_GUILD2 = function PACKET_CZ_REQ_JOIN_GUILD2() {
+		this.name = "";
+	};
+	PACKET.CZ.REQ_JOIN_GUILD2.prototype.build = function() {
+		const pkt_buf = new BinaryWriter(26);
+		pkt_buf.writeShort(2326);
+		pkt_buf.writeString(this.name, 24);
 		return pkt_buf;
 	};
 	PACKET.CZ.JOIN_GUILD = function PACKET_CZ_JOIN_GUILD() {
@@ -207013,6 +207040,7 @@ function render$13(gl, modelView, projection, normalMat, fog, light) {
 	gl.disableVertexAttribArray(attribute.aTextureCoord);
 	gl.disableVertexAttribArray(attribute.aLightmapCoord);
 	gl.disableVertexAttribArray(attribute.aTileColorCoord);
+	gl.activeTexture(gl.TEXTURE0);
 }
 /**
 * Prepare lightmap and send it to GPU
@@ -207516,6 +207544,7 @@ var init_SpriteRenderer = __esmMin((() => {
 			gl.uniform1f(uniform.uFogNear, fog.near);
 			gl.uniform1f(uniform.uFogFar, fog.far);
 			gl.uniform3fv(uniform.uFogColor, fog.color);
+			gl.activeTexture(gl.TEXTURE0);
 			gl.uniform1i(uniform.uDiffuse, 0);
 			gl.uniform1i(uniform.uPalette, 1);
 			gl.uniform1f(uniform.uCameraZoom, Camera.zoom);
@@ -213261,7 +213290,7 @@ var init_SkillEffect = __esmMin((() => {
 	SkillEffect[SkillConst_default.MO_CALLSPIRITS] = {};
 	SkillEffect[SkillConst_default.MO_ABSORBSPIRITS] = { successEffectIdOnCaster: 253 };
 	SkillEffect[SkillConst_default.MO_TRIPLEATTACK] = { effectId: 329 };
-	SkillEffect[SkillConst_default.MO_BODYRELOCATION] = {};
+	SkillEffect[SkillConst_default.MO_BODYRELOCATION] = { effectId: 166 };
 	SkillEffect[SkillConst_default.MO_INVESTIGATE] = { effectId: 267 };
 	SkillEffect[SkillConst_default.MO_FINGEROFFENSIVE] = {
 		effectId: 265,
@@ -222154,7 +222183,7 @@ function initializePathFindingWorker() {
 	if (!_pathFindingWorker) {
 		_pathFindingWorker = new Worker(new URL(
 			/* @vite-ignore */
-			"" + new URL("PathFindingWorker.js", import.meta.url).href,
+			new URL("PathFindingWorker.js", import.meta.url).href,
 			"" + import.meta.url
 		).href);
 		_pathFindingWorker.id = (/* @__PURE__ */ new Date()).getTime().toString();
@@ -230716,6 +230745,136 @@ var init_CheckAttendance = __esmMin((() => {
 	CheckAttendance_default = UIManager.addComponent(CheckAttendance);
 }));
 //#endregion
+//#region src/UI/Components/SkillList/SkillRequirements.js
+function getOwnedSkill(ownedSkills, skillId) {
+	return ownedSkills?.get?.(skillId) ?? ownedSkills?.[skillId] ?? null;
+}
+function getOwnedLevel(ownedSkills, skillId) {
+	return getOwnedSkill(ownedSkills, skillId)?.level ?? 0;
+}
+function getJobLineage(jobId, skillTreeView) {
+	const lineage = [];
+	const visited = /* @__PURE__ */ new Set();
+	let currentJobId = jobId;
+	while (currentJobId != null && !visited.has(currentJobId)) {
+		visited.add(currentJobId);
+		lineage.push(currentJobId);
+		const tree = skillTreeView[currentJobId];
+		if (!tree || tree.beforeJob == null) break;
+		currentJobId = tree.beforeJob;
+	}
+	return lineage;
+}
+/**
+* Resolve the requirements that apply to a skill for the active character job.
+* Job-specific entries override the generic list, including explicit empty
+* overrides. Aliased jobs in SkillTreeView share the same tree object, so an
+* alias can inherit the canonical job's override.
+*/
+function resolveSkillRequirements(skill, jobId, skillTreeView) {
+	if (!skill) return [];
+	const jobRequirements = skill.NeedSkillList;
+	if (jobRequirements) {
+		const requirementJobs = Object.keys(jobRequirements);
+		for (const lineageJobId of getJobLineage(jobId, skillTreeView)) {
+			if (Object.hasOwn(jobRequirements, lineageJobId)) return jobRequirements[lineageJobId];
+			const lineageTree = skillTreeView[lineageJobId];
+			if (!lineageTree) continue;
+			const canonicalJobId = requirementJobs.find((requirementJobId) => {
+				return skillTreeView[requirementJobId] === lineageTree;
+			});
+			if (canonicalJobId !== void 0) return jobRequirements[canonicalJobId];
+		}
+	}
+	return skill._NeedSkillList ?? [];
+}
+function clonePlan(plan) {
+	return new Map(Array.from(plan, ([skillId, choice]) => [skillId, { ...choice }]));
+}
+function calculatePlanCost(plan, ownedSkills) {
+	let cost = 0;
+	for (const [skillId, choice] of plan) if (!choice.isQuest) cost += Math.max(0, choice.count - getOwnedLevel(ownedSkills, skillId));
+	return cost;
+}
+function getPlannedLevel(plan, ownedSkills, skillId) {
+	return Math.max(plan.get(skillId)?.count ?? 0, getOwnedLevel(ownedSkills, skillId));
+}
+/**
+* Build a complete candidate plan for one more level of skillId. The input
+* plan is never mutated. A null result means the complete prerequisite chain
+* is invalid or cannot be afforded.
+*/
+function stageSkillPlan({ plan, skillId, ownedSkills, skillInfo, skillTreeView, jobId, availablePoints }) {
+	const candidate = clonePlan(plan);
+	const visiting = /* @__PURE__ */ new Set();
+	const stage = (currentSkillId, requiredLevel = null) => {
+		const info = skillInfo[currentSkillId];
+		if (!info || visiting.has(currentSkillId)) return false;
+		const ownedLevel = getOwnedLevel(ownedSkills, currentSkillId);
+		if (info.Type === "Quest" && ownedLevel <= 0) return requiredLevel == null;
+		const currentLevel = Math.max(candidate.get(currentSkillId)?.count ?? 0, ownedLevel);
+		const targetLevel = requiredLevel == null ? Math.min(currentLevel + 1, info.MaxLv) : Math.max(currentLevel, requiredLevel);
+		if (targetLevel > info.MaxLv) return false;
+		candidate.set(currentSkillId, {
+			count: targetLevel,
+			isQuest: false
+		});
+		visiting.add(currentSkillId);
+		for (const [requiredSkillId, level] of resolveSkillRequirements(info, jobId, skillTreeView)) if (!stage(requiredSkillId, level)) {
+			visiting.delete(currentSkillId);
+			return false;
+		}
+		visiting.delete(currentSkillId);
+		return true;
+	};
+	if (!stage(skillId)) return null;
+	const cost = calculatePlanCost(candidate, ownedSkills);
+	if (cost > availablePoints) return null;
+	return {
+		plan: candidate,
+		cost
+	};
+}
+function validateSkillPlan({ plan, ownedSkills, skillInfo, skillTreeView, jobId, availablePoints }) {
+	if (calculatePlanCost(plan, ownedSkills) > availablePoints) return false;
+	for (const [skillId, choice] of plan) {
+		const info = skillInfo[skillId];
+		const ownedLevel = getOwnedLevel(ownedSkills, skillId);
+		if (!info || choice.count < ownedLevel || choice.count > info.MaxLv) return false;
+		for (const [requiredSkillId, requiredLevel] of resolveSkillRequirements(info, jobId, skillTreeView)) if (getPlannedLevel(plan, ownedSkills, requiredSkillId) < requiredLevel) return false;
+	}
+	return true;
+}
+/**
+* Return one skill id per upgrade packet, ordered so every prerequisite is
+* upgraded before its dependants. A null result means the staged plan is no
+* longer valid against the authoritative skill state.
+*/
+function createSkillUpgradeOrder(options) {
+	if (!validateSkillPlan(options)) return null;
+	const { plan, ownedSkills, skillInfo, skillTreeView, jobId } = options;
+	const order = [];
+	const visited = /* @__PURE__ */ new Set();
+	const visiting = /* @__PURE__ */ new Set();
+	const visit = (skillId) => {
+		if (visited.has(skillId)) return true;
+		if (visiting.has(skillId)) return false;
+		const info = skillInfo[skillId];
+		if (!info) return false;
+		visiting.add(skillId);
+		for (const [requiredSkillId] of resolveSkillRequirements(info, jobId, skillTreeView)) if (plan.has(requiredSkillId) && !visit(requiredSkillId)) return false;
+		visiting.delete(skillId);
+		visited.add(skillId);
+		const count = plan.get(skillId)?.count ?? getOwnedLevel(ownedSkills, skillId);
+		const upgrades = Math.max(0, count - getOwnedLevel(ownedSkills, skillId));
+		for (let i = 0; i < upgrades; i++) order.push(skillId);
+		return true;
+	};
+	for (const skillId of plan.keys()) if (!visit(skillId)) return null;
+	return order;
+}
+var init_SkillRequirements = __esmMin((() => {}));
+//#endregion
 //#region src/UI/Components/SkillList/SkillListCommon.js
 function _escapeHTML$2(text) {
 	const div = document.createElement("div");
@@ -230725,7 +230884,7 @@ function _escapeHTML$2(text) {
 function _isNumeric(val) {
 	return !isNaN(parseFloat(val)) && isFinite(val);
 }
-function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillListKey = "_NeedSkillList", showDescOnMiniHover = false, touchDrag = false, incrementalRemember = false, guardMissingJob = false, readdSkillOnUpdate = false, listOnly = false, dragFrom = null, titlebarText = null, containerSelector = null, preferenceDefaults = {
+function createSkillList({ name, htmlText, cssText, hasTabs = false, showDescOnMiniHover = false, touchDrag = false, guardMissingJob = false, readdSkillOnUpdate = false, listOnly = false, dragFrom = null, titlebarText = null, containerSelector = null, preferenceDefaults = {
 	x: 100,
 	y: 200,
 	width: 8,
@@ -230747,7 +230906,8 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 	let _lArrow, _rArrow;
 	let skillPosition = [];
 	const skillDependencyTree = [];
-	let rememberChoice = [];
+	let skillJobId = null;
+	let rememberChoice = /* @__PURE__ */ new Map();
 	const hasSkills = [];
 	let _justDragged = false;
 	const _touchDrag = {
@@ -230770,6 +230930,7 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 			onResize(e, this);
 		});
 		root.querySelector(".titlebar .close")?.addEventListener("click", () => {
+			onResetChoice(this);
 			this.ui.hide();
 		});
 		root.querySelector(".titlebar .mini")?.addEventListener("click", () => {
@@ -230943,6 +231104,7 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 	};
 	Component.toggle = function toggle() {
 		if (this.ui.is(":visible")) {
+			onResetChoice(this);
 			this.ui.hide();
 			if (_btnLevelUp && _btnLevelUp.parentNode) _btnLevelUp.remove();
 		} else {
@@ -230954,7 +231116,6 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 		switch (key.cmd) {
 			case "TOGGLE": this.toggle();
 		}
-		onResetChoice(this);
 	};
 	Component.setSkills = function setSkills(skills) {
 		const root = this.getRoot();
@@ -230968,10 +231129,13 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 		}
 		root.querySelectorAll(".upgradable").forEach((el) => el.classList.remove("upgradable"));
 		const entity = SessionStorage_default.Entity;
-		skillPosition = getSkillPosition(entity ? entity._job || entity.job : 0);
+		skillJobId = entity ? entity._job || entity.job : 0;
+		skillPosition = getSkillPosition(skillJobId);
+		skillDependencyTree.length = 0;
 		createSkillDependencyTree();
 		for (let i = 0, count = _list.length; i < count; ++i) this.onUpdateSkill(_list[i].SKID, 0);
 		_list.length = 0;
+		hasSkills.length = 0;
 		if (hasTabs) root.querySelectorAll(".content table").forEach((t) => {
 			t.innerHTML = "";
 		});
@@ -231013,7 +231177,7 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 							list,
 							MaxLv: sk.MaxLv
 						};
-						if (sk?.[needSkillListKey] !== void 0) sk[needSkillListKey].forEach((item) => {
+						resolveSkillRequirements(sk, skillJobId, SkillTreeView).forEach((item) => {
 							skillDependencyTree[skid]["dependency"][item[0]] = item[1];
 						});
 					} else console.error("Something wrong with this skill: %d", skid);
@@ -231024,20 +231188,18 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 						list: void 0,
 						MaxLv: sk.MaxLv
 					};
-					if (sk?.[needSkillListKey] !== void 0) sk[needSkillListKey].forEach((item) => {
+					resolveSkillRequirements(sk, skillJobId, SkillTreeView).forEach((item) => {
 						skillDependencyTree[skid]["dependency"][item[0]] = item[1];
 					});
 				}
 			});
 		});
 	}
-	function specifyRequirements(skillId, count, root) {
-		const skdt = skillDependencyTree[skillId];
-		if (skdt?.dependency || count != null) skillPosition.forEach((items, list) => {
+	function highlightNecessarySkill(skillId, count, root) {
+		skillPosition.forEach((items, list) => {
 			if (items[skillId] !== void 0) {
 				const skillbox = root.querySelector(`#positionSkills${list} .s${items[skillId]}`);
 				if (skillbox) {
-					skillbox.querySelector(".disabled");
 					skillbox.classList.add("needleSkill");
 					if (count !== null && count !== void 0) {
 						const counterEl = document.createElement("div");
@@ -231048,76 +231210,51 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 				}
 			}
 		});
-		if (skdt?.dependency) skdt.dependency.forEach((item, key) => {
-			specifyRequirements(key, item, root);
+	}
+	function collectNecessarySkills(skillId, requirements, visiting = /* @__PURE__ */ new Set()) {
+		if (visiting.has(skillId)) return;
+		visiting.add(skillId);
+		skillDependencyTree[skillId]?.dependency.forEach((level, requiredSkillId) => {
+			requirements.set(requiredSkillId, Math.max(requirements.get(requiredSkillId) ?? 0, level));
+			collectNecessarySkills(requiredSkillId, requirements, visiting);
 		});
+		visiting.delete(skillId);
 	}
 	function onRememberChoice(target, root) {
 		if (_justDragged) return;
 		let main = target.parentElement;
 		if (!main.classList.contains("skill")) main = main.parentElement;
-		rememberChoice = setRememberChoice(parseInt(main.getAttribute("data-index"), 10));
-		rememberChoice.forEach((item, skId) => {
-			if (!rememberChoice[skId]["isQuest"] && totalCounter < _points) {
-				const sk = skillDependencyTree[skId];
-				if (!sk) return;
-				const skillbox = root.querySelector(`#positionSkills${sk.list} .s${sk.position}`);
-				if (skillbox) {
-					const currentEl = skillbox.querySelector(".current");
-					if (incrementalRemember) {
-						if (currentEl && currentEl.textContent !== String(sk.MaxLv) && currentEl.textContent !== String(item.count)) {
-							const level = currentEl.textContent;
-							let diff = 0;
-							if (item.count > level) diff = item.count - level;
-							totalCounter += diff;
-							skillbox.querySelectorAll(".skill").forEach((el) => el.classList.remove("disabled"));
-							const levelEl = skillbox.querySelector(".level");
-							if (levelEl) levelEl.style.display = "";
-							if (currentEl) currentEl.textContent = rememberChoice[skId]["count"];
-							const maxEl = skillbox.querySelector(".max");
-							if (maxEl) maxEl.textContent = rememberChoice[skId]["count"];
-						}
-					} else if (currentEl && currentEl.textContent !== String(sk.MaxLv)) {
-						totalCounter += rememberChoice[skId]["count"];
-						const disabledEl = skillbox.querySelector(".disabled");
-						if (disabledEl) disabledEl.classList.remove("disabled");
-						const levelEl = skillbox.querySelector(".level");
-						if (levelEl) levelEl.style.display = "";
-						if (currentEl) currentEl.textContent = rememberChoice[skId]["count"];
-						const maxEl = skillbox.querySelector(".max");
-						if (maxEl) maxEl.textContent = rememberChoice[skId]["count"];
-					}
-				}
-			}
+		const skillId = parseInt(main.getAttribute("data-index"), 10);
+		const result = stageSkillPlan({
+			plan: rememberChoice,
+			skillId,
+			ownedSkills: hasSkills,
+			skillInfo: SkillInfo,
+			skillTreeView: SkillTreeView,
+			jobId: skillJobId,
+			availablePoints: _points
+		});
+		if (!result) return;
+		rememberChoice = result.plan;
+		totalCounter = result.cost;
+		renderRememberChoice(root);
+	}
+	function renderRememberChoice(root) {
+		rememberChoice.forEach((choice, skillId) => {
+			if (choice.isQuest) return;
+			const skill = hasSkills[skillId];
+			root.querySelectorAll(`.skill.id${skillId}`).forEach((element) => {
+				element.classList.remove("active", "passive", "disabled");
+				element.classList.add(skill?.type ? "active" : "passive");
+				const levelEl = element.querySelector(".level");
+				if (levelEl) levelEl.style.display = "";
+				element.querySelectorAll(".current, .max").forEach((level) => {
+					level.textContent = choice.count;
+				});
+			});
 		});
 		const skpointsEl = root.querySelector(".skpoints_count");
 		if (skpointsEl) skpointsEl.textContent = `${_points - totalCounter}/${_points}`;
-	}
-	function setRememberChoice(skillId, count = null, isQuest = false) {
-		const sk = SkillInfo[skillId];
-		if (!isQuest && sk["Type"] === "Quest") {
-			const skill = getSkillById(skillId);
-			isQuest = !skill?.level || skill?.level <= 0;
-		}
-		rememberChoice[skillId] = rememberChoice[skillId] ?? {
-			count: hasSkills?.[skillId]?.level ?? 0,
-			list: null,
-			isQuest
-		};
-		if (!isQuest) {
-			if (count) {
-				if (count > rememberChoice[skillId]["count"]) rememberChoice[skillId]["count"] = count;
-			} else if (sk["MaxLv"] > rememberChoice[skillId]["count"]) rememberChoice[skillId]["count"]++;
-		}
-		if (sk[needSkillListKey] !== void 0) {
-			sk[needSkillListKey].forEach((item) => {
-				rememberChoice[skillId][item[0]] = setRememberChoice(item[0], item[1], isQuest)[item[0]];
-			});
-			Object.entries(rememberChoice[skillId]).forEach(([key, value]) => {
-				if (_isNumeric(key) && value.isQuest) rememberChoice[skillId]["isQuest"] = value.isQuest;
-			});
-		}
-		return rememberChoice;
 	}
 	function getSkillPosition(JobId) {
 		const positions = [];
@@ -231489,47 +231626,53 @@ function createSkillList({ name, htmlText, cssText, hasTabs = false, needSkillLi
 		resize(comp, _preferences.width, _preferences.height);
 	}
 	function onApplyChoice(comp) {
-		const applyArr = [];
-		rememberChoice.forEach((item, skillId) => {
-			applyArr[skillId] = 0;
-			const level = hasSkills?.[skillId]?.level ?? 0;
-			if (item.count > level) applyArr[skillId] = item.count - level;
-			else applyArr[skillId] = item.count;
+		const order = createSkillUpgradeOrder({
+			plan: rememberChoice,
+			ownedSkills: hasSkills,
+			skillInfo: SkillInfo,
+			skillTreeView: SkillTreeView,
+			jobId: skillJobId,
+			availablePoints: _points
 		});
-		applyArr.forEach((c, k) => {
-			for (let i = 0; i < c; i++) Component.onIncreaseSkill(parseInt(k, 10));
-		});
-		totalCounter = 0;
-		const skpointsEl = comp.getRoot().querySelector(".skpoints_count");
-		if (skpointsEl) skpointsEl.textContent = `${_points - totalCounter}`;
-		rememberChoice = [];
+		if (!order) {
+			onResetChoice(comp);
+			return;
+		}
+		order.forEach((skillId) => Component.onIncreaseSkill(skillId));
+		onResetChoice(comp);
 	}
 	function onResetChoice(comp) {
 		const root = comp.getRoot();
-		rememberChoice.forEach((_count, skillId) => {
-			if (!skillDependencyTree[skillId]) return;
-			const skillbox = root.querySelector(`.skillCol.s${skillDependencyTree[skillId].position}`);
-			if (skillbox) {
-				if (!hasSkills?.[skillId]?.level) skillbox.querySelectorAll(".skill").forEach((el) => el.classList.add("disabled"));
-				const selectable = skillbox.querySelector(".selectable");
+		rememberChoice.forEach((_choice, skillId) => {
+			const skill = hasSkills[skillId];
+			const level = skill?.level ?? 0;
+			root.querySelectorAll(`.skill.id${skillId}`).forEach((element) => {
+				element.classList.remove("active", "passive", "disabled");
+				element.classList.add(level ? skill?.type ? "active" : "passive" : "disabled");
+				const selectable = element.querySelector(".selectable");
 				if (selectable) selectable.style.display = "";
-				skillbox.querySelectorAll(".current").forEach((el) => {
-					el.textContent = hasSkills?.[skillId]?.level ?? 0;
+				element.querySelectorAll(".current, .max").forEach((value) => {
+					value.textContent = level;
 				});
-				skillbox.querySelectorAll(".max").forEach((el) => {
-					el.textContent = hasSkills?.[skillId]?.level ?? 0;
-				});
-			}
+				const levelEl = element.querySelector(".level");
+				if (levelEl) levelEl.style.display = !level && element.parentElement?.classList.contains("skillCol") ? "none" : "";
+			});
 		});
 		totalCounter = 0;
 		const skpointsEl = root.querySelector(".skpoints_count");
 		if (skpointsEl) skpointsEl.textContent = _points;
-		rememberChoice = [];
+		rememberChoice = /* @__PURE__ */ new Map();
 	}
 	function onNecessarySkills(target, root) {
 		let main = target.parentElement;
 		if (!main.classList.contains("skill")) main = main.parentElement;
-		specifyRequirements(parseInt(main.getAttribute("data-index"), 10), null, root);
+		const skillId = parseInt(main.getAttribute("data-index"), 10);
+		const requirements = /* @__PURE__ */ new Map();
+		collectNecessarySkills(skillId, requirements);
+		highlightNecessarySkill(skillId, null, root);
+		requirements.forEach((level, requiredSkillId) => {
+			highlightNecessarySkill(requiredSkillId, level, root);
+		});
 	}
 	function _resolveSkillID(el) {
 		let main = el.parentElement;
@@ -231649,6 +231792,7 @@ var init_SkillListCommon = __esmMin((() => {
 	init_SkillInfo();
 	init_SkillTargetSelection();
 	init_SkillTreeView();
+	init_SkillRequirements();
 	init_UIManager();
 }));
 //#endregion
@@ -231709,10 +231853,8 @@ var init_SkillListV2 = __esmMin((() => {
 		htmlText: SkillListV2_default$2,
 		cssText: SkillListV2_default$1,
 		hasTabs: true,
-		needSkillListKey: "_NeedSkillList",
 		showDescOnMiniHover: false,
 		touchDrag: true,
-		incrementalRemember: true,
 		guardMissingJob: true,
 		readdSkillOnUpdate: true,
 		dragFrom: "SkillList"
@@ -238490,6 +238632,29 @@ var init_WriteRodex = __esmMin((() => {
 	WriteRodex_default = UIManager.addComponent(WriteRodex);
 }));
 //#endregion
+//#region src/UI/Components/Inventory/InventoryItemTransfer.js
+/**
+* Transfer an inventory item stack to the active receivers, highest priority first.
+* A receiver that declines the item lets the next one (or the caller's fallback) handle it.
+*
+* @param {object} item Inventory item
+* @param {object} components Registered UI components
+* @returns {boolean} Whether a receiver handled the request
+*/
+function transferInventoryItemStack(item, components) {
+	if (!item || !components) return false;
+	return Object.values(components).filter((component) => {
+		return component?.__active && component._host?.isConnected && component._host.style.display !== "none" && typeof component.receiveInventoryItemStack === "function";
+	}).sort((a, b) => (b.inventoryTransferPriority || 0) - (a.inventoryTransferPriority || 0)).some((receiver) => receiver.receiveInventoryItemStack(item) === true);
+}
+var InventoryItemTransferPriority;
+var init_InventoryItemTransfer = __esmMin((() => {
+	InventoryItemTransferPriority = Object.freeze({
+		TRADE: 300,
+		NPC_STORE: 400
+	});
+}));
+//#endregion
 //#region src/UI/Components/Inventory/InventoryCommon.js
 function _sanitizeHtml$7(str) {
 	const whitelist = [
@@ -239311,6 +239476,7 @@ function createInventory(config) {
 	* Alt Right Click Request Transfer
 	*/
 	function transferItemToOtherUI(item) {
+		if (transferInventoryItemStack(item, UIManager.components)) return true;
 		const storageUI = StorageController.getUI();
 		const isStorageOpen = storageUI._host ? storageUI._host.style.display !== "none" : false;
 		const isCartOpen = CartItems_default._host ? CartItems_default._host.style.display !== "none" : false;
@@ -239616,6 +239782,7 @@ var init_InventoryCommon = __esmMin((() => {
 	init_Enchant();
 	init_Mail$1();
 	init_WriteRodex();
+	init_InventoryItemTransfer();
 }));
 //#endregion
 //#region src/UI/Components/Inventory/InventoryV0/InventoryV0.js
@@ -245168,6 +245335,25 @@ var init_Guild = __esmMin((() => {
 			Network.sendPacket(pkt);
 		}
 		/**
+		* Send an invitation to the player by name
+		*
+		* @param {string} target character name
+		*
+		* @note Sends CZ.REQ_JOIN_GUILD2 (0x916), which is only valid for
+		*   PACKETVER >= 20120131 (length table defines 0x916 from that date).
+		*   Older clients can't invite by name — see REVIEW.md (Packet changes /
+		*   PACKETVER range).
+		*/
+		static requestPlayerInvitationByName(name) {
+			if (PacketVerManager_default.value < 20120131) {
+				ChatBox_default.addText("Guild invite by name requires client 2012-01-31 or newer.", ChatBox_default.TYPE.ERROR, ChatBox_default.FILTER.PUBLIC_LOG);
+				return;
+			}
+			const pkt = new PACKET.CZ.REQ_JOIN_GUILD2();
+			pkt.name = name;
+			Network.sendPacket(pkt);
+		}
+		/**
 		* Send a guild alliance to a target player
 		*
 		* @param {number} target account id
@@ -248230,6 +248416,17 @@ var init_ProcessCommand = __esmMin((() => {
 				}
 			}
 		},
+		guildinvite: {
+			description: "Invites the specified player to your guild",
+			callback: function(text) {
+				const matches = text.match(/^guildinvite\s+(.+)/);
+				if (matches && matches[1]) {
+					GuildEngine.requestPlayerInvitationByName(matches[1]);
+					return;
+				}
+				this.addText("Usage: /guildinvite <Character Name>", this.TYPE.INFO, this.FILTER.PUBLIC_LOG);
+			}
+		},
 		breakguild: {
 			description: "Disbands a guild. Can only be used by the guild leader. All members must be expelled first",
 			callback: function(text) {
@@ -250253,8 +250450,8 @@ function rebuildMeshAtFrame(self, gl, frame) {
 	}
 	const buffer = new Float32Array(total);
 	let offset = 0;
-	let i;
-	for (i = 0; i < objects.length; i++) {
+	let i = 0;
+	for (; i < objects.length; i++) {
 		const obj = objects[i];
 		const length = obj.mesh.length;
 		infos[i] = {
@@ -253382,8 +253579,8 @@ function loadCloudTexture(gl, i) {
 * Set up cloud data
 */
 function setUpCloudData() {
-	let i;
-	for (i = 0; i < MAX_CLOUDS; i++) {
+	let i = 0;
+	for (; i < MAX_CLOUDS; i++) {
 		if (!_clouds[i]) _clouds[i] = {
 			position: vec3$7.create(),
 			direction: vec3$7.create(),
@@ -257768,7 +257965,7 @@ var init_Renderer = __esmMin((() => {
 		* Start rendering
 		*/
 		static render(fn) {
-			if (fn) this.renderCallbacks.push(fn);
+			if (fn && !this.renderCallbacks.includes(fn)) this.renderCallbacks.push(fn);
 			if (!this.rendering) {
 				this.rendering = true;
 				try {
@@ -296370,6 +296567,7 @@ var init_DBManager = __esmMin((() => {
 			JobConst_default.MONK_H,
 			JobConst_default.SURA,
 			JobConst_default.SURA_H,
+			JobConst_default.SURA_2ND,
 			JobConst_default.INQUISITOR,
 			JobConst_default.MONK_B,
 			JobConst_default.SURA_B,
@@ -297293,6 +297491,38 @@ var init_DBManager = __esmMin((() => {
 				} else if (type in WeaponAction[job]) return WeaponAction[job][type];
 			}
 			return 0;
+		}
+		/**
+		* @return {{frame: number, length: number}|null} attack slice for jobs with combined action sheets
+		* @param {number} job
+		* @param {number} weapon
+		*/
+		static getAttackSlice(job, weapon) {
+			const type = DB.getWeaponType(weapon, true);
+			switch (job) {
+				case JobConst_default.MONK:
+				case JobConst_default.MONK_H:
+				case JobConst_default.MONK_B:
+				case JobConst_default.SURA:
+				case JobConst_default.SURA_H:
+				case JobConst_default.SURA_B:
+				case JobConst_default.SURA_2ND:
+				case JobConst_default.INQUISITOR:
+				case JobConst_default.INQUISITOR_RIDING:
+					if (type === WeaponType_default.KNUKLE || type === WeaponType_default.NONE) return {
+						frame: 0,
+						length: 5
+					};
+					break;
+				case JobConst_default.DO_SUMMONER:
+				case JobConst_default.DO_SUMMONER_B:
+				case JobConst_default.SPIRIT_HANDLER:
+				case JobConst_default.SPIRIT_HANDLER_RIDING1: return {
+					frame: 0,
+					length: 4
+				};
+			}
+			return null;
 		}
 		static mountWeapon(weaponID, shieldID) {
 			const _weapon = DB.getWeaponType(weaponID, true);
@@ -299030,6 +299260,7 @@ var init_Trade$1 = __esmMin((() => {
 	init_ItemInfo();
 	init_Inventory();
 	init_ChatBox();
+	init_InventoryItemTransfer();
 	init_Trade$3();
 	init_Trade$2();
 	Trade = new GUIComponent("Trade", Trade_default$1);
@@ -299180,6 +299411,13 @@ var init_Trade$1 = __esmMin((() => {
 			const icon = root.querySelector(`.item[data-index="${idx}"] .icon`);
 			if (icon && icon.closest(".box.recv")) icon.style.backgroundImage = `url(${data})`;
 		});
+	};
+	Trade.inventoryTransferPriority = InventoryItemTransferPriority.TRADE;
+	Trade.receiveInventoryItemStack = function receiveInventoryItemStack(item) {
+		const sendBox = Trade.getRoot().querySelector(".box.send");
+		if (!item || !sendBox || sendBox.classList.contains("disabled")) return false;
+		onRequestAddItem(item.index, item.count || 1);
+		return true;
 	};
 	/**
 	* Conclude a part of the trade
@@ -299678,37 +299916,49 @@ function Animation() {
 function setAction(option) {
 	const anim = this.animation;
 	if (option.delay) {
-		anim.delay = option.delay + 0;
-		option.delay = 0;
-		anim.save = option;
-	} else {
-		if (option.action === this.ACTION.ATTACK) {
-			if (this.objecttype === this.constructor.TYPE_PC) {
-				const attack = DB.getWeaponAction(this.weapon, this._job, this._sex);
-				option.action = [
-					this.ACTION.ATTACK1,
-					this.ACTION.ATTACK2,
-					this.ACTION.ATTACK3
-				][attack];
-			}
-			if (option.action === -2) option.action = this.ACTION.ATTACK1;
+		const targetDelay = option.delay < 1e9 ? Date.now() + option.delay : option.delay;
+		if (targetDelay > Date.now()) {
+			anim.delay = targetDelay;
+			option.delay = 0;
+			anim.save = option;
+			anim.next = false;
+			return;
 		}
-		const wasWalking = this.action === this.ACTION.WALK;
-		const newAction = option.action === -1 || typeof option.action === "undefined" ? this.ACTION.IDLE : option.action;
-		const willWalk = newAction === this.ACTION.WALK;
-		if (wasWalking && !willWalk && this.walk && this.walk.total > 0 && this.objecttype !== this.constructor.TYPE_FALCON && this.objecttype !== this.constructor.TYPE_WUG) this.resetRoute();
-		this.action = newAction;
-		anim.tick = Date.now() + 0;
-		anim.delay = 0;
-		anim.frame = option.frame || 0;
-		anim.speed = option.speed || false;
-		anim.length = option.length || false;
-		anim.repeat = option.repeat || false;
-		anim.play = typeof option.play !== "undefined" ? option.play : true;
-		anim.next = option.next || false;
-		anim.save = false;
-		this.sound.free();
+		option.delay = 0;
 	}
+	if (option.action === this.ACTION.ATTACK) {
+		if (this.objecttype === this.constructor.TYPE_PC) {
+			const attack = DB.getWeaponAction(this.weapon, this._job, this._sex);
+			option.action = [
+				this.ACTION.ATTACK1,
+				this.ACTION.ATTACK2,
+				this.ACTION.ATTACK3
+			][attack];
+			if (!option.length) {
+				const slice = DB.getAttackSlice(this._job, this.weapon);
+				if (slice) {
+					if (typeof option.frame === "undefined" || option.frame === 0) option.frame = slice.frame;
+					option.length = slice.length;
+				}
+			}
+		}
+		if (option.action === -2) option.action = this.ACTION.ATTACK1;
+	}
+	const wasWalking = this.action === this.ACTION.WALK;
+	const newAction = option.action === -1 || typeof option.action === "undefined" ? this.ACTION.IDLE : option.action;
+	const willWalk = newAction === this.ACTION.WALK;
+	if (wasWalking && !willWalk && !this.isFastMoving && this.walk && this.walk.total > 0 && this.objecttype !== this.constructor.TYPE_FALCON && this.objecttype !== this.constructor.TYPE_WUG) this.resetRoute();
+	this.action = newAction;
+	anim.tick = Date.now() + 0;
+	anim.delay = 0;
+	anim.frame = option.frame || 0;
+	anim.speed = option.speed || false;
+	anim.length = option.length || false;
+	anim.repeat = option.repeat || false;
+	anim.play = typeof option.play !== "undefined" ? option.play : true;
+	anim.next = option.next || false;
+	anim.save = false;
+	this.sound.free();
 }
 /**
 * Initialize Entity action
@@ -301758,6 +302008,7 @@ function WalkStructure() {
 	this.prevTick = 0;
 	this.dist = 0;
 	this.path = new Int16Array(PathFinding_default.MAX_WALKPATH * 2);
+	this.segmentDurations = new Float32Array(PathFinding_default.MAX_WALKPATH);
 	this.pos = /* @__PURE__ */ new Float32Array(3);
 	this.lastPos = /* @__PURE__ */ new Float32Array(3);
 	this.onEnd = null;
@@ -301809,6 +302060,14 @@ function walkToNonWalkableGround(from_x, from_y, to_x, to_y, range, isOverShoot 
 	this.walk.total = total * 2;
 	if (total > 0) {
 		this.walk.pos.set(this.position);
+		const numSegments = total - 1;
+		for (let i = 0; i < numSegments; i++) {
+			const pIdx = (i + 1) * 2;
+			const segDx = path[pIdx] - (i === 0 ? this.position[0] : path[pIdx - 2]);
+			const segDy = path[pIdx + 1] - (i === 0 ? this.position[1] : path[pIdx - 1]);
+			const segDist = Math.hypot(segDx, segDy);
+			this.walk.segmentDurations[i] = segDist * this.walk.speed;
+		}
 		const nowTick = Date.now();
 		const pathDuration = estimatePathDuration(this.walk.path, this.walk.total, this.walk.speed, this.position);
 		const startTick = computeWalkStartTick(nowTick, moveStartTime, pathDuration, this.objecttype === this.constructor.TYPE_PC || this.objecttype === this.constructor.TYPE_DISGUISED || this.objecttype === this.constructor.TYPE_PET || this.objecttype === this.constructor.TYPE_HOM || this.objecttype === this.constructor.TYPE_MERC ? pathDuration : Math.min(pathDuration, this.walk.speed));
@@ -301882,24 +302141,89 @@ function walkToNonWalkableGround(from_x, from_y, to_x, to_y, range, isOverShoot 
 * @param {number} to_x
 * @param {number} to_y
 * @param {number} range optional
+* @param {number} [moveStartTime]
+* @param {number} [moveEndTime]
+* @param {boolean} [isFastMove=false]
+* @param {number} [fastSpeed]
 */
-function walkTo(from_x, from_y, to_x, to_y, range, moveStartTime) {
+function walkTo(from_x, from_y, to_x, to_y, range, moveStartTime, moveEndTime, isFastMove, fastSpeed) {
 	if (from_x === to_x && from_y === to_y) return;
+	const curX = this.position[0];
+	const curY = this.position[1];
+	const hasCurrentPos = isFinite(curX) && isFinite(curY) && (curX !== 0 || curY !== 0);
+	const curCellX = Math.round(curX);
+	const curCellY = Math.round(curY);
+	const distFromStart = hasCurrentPos ? Math.hypot(curCellX - from_x, curCellY - from_y) : Infinity;
+	if (distFromStart > 16 || !hasCurrentPos) {
+		this.position[0] = from_x;
+		this.position[1] = from_y;
+		this.position[2] = Altitude.getCellHeight(from_x, from_y);
+	}
 	const hadRoute = this.walk && this.walk.total > 0;
 	const wasWalkingAction = this.action === this.ACTION.WALK;
 	this.resetRoute(hadRoute);
+	if (isFastMove) {
+		if (!this.isFastMoving) this._normalSpeed = this.walk.speed;
+		this.isFastMoving = true;
+		this._fastMoveTrail = true;
+		if (fastSpeed) this.walk.speed = fastSpeed;
+	}
 	const path = this.walk.path;
-	const total = PathFinding_default.search(from_x | 0, from_y | 0, to_x | 0, to_y | 0, range || 0, path);
+	let total = 0;
+	let usedFallback = false;
+	if (distFromStart <= 16 && hasCurrentPos) total = PathFinding_default.search(curCellX, curCellY, to_x | 0, to_y | 0, range || 0, path);
+	if (!total) {
+		total = PathFinding_default.search(from_x | 0, from_y | 0, to_x | 0, to_y | 0, range || 0, path);
+		if (total) usedFallback = true;
+	}
+	if (usedFallback) {
+		this.position[0] = from_x;
+		this.position[1] = from_y;
+		this.position[2] = Altitude.getCellHeight(from_x, from_y);
+	}
 	this.walk.index = 2;
 	this.walk.total = total * 2;
 	if (total) {
 		this.walk.pos.set(this.position);
-		const nowTick = Date.now();
-		const pathDuration = estimatePathDuration(this.walk.path, this.walk.total, this.walk.speed);
-		const startTick = computeWalkStartTick(nowTick, moveStartTime, pathDuration, this.objecttype === this.constructor.TYPE_PC || this.objecttype === this.constructor.TYPE_DISGUISED || this.objecttype === this.constructor.TYPE_PET || this.objecttype === this.constructor.TYPE_HOM || this.objecttype === this.constructor.TYPE_MERC ? pathDuration : Math.min(pathDuration, this.walk.speed));
-		this.walk.tick = this.walk.prevTick = startTick;
-		if (!hadRoute) this.walk.dist = 0;
+		if (!hadRoute || usedFallback) this.walk.dist = 0;
 		this.walk.lastPos.set(this.position);
+		const numSegments = total - 1;
+		let clientDuration = 0;
+		const firstDx = path[2] - this.position[0];
+		const firstDy = path[3] - this.position[1];
+		const firstSegDuration = Math.hypot(firstDx, firstDy) * this.walk.speed;
+		this.walk.segmentDurations[0] = firstSegDuration;
+		clientDuration += firstSegDuration;
+		for (let i = 1; i < numSegments; i++) {
+			const pIdx = (i + 1) * 2;
+			const segDx = path[pIdx] - path[pIdx - 2];
+			const segDy = path[pIdx + 1] - path[pIdx - 1];
+			const segDur = segDx && segDy ? this.walk.speed * DIAGONAL_FACTOR : this.walk.speed;
+			this.walk.segmentDurations[i] = segDur;
+			clientDuration += segDur;
+		}
+		let serverDuration = 0;
+		if (!isFastMove) {
+			if (moveEndTime && moveStartTime && moveEndTime > moveStartTime) serverDuration = moveEndTime - moveStartTime;
+			else {
+				const sDx = to_x - from_x;
+				const sDy = to_y - from_y;
+				const straight = Math.abs(Math.abs(sDx) - Math.abs(sDy));
+				const diag = Math.min(Math.abs(sDx), Math.abs(sDy));
+				serverDuration = straight * this.walk.speed + diag * this.walk.speed * DIAGONAL_FACTOR;
+			}
+		}
+		const nowTick = Date.now();
+		const isPlayerLike = this.objecttype === this.constructor.TYPE_PC || this.objecttype === this.constructor.TYPE_DISGUISED || this.objecttype === this.constructor.TYPE_PET || this.objecttype === this.constructor.TYPE_HOM || this.objecttype === this.constructor.TYPE_MERC;
+		const maxFastForward = isFastMove ? 0 : isPlayerLike ? clientDuration : Math.min(clientDuration, this.walk.speed);
+		const startTick = isFastMove ? nowTick : computeWalkStartTick(nowTick, moveStartTime, clientDuration, maxFastForward);
+		this.walk.tick = this.walk.prevTick = startTick;
+		if (!isFastMove && numSegments > 0 && serverDuration > 0) {
+			let sub = serverDuration - clientDuration;
+			sub = Math.max(-2500, Math.min(2500, sub));
+			const subDiv = sub / numSegments;
+			for (let i = 0; i < numSegments; i++) this.walk.segmentDurations[i] = Math.max(10, this.walk.segmentDurations[i] + subDiv);
+		}
 		if (this.walk.total >= 2) {
 			const firstX1 = this.walk.path[2];
 			const firstY1 = this.walk.path[3];
@@ -301907,13 +302231,71 @@ function walkTo(from_x, from_y, to_x, to_y, range, moveStartTime) {
 			this.direction = quantizeDir(initDir1);
 		}
 		this.headDir = 0;
-		if (!wasWalkingAction) this.setAction({
+		if (!wasWalkingAction && !isFastMove) this.setAction({
 			action: this.ACTION.WALK,
 			frame: 0,
 			repeat: true,
 			play: true
 		});
 	}
+}
+/**
+* Fast move / forced relocation to a destination cell (e.g. MO_BODYRELOCATION, knockback, slide).
+* Bypasses regular rubberbanding, latency compensation, and walk animation cycles.
+* Uses direct linear interpolation between current position and destination cell (no curved walking detours).
+*
+* @param {number} to_x Destination X cell
+* @param {number} to_y Destination Y cell
+* @param {number} [speed=15] Speed in ms per cell
+* @param {function} [onEnd] Callback when relocation finishes
+* @param {boolean} [keepDirection=false] Whether to preserve current facing direction (e.g. knockback/backslide)
+* @returns {boolean} True if fast movement started, false if already at destination (no-op)
+*/
+function fastMoveTo(to_x, to_y, speed = 15, onEnd, keepDirection = false) {
+	const curX = this.position[0];
+	const curY = this.position[1];
+	const hasCurrentPos = isFinite(curX) && isFinite(curY) && (curX !== 0 || curY !== 0);
+	const curCellX = hasCurrentPos ? Math.round(curX) : to_x | 0;
+	const curCellY = hasCurrentPos ? Math.round(curY) : to_y | 0;
+	if (curCellX === (to_x | 0) && curCellY === (to_y | 0)) {
+		this.resetRoute();
+		if (this.action !== this.ACTION.DIE && (!this.animation.play || this.action === this.ACTION.WALK)) this.setAction({
+			action: this.ACTION.IDLE,
+			frame: 0,
+			play: true,
+			repeat: true
+		});
+		if (onEnd) onEnd();
+		return false;
+	}
+	this.resetRoute();
+	if (!this.isFastMoving) this._normalSpeed = this.walk.speed;
+	this.isFastMoving = true;
+	this._preserveDirection = !!keepDirection;
+	this.walk.speed = speed || 15;
+	if (this.action === this.ACTION.WALK) this.setAction({ action: this.ACTION.IDLE });
+	const path = this.walk.path;
+	path[0] = curCellX;
+	path[1] = curCellY;
+	path[2] = to_x | 0;
+	path[3] = to_y | 0;
+	this.walk.index = 2;
+	this.walk.total = 4;
+	this.walk.pos.set(this.position);
+	this.walk.lastPos.set(this.position);
+	this.walk.dist = 0;
+	const firstDx = path[2] - this.position[0];
+	const firstDy = path[3] - this.position[1];
+	this.walk.segmentDurations[0] = Math.max(1, Math.hypot(firstDx, firstDy) * this.walk.speed);
+	const nowTick = Date.now();
+	this.walk.tick = this.walk.prevTick = nowTick;
+	if (!this._preserveDirection) {
+		const initDir = offsetToFloatDir(firstDx, firstDy);
+		this.direction = quantizeDir(initDir);
+		this.headDir = 0;
+	}
+	if (onEnd) this.walk.onEnd = onEnd;
+	return true;
 }
 /**
 * Process walking
@@ -301927,7 +302309,7 @@ function walkProcess() {
 	const TICK = Date.now();
 	const falconGliding = 5;
 	if (total == 0) return;
-	if (total > 0 && this.action !== this.ACTION.WALK && this.objecttype !== this.constructor.TYPE_FALCON && this.objecttype !== this.constructor.TYPE_WUG) {
+	if (total > 0 && !this.isFastMoving && this.action !== this.ACTION.WALK && this.objecttype !== this.constructor.TYPE_FALCON && this.objecttype !== this.constructor.TYPE_WUG) {
 		let actionName = "UNKNOWN";
 		for (const key in this.ACTION) if (this.ACTION[key] === this.action) {
 			actionName = key;
@@ -301946,18 +302328,27 @@ function walkProcess() {
 		});
 		console.trace("Stack trace of debug:");
 	}
-	if (this.action === this.ACTION.WALK || this.objecttype === this.constructor.TYPE_FALCON || this.objecttype === this.constructor.TYPE_WUG) {
+	if (this.action === this.ACTION.WALK || this.isFastMoving || this.objecttype === this.constructor.TYPE_FALCON || this.objecttype === this.constructor.TYPE_WUG) {
 		const getSegmentDuration = function getSegmentDuration(dx, dy, baseSpeed) {
 			let duration = dx && dy ? baseSpeed * Math.SQRT2 : baseSpeed;
 			if (!duration || duration < 1) duration = 1;
 			return duration;
 		};
-		const finishWalk = function finishWalk() {
+		const finishWalk = () => {
 			const cellHeight = this.objecttype == this.constructor.TYPE_FALCON ? Altitude.getCellHeight(path[total - 2], path[total - 1]) + 5 : Altitude.getCellHeight(path[total - 2], path[total - 1]);
 			pos[0] = path[total - 2];
 			pos[1] = path[total - 1];
 			pos[2] = cellHeight;
 			walk.lastPos.set(pos);
+			if (this.isFastMoving) {
+				this.isFastMoving = false;
+				this._fastMoveTrail = false;
+				this._preserveDirection = false;
+				if (typeof this._normalSpeed === "number") {
+					this.walk.speed = this._normalSpeed;
+					delete this._normalSpeed;
+				}
+			}
 			if (this.objecttype == this.constructor.TYPE_WUG && this.isAttacking) this.setAction({
 				action: this.ACTION.ATTACK,
 				frame: 0,
@@ -301972,7 +302363,7 @@ function walkProcess() {
 					next: false
 				}
 			});
-			else this.setAction({
+			else if (this.action !== this.ACTION.DIE) this.setAction({
 				action: this.ACTION.IDLE,
 				frame: 0,
 				play: true,
@@ -301985,7 +302376,7 @@ function walkProcess() {
 			}
 			this.resetRoute();
 			this.isAttacking = false;
-		}.bind(this);
+		};
 		if (index >= total) {
 			finishWalk();
 			return;
@@ -301996,11 +302387,12 @@ function walkProcess() {
 		let nextY = path[index + 1];
 		let dx = nextX - startX;
 		let dy = nextY - startY;
-		let speed = getSegmentDuration(dx, dy, walk.speed);
+		let segIdx = index - 2 >> 1;
+		let speed = walk.segmentDurations && walk.segmentDurations[segIdx] || getSegmentDuration(dx, dy, walk.speed);
 		let segmentStart = walk.tick || TICK;
 		let segmentEnd = segmentStart + speed;
 		let traveledDist = 0;
-		if (walk.prevTick && walk.prevTick !== TICK && walk.prevTick > segmentStart && this.action !== this.ACTION.WALK && this.objecttype !== this.constructor.TYPE_FALCON) {
+		if (walk.prevTick && walk.prevTick !== TICK && walk.prevTick > segmentStart && !this.isFastMoving && this.action !== this.ACTION.WALK && this.objecttype !== this.constructor.TYPE_FALCON) {
 			segmentStart += TICK - walk.prevTick;
 			segmentEnd = segmentStart + speed;
 		}
@@ -302015,7 +302407,8 @@ function walkProcess() {
 			nextY = path[index + 1];
 			dx = nextX - startX;
 			dy = nextY - startY;
-			speed = getSegmentDuration(dx, dy, walk.speed);
+			segIdx = index - 2 >> 1;
+			speed = walk.segmentDurations && walk.segmentDurations[segIdx] || getSegmentDuration(dx, dy, walk.speed);
 			segmentStart = segmentEnd;
 			segmentEnd = segmentStart + speed;
 		}
@@ -302030,7 +302423,7 @@ function walkProcess() {
 		pos[0] = newX;
 		pos[1] = newY;
 		pos[2] = cellHeight;
-		if (index < total) {
+		if (!this._preserveDirection && index < total) {
 			if (index === 2) {
 				const remDx = nextX - newX;
 				const remDy = nextY - newY;
@@ -302091,10 +302484,20 @@ function entitiesWalkProcess() {
 	}
 }
 function resetRoute(keepDistance) {
+	if (this.isFastMoving) {
+		if (typeof this._normalSpeed === "number") {
+			this.walk.speed = this._normalSpeed;
+			delete this._normalSpeed;
+		}
+	}
+	this.isFastMoving = false;
+	this._fastMoveTrail = false;
+	this._preserveDirection = false;
 	this.walk.tick = 0;
 	this.walk.prevTick = 0;
 	if (!keepDistance) this.walk.dist = 0;
 	this.walk.path = new Int16Array(PathFinding_default.MAX_WALKPATH * 2);
+	if (this.walk.segmentDurations) this.walk.segmentDurations.fill(0);
 	this.walk.lastPos[0] = 0;
 	this.walk.lastPos[1] = 0;
 	this.walk.lastPos[2] = 0;
@@ -302145,8 +302548,13 @@ function distance(entity1, entity2) {
 */
 function Init$4() {
 	this.onWalkEnd = function onWalkEnd() {};
+	this._preserveDirection = false;
+	this.isFastMoving = false;
+	this._fastMoveTrail = false;
+	this._enableTrail = false;
 	this.walk = new WalkStructure();
 	this.walkTo = walkTo;
+	this.fastMoveTo = fastMoveTo;
 	this.walkToNonWalkableGround = walkToNonWalkableGround;
 	this.walkProcess = walkProcess;
 	this.entitiesWalkProcess = entitiesWalkProcess;
@@ -302263,18 +302671,18 @@ function renderSecondBody(entity, layers, spr, pal, files, type, _position, opti
 		};
 		const trail = entity._trailData[type];
 		const now = Date.now();
-		const interval = blurType === 3 || blurType === 5 ? 560 : 80;
+		const interval = entity.isFastMoving ? 30 : blurType === 3 || blurType === 5 ? 560 : 80;
 		const maxLen = blurType === 4 ? 1 : GraphicsSettings.performanceMode ? Math.floor(trailLength / 2) : trailLength;
 		let shouldCapture = false;
-		if (blurType === 1 || blurType === 3) shouldCapture = entity.action === entity.ACTION.WALK && now - trail.lastTick > interval;
+		if (blurType === 1 || blurType === 3) shouldCapture = (entity.action === entity.ACTION.WALK || entity.isFastMoving) && now - trail.lastTick > interval;
 		else if (blurType === 4) shouldCapture = trail.snapshots.length === 0;
-		else if (blurType === 5) shouldCapture = [
+		else if (blurType === 5) shouldCapture = ([
 			entity.ACTION.ATTACK,
 			entity.ACTION.ATTACK1,
 			entity.ACTION.ATTACK2,
 			entity.ACTION.ATTACK3,
 			entity.ACTION.SKILL
-		].includes(entity.action) && now - trail.lastTick > interval;
+		].includes(entity.action) || entity.isFastMoving) && now - trail.lastTick > interval;
 		if (shouldCapture) {
 			trail.snapshots.unshift({
 				position: gl_matrix_default.vec3.clone(entity.position),
@@ -302329,8 +302737,12 @@ function renderSecondBody(entity, layers, spr, pal, files, type, _position, opti
 */
 function getAnimationDelay(type, entity, act) {
 	if (type === "body" && entity.action === entity.ACTION.WALK) return act.delay / 150 * entity.walk.speed;
-	if (entity.action === entity.ACTION.ATTACK || entity.action === entity.ACTION.ATTACK1 || entity.action === entity.ACTION.ATTACK2 || entity.action === entity.ACTION.ATTACK3) return entity.attack_speed / act.animations.length;
-	return act.delay;
+	if (entity.action === entity.ACTION.ATTACK || entity.action === entity.ACTION.ATTACK1 || entity.action === entity.ACTION.ATTACK2 || entity.action === entity.ACTION.ATTACK3) {
+		if (act && act.delay && act.delay > 0) return act.delay;
+		if (entity.attack_speed && act && act.animations && act.animations.length > 0) return Math.max(entity.attack_speed / act.animations.length, 100);
+		return 150;
+	}
+	return act && act.delay || 150;
 }
 /**
 * Calculate animations
@@ -302392,14 +302804,14 @@ function calcAnimation(entity, act, type, tick) {
 		anim %= animSize;
 		return anim;
 	}
-	anim = Math.min(tick / delay | 0, animCount || animCount - 1);
+	anim = Math.min(tick / delay | 0, animCount ? animCount - 1 : 0);
 	anim %= animCount;
 	anim += animCount * headDir;
 	anim += animation.frame;
 	anim %= animSize;
-	const lastFrame = animation.frame + animSize - 1;
-	if (type === "body" && anim >= lastFrame) {
-		animation.frame = anim = lastFrame;
+	const lastFrame = animation.frame + animCount - 1;
+	if (type === "body" && (tick / delay | 0) >= animCount - 1) {
+		animation.frame = anim = Math.min(lastFrame, animSize - 1);
 		animation.play = false;
 		if (animation.next) entity.setAction(animation.next);
 	}
@@ -302477,7 +302889,7 @@ function Init$3() {
 	this.renderLayer = renderLayer;
 	this.renderEntity = renderEntity;
 }
-var WALK_DIST_TO_MOTION, renderGUI, calculateBoundingRect, renderEntity, renderElement;
+var WALK_DIST_TO_MOTION, renderGUI, SPRITE_LIFT, calculateBoundingRect, renderEntity, renderElement;
 var init_EntityRender = __esmMin((() => {
 	init_gl_matrix();
 	init_Camera();
@@ -302496,6 +302908,7 @@ var init_EntityRender = __esmMin((() => {
 		const vec4 = gl_matrix_default.vec4;
 		const _matrix = mat4.create();
 		const _vector = vec4.create();
+		const _pickMatrix = mat4.create();
 		return function _renderGUI(entity, modelView, projection) {
 			_vector[0] = entity.position[0] + .5;
 			_vector[1] = -entity.position[2];
@@ -302511,7 +302924,23 @@ var init_EntityRender = __esmMin((() => {
 			_matrix[9] = 0;
 			_matrix[10] = 1;
 			mat4.multiply(_matrix, projection, _matrix);
-			if (entity.effectColor[3] && entity._job !== 139) calculateBoundingRect(entity, _matrix);
+			if (entity.effectColor[3] && entity._job !== 139) {
+				_vector[0] = entity.position[0] + .5;
+				_vector[1] = -(entity.position[2] + SPRITE_LIFT);
+				_vector[2] = entity.position[1] + .5;
+				mat4.translate(_pickMatrix, modelView, _vector);
+				_pickMatrix[0] = 1;
+				_pickMatrix[1] = 0;
+				_pickMatrix[2] = 0;
+				_pickMatrix[4] = 0;
+				_pickMatrix[5] = 1;
+				_pickMatrix[6] = 0;
+				_pickMatrix[8] = 0;
+				_pickMatrix[9] = 0;
+				_pickMatrix[10] = 1;
+				mat4.multiply(_pickMatrix, projection, _pickMatrix);
+				calculateBoundingRect(entity, _pickMatrix);
+			}
 			_vector[0] = 0;
 			_vector[1] = 0;
 			_vector[2] = 0;
@@ -302526,6 +302955,7 @@ var init_EntityRender = __esmMin((() => {
 			if (entity.room.display) entity.room.render(_matrix);
 		};
 	})();
+	SPRITE_LIFT = .2;
 	calculateBoundingRect = (function calculateBoundingRectClosure() {
 		const vec4 = gl_matrix_default.vec4;
 		const size = gl_matrix_default.vec2.create();
@@ -302791,7 +303221,7 @@ var init_EntityRender = __esmMin((() => {
 			const isBERSERK = entity.getOpt3(StatusState_default.Status.BERSERK);
 			renderSecondBody(entity, layers, spr, pal, files, type, _position, {
 				enableHalo: entity.getOpt3(StatusState_default.Status.ASSUMPTIO) || !!entity._enableHalo,
-				enableTrail: isENERGYCOAT || isBUNSIN || isHALLUCINATIONWALK || isQUICKEN || isOVERTHRUST || isEXPLOSIONSPIRITS || isBERSERK || !!entity._enableTrail,
+				enableTrail: isENERGYCOAT || isBUNSIN || isHALLUCINATIONWALK || isQUICKEN || isOVERTHRUST || isEXPLOSIONSPIRITS || isBERSERK || !!entity._fastMoveTrail || !!entity._enableTrail,
 				blurType: isBUNSIN ? 5 : isHALLUCINATIONWALK ? 3 : entity._blurType || 1
 			});
 			for (let i = 0, count = layers.length; i < count; ++i) entity.renderLayer(layers[i], spr, pal, files.size, _position, type, isBlendModeOne);
@@ -304147,12 +304577,19 @@ var init_Entity$1 = __esmMin((() => {
 					if (this.display.name.length == 0) this.display.load = this.display.TYPE.NONE;
 					this.display.update(this.objecttype === Entity.TYPE_MOB ? this.display.STYLE.MOB : this.objecttype === Entity.TYPE_NPC_ABR ? this.display.STYLE.MOB : this.objecttype === Entity.TYPE_NPC_BIONIC ? this.display.STYLE.MOB : this.objecttype === Entity.TYPE_DISGUISED ? this.display.STYLE.MOB : this.objecttype === Entity.TYPE_NPC ? this.display.STYLE.NPC : this.objecttype === Entity.TYPE_NPC2 ? this.display.STYLE.NPC : this.display.STYLE.DEFAULT);
 					break;
-				case "MoveData":
-					this.position[0] = unit.MoveData[0];
-					this.position[1] = unit.MoveData[1];
-					this.position[2] = Altitude.getCellHeight(unit.MoveData[0], unit.MoveData[1]);
-					this.walkTo(unit.MoveData[0], unit.MoveData[1], unit.MoveData[2], unit.MoveData[3], void 0, unit.moveStartTime);
+				case "MoveData": {
+					const curX = this.position[0];
+					const curY = this.position[1];
+					const isUninitialized = !curX && !curY;
+					const isTooFar = Math.hypot(curX - unit.MoveData[0], curY - unit.MoveData[1]) > 16;
+					if (isUninitialized || isTooFar) {
+						this.position[0] = unit.MoveData[0];
+						this.position[1] = unit.MoveData[1];
+						this.position[2] = Altitude.getCellHeight(unit.MoveData[0], unit.MoveData[1]);
+					}
+					this.walkTo(unit.MoveData[0], unit.MoveData[1], unit.MoveData[2], unit.MoveData[3], void 0, unit.moveStartTime, unit.moveServerEndTime || unit.moveEndTime);
 					break;
+				}
 				case "accessory":
 					this.accessory = unit.accessory;
 					break;
@@ -308260,8 +308697,8 @@ var init_html2canvas = __esmMin((() => {
 						"Right",
 						"Bottom",
 						"Left"
-					], s;
-					for (s = 0; s < 4; s += 1) borders.push({
+					], s = 0;
+					for (; s < 4; s += 1) borders.push({
 						width: getCSSInt(el, "border" + sides[s] + "Width"),
 						color: getCSS(el, "border" + sides[s] + "Color")
 					});
@@ -308273,8 +308710,8 @@ var init_html2canvas = __esmMin((() => {
 						"TopRight",
 						"BottomRight",
 						"BottomLeft"
-					], s;
-					for (s = 0; s < 4; s += 1) borders.push(getCSS(el, "border" + sides[s] + "Radius"));
+					], s = 0;
+					for (; s < 4; s += 1) borders.push(getCSS(el, "border" + sides[s] + "Radius"));
 					return borders;
 				})(el);
 				for (borderSide = 0; borderSide < 4; borderSide += 1) {
@@ -308617,8 +309054,8 @@ var init_html2canvas = __esmMin((() => {
 			if (support.svgRendering) (function(body) {
 				let img = new Image(), size = docSize(), html = "";
 				function parseDOM(el) {
-					let children = _html2canvas.Util.Children(el), len = children.length, attr, a, alen, elm, i;
-					for (i = 0; i < len; i += 1) {
+					let children = _html2canvas.Util.Children(el), len = children.length, attr, a, alen, elm, i = 0;
+					for (; i < len; i += 1) {
 						elm = children[i];
 						if (elm.nodeType === 3) html += elm.nodeValue.replace(/\</g, "&lt;").replace(/\>/g, "&gt;");
 						else if (elm.nodeType === 1) {
@@ -309276,6 +309713,15 @@ var init_ScreenShot = __esmMin((() => {
 //#endregion
 //#region src/Controls/MapControl.js
 /**
+* Stop the camera rotation when the right button is released, even if the
+* release happens over a UI element that swallows the bubbling mouseup event.
+*/
+function onMouseUpCapture(event) {
+	if (event.which !== 3 || !Camera.action.active) return;
+	Cursor.setType(Cursor.ACTION.DEFAULT);
+	Camera.rotate(false);
+}
+/**
 * What to do when clicking on the map ?
 */
 function onMouseDown(event) {
@@ -309325,9 +309771,6 @@ function onMouseDown(event) {
 						SessionStorage_default.autoFollow = true;
 						onAutoFollow();
 					}
-					entityOver.onMouseDown();
-					entityOver.onFocus();
-					EntityManager.setFocusEntity(entityOver);
 				}
 				Cursor.setType(Cursor.ACTION.ROTATE);
 				Camera.rotate(true);
@@ -309532,6 +309975,7 @@ var init_MapControl = __esmMin((() => {
 			Renderer.canvas.addEventListener("drop", onDrop$6.bind(this));
 			window.addEventListener("mousedown", onMouseDown.bind(this));
 			window.addEventListener("mouseup", onMouseUp.bind(this));
+			window.addEventListener("mouseup", onMouseUpCapture, true);
 		}
 	};
 }));
@@ -316679,7 +317123,7 @@ var init_colors = __esmMin((() => {}));
 * @param {object} pkt - PACKET.ZC.NOTIFY_PLAYERMOVE
 */
 function onPlayerMove(pkt) {
-	SessionStorage_default.Entity.walkTo(pkt.MoveData[0], pkt.MoveData[1], pkt.MoveData[2], pkt.MoveData[3], void 0, pkt.moveStartTime);
+	SessionStorage_default.Entity.walkTo(pkt.MoveData[0], pkt.MoveData[1], pkt.MoveData[2], pkt.MoveData[3], void 0, pkt.moveStartTime, pkt.moveEndTime || pkt.moveServerEndTime);
 }
 /**
 * Our player just talk
@@ -317800,18 +318244,22 @@ var init_NPC = __esmMin((() => {
 }));
 //#endregion
 //#region src/DB/Skills/SkillAction.js
-var SkillAction;
+var SkillAction, makeAttackSkillAction, makeGenericSkillAction, makeSliceAttackAction;
 var init_SkillAction = __esmMin((() => {
+	init_DBManager();
 	init_SkillConst();
 	SkillAction = {};
-	SkillAction["DEFAULT"] = function(entity, tick) {
+	makeAttackSkillAction = (actionProp = "ATTACK") => function(entity, tick, pkt) {
+		const holdDelay = pkt && pkt.attackMT ? Math.max(pkt.attackMT, 400) : 400;
+		const nextAction = entity && entity.ACTION && entity.ACTION.READYFIGHT !== void 0 ? entity.ACTION.READYFIGHT : entity && entity.ACTION && entity.ACTION.IDLE || 0;
 		return {
-			action: entity.ACTION.SKILL,
+			action: entity.ACTION[actionProp],
 			frame: 0,
 			repeat: false,
 			play: true,
 			next: {
-				action: entity.ACTION.IDLE,
+				delay: (tick || Date.now()) + holdDelay,
+				action: nextAction,
 				frame: 0,
 				repeat: true,
 				play: true,
@@ -317819,14 +318267,17 @@ var init_SkillAction = __esmMin((() => {
 			}
 		};
 	};
-	SkillAction["DEFAULT_DORAM"] = function(entity, tick) {
+	makeGenericSkillAction = (actionProp = "SKILL", nextActionProp = "IDLE") => function(entity, tick, pkt) {
+		const holdDelay = pkt && pkt.attackMT ? Math.max(pkt.attackMT, 400) : 400;
+		const nextAction = entity && entity.ACTION && entity.ACTION[nextActionProp] !== void 0 ? entity.ACTION[nextActionProp] : entity && entity.ACTION && entity.ACTION.IDLE || 0;
 		return {
-			action: entity.ACTION.ATTACK2,
+			action: entity.ACTION[actionProp],
 			frame: 0,
 			repeat: false,
 			play: true,
 			next: {
-				action: entity.ACTION.IDLE,
+				delay: (tick || Date.now()) + holdDelay,
+				action: nextAction,
 				frame: 0,
 				repeat: true,
 				play: true,
@@ -317834,7 +318285,32 @@ var init_SkillAction = __esmMin((() => {
 			}
 		};
 	};
-	SkillAction[SkillConst_default.ST_CHASEWALK] = SkillAction[SkillConst_default.CH_SOULCOLLECT] = function(entity, tick) {
+	makeSliceAttackAction = (actionProp = "ATTACK", startFrame = 0, length = 0, nextActionProp = "READYFIGHT") => function(entity, tick, pkt) {
+		const holdDelay = pkt && pkt.attackMT ? Math.max(pkt.attackMT, 400) : 400;
+		const nextAction = entity && entity.ACTION && entity.ACTION[nextActionProp] !== void 0 ? entity.ACTION[nextActionProp] : entity && entity.ACTION && entity.ACTION.READYFIGHT !== void 0 ? entity.ACTION.READYFIGHT : entity && entity.ACTION && entity.ACTION.IDLE || 0;
+		const job = entity && (typeof entity._job !== "undefined" ? entity._job : entity.job);
+		const weapon = entity && (typeof entity.weapon !== "undefined" ? entity.weapon : 0);
+		const hasSlice = job !== void 0 ? DB.getAttackSlice(job, weapon) : true;
+		return {
+			action: entity && entity.ACTION && entity.ACTION[actionProp] !== void 0 ? entity.ACTION[actionProp] : 0,
+			frame: hasSlice ? startFrame : 0,
+			length: hasSlice && length > 0 ? length : false,
+			repeat: false,
+			play: true,
+			next: {
+				delay: (tick || Date.now()) + holdDelay,
+				action: nextAction,
+				frame: 0,
+				repeat: true,
+				play: true,
+				next: false
+			}
+		};
+	};
+	SkillAction["DEFAULT"] = makeGenericSkillAction("SKILL");
+	SkillAction["DEFAULT_MONK"] = makeGenericSkillAction("IDLE", "IDLE");
+	SkillAction["DEFAULT_DORAM"] = makeGenericSkillAction("ATTACK2");
+	SkillAction[SkillConst_default.AL_INCAGI] = SkillAction[SkillConst_default.CASH_INCAGI] = SkillAction[SkillConst_default.ST_CHASEWALK] = SkillAction[SkillConst_default.CH_SOULCOLLECT] = SkillAction[SkillConst_default.MO_CALLSPIRITS] = SkillAction[SkillConst_default.MO_ABSORBSPIRITS] = SkillAction[SkillConst_default.MO_BODYRELOCATION] = SkillAction[SkillConst_default.MO_STEELBODY] = SkillAction[SkillConst_default.MO_EXPLOSIONSPIRITS] = SkillAction[SkillConst_default.MO_KITRANSLATION] = SkillAction[SkillConst_default.SR_CURSEDCIRCLE] = SkillAction[SkillConst_default.SR_LIGHTNINGWALK] = SkillAction[SkillConst_default.SR_RAISINGDRAGON] = SkillAction[SkillConst_default.SR_GENTLETOUCH] = SkillAction[SkillConst_default.SR_ASSIMILATEPOWER] = SkillAction[SkillConst_default.SR_POWERVELOCITY] = SkillAction[SkillConst_default.SR_GENTLETOUCH_QUIET] = SkillAction[SkillConst_default.SR_GENTLETOUCH_CURE] = SkillAction[SkillConst_default.SR_GENTLETOUCH_ENERGYGAIN] = SkillAction[SkillConst_default.SR_GENTLETOUCH_CHANGE] = SkillAction[SkillConst_default.SR_GENTLETOUCH_REVITALIZE] = function(entity, tick) {
 		return {
 			action: entity.ACTION.IDLE,
 			frame: 0,
@@ -317843,81 +318319,27 @@ var init_SkillAction = __esmMin((() => {
 			next: false
 		};
 	};
-	SkillAction[SkillConst_default.SM_BASH] = SkillAction[SkillConst_default.SM_MAGNUM] = SkillAction[SkillConst_default.KN_PIERCE] = SkillAction[SkillConst_default.KN_BRANDISHSPEAR] = SkillAction[SkillConst_default.KN_SPEARSTAB] = SkillAction[SkillConst_default.KN_BOWLINGBASH] = SkillAction[SkillConst_default.BS_HAMMERFALL] = SkillAction[SkillConst_default.AC_CHARGEARROW] = SkillAction[SkillConst_default.RG_BACKSTAP] = SkillAction[SkillConst_default.RG_RAID] = SkillAction[SkillConst_default.RG_INTIMIDATE] = SkillAction[SkillConst_default.CR_SHIELDCHARGE] = SkillAction[SkillConst_default.CR_HOLYCROSS] = SkillAction[SkillConst_default.MO_CHAINCOMBO] = SkillAction[SkillConst_default.MO_COMBOFINISH] = SkillAction[SkillConst_default.BA_MUSICALSTRIKE] = SkillAction[SkillConst_default.DC_THROWARROW] = SkillAction[SkillConst_default.NPC_DARKCROSS] = SkillAction[SkillConst_default.CH_PALMSTRIKE] = SkillAction[SkillConst_default.CH_TIGERFIST] = SkillAction[SkillConst_default.CH_CHAINCRUSH] = SkillAction[SkillConst_default.LK_SPIRALPIERCE] = SkillAction[SkillConst_default.LK_HEADCRUSH] = SkillAction[SkillConst_default.LK_JOINTBEAT] = SkillAction[SkillConst_default.HW_MAGICPOWER] = SkillAction[SkillConst_default.PA_SACRIFICE] = SkillAction[SkillConst_default.ASC_METEORASSAULT] = SkillAction[SkillConst_default.TK_STORMKICK] = SkillAction[SkillConst_default.TK_DOWNKICK] = SkillAction[SkillConst_default.TK_TURNKICK] = SkillAction[SkillConst_default.TK_COUNTER] = SkillAction[SkillConst_default.TK_JUMPKICK] = SkillAction[SkillConst_default.CR_ACIDDEMONSTRATION] = SkillAction[SkillConst_default.GS_TRIPLEACTION] = SkillAction[SkillConst_default.GS_BULLSEYE] = SkillAction[SkillConst_default.GS_TRACKING] = SkillAction[SkillConst_default.GS_DISARM] = SkillAction[SkillConst_default.GS_PIERCINGSHOT] = SkillAction[SkillConst_default.GS_RAPIDSHOWER] = SkillAction[SkillConst_default.GS_DESPERADO] = SkillAction[SkillConst_default.GS_DUST] = SkillAction[SkillConst_default.GS_FULLBUSTER] = SkillAction[SkillConst_default.GS_SPREADATTACK] = SkillAction[SkillConst_default.GS_GROUNDDRIFT] = SkillAction[SkillConst_default.NJ_HUUMA] = SkillAction[SkillConst_default.NJ_KASUMIKIRI] = SkillAction[SkillConst_default.NJ_KIRIKAGE] = SkillAction[SkillConst_default.NJ_ISSEN] = SkillAction[SkillConst_default.RK_SONICWAVE] = SkillAction[SkillConst_default.RK_HUNDREDSPEAR] = SkillAction[SkillConst_default.RK_WINDCUTTER] = SkillAction[SkillConst_default.RK_IGNITIONBREAK] = SkillAction[SkillConst_default.RK_DRAGONBREATH] = SkillAction[SkillConst_default.GC_DARKILLUSION] = SkillAction[SkillConst_default.GC_COUNTERSLASH] = SkillAction[SkillConst_default.GC_WEAPONCRUSH] = SkillAction[SkillConst_default.GC_VENOMPRESSURE] = SkillAction[SkillConst_default.GC_PHANTOMMENACE] = SkillAction[SkillConst_default.GC_ROLLINGCUTTER] = SkillAction[SkillConst_default.GC_CROSSRIPPERSLASHER] = SkillAction[SkillConst_default.NC_PILEBUNKER] = SkillAction[SkillConst_default.NC_VULCANARM] = SkillAction[SkillConst_default.NC_FLAMELAUNCHER] = SkillAction[SkillConst_default.NC_COLDSLOWER] = SkillAction[SkillConst_default.NC_ARMSCANNON] = SkillAction[SkillConst_default.NC_POWERSWING] = SkillAction[SkillConst_default.NC_AXETORNADO] = SkillAction[SkillConst_default.SC_FATALMENACE] = SkillAction[SkillConst_default.LG_CANNONSPEAR] = SkillAction[SkillConst_default.LG_MOONSLASHER] = SkillAction[SkillConst_default.LG_BANISHINGPOINT] = SkillAction[SkillConst_default.LG_TRAMPLE] = SkillAction[SkillConst_default.LG_SHIELDPRESS] = SkillAction[SkillConst_default.LG_PINPOINTATTACK] = SkillAction[SkillConst_default.LG_RAGEBURST] = SkillAction[SkillConst_default.LG_OVERBRAND] = SkillAction[SkillConst_default.LG_RAYOFGENESIS] = SkillAction[SkillConst_default.LG_EARTHDRIVE] = SkillAction[SkillConst_default.SR_DRAGONCOMBO] = SkillAction[SkillConst_default.SR_SKYNETBLOW] = SkillAction[SkillConst_default.SR_FALLENEMPIRE] = SkillAction[SkillConst_default.SR_TIGERCANNON] = SkillAction[SkillConst_default.SR_CRESCENTELBOW] = SkillAction[SkillConst_default.SR_GATEOFHELL] = function(entity, tick) {
-		return {
-			action: entity.ACTION.ATTACK,
-			frame: 0,
-			repeat: false,
-			play: true,
-			next: {
-				action: entity.ACTION.IDLE,
-				frame: 0,
-				repeat: true,
-				play: true,
-				next: false
-			}
-		};
-	};
-	SkillAction[SkillConst_default.KN_SPEARBOOMERANG] = SkillAction[SkillConst_default.CR_SHIELDBOOMERANG] = SkillAction[SkillConst_default.AM_DEMONSTRATION] = SkillAction[SkillConst_default.AM_ACIDTERROR] = SkillAction[SkillConst_default.AM_POTIONPITCHER] = SkillAction[SkillConst_default.AM_CANNIBALIZE] = SkillAction[SkillConst_default.TF_SPRINKLESAND] = SkillAction[SkillConst_default.TF_THROWSTONE] = SkillAction[SkillConst_default.NJ_SYURIKEN] = SkillAction[SkillConst_default.NJ_KUNAI] = SkillAction[SkillConst_default.NJ_ZENYNAGE] = SkillAction[SkillConst_default.ITM_TOMAHAWK] = SkillAction[SkillConst_default.AS_VENOMKNIFE] = SkillAction[SkillConst_default.PA_SHIELDCHAIN] = SkillAction[SkillConst_default.NC_AXEBOOMERANG] = SkillAction[SkillConst_default.GN_SLINGITEM] = function(entity, tick) {
-		return {
-			action: entity.ACTION.ATTACK1,
-			frame: 0,
-			repeat: false,
-			play: true,
-			next: {
-				action: entity.ACTION.IDLE,
-				frame: 0,
-				repeat: true,
-				play: true,
-				next: false
-			}
-		};
-	};
-	SkillAction[SkillConst_default.TF_POISON] = SkillAction[SkillConst_default.MC_MAMMONITE] = SkillAction[SkillConst_default.MC_CARTREVOLUTION] = SkillAction[SkillConst_default.GN_CART_TORNADO] = function(entity, tick) {
-		return {
-			action: entity.ACTION.ATTACK2,
-			frame: 0,
-			repeat: false,
-			play: true,
-			next: {
-				action: entity.ACTION.IDLE,
-				frame: 0,
-				repeat: true,
-				play: true,
-				next: false
-			}
-		};
-	};
-	SkillAction[SkillConst_default.AC_DOUBLE] = SkillAction[SkillConst_default.ASC_BREAKER] = SkillAction[SkillConst_default.HT_PHANTASMIC] = SkillAction[SkillConst_default.SN_SHARPSHOOTING] = SkillAction[SkillConst_default.RA_ARROWSTORM] = SkillAction[SkillConst_default.RA_AIMEDBOLT] = SkillAction[SkillConst_default.SC_TRIANGLESHOT] = function(entity, tick) {
-		return {
-			action: entity.ACTION.ATTACK3,
-			frame: 0,
-			repeat: false,
-			play: true,
-			next: {
-				action: entity.ACTION.IDLE,
-				frame: 0,
-				repeat: true,
-				play: true,
-				next: false
-			}
-		};
-	};
-	SkillAction[SkillConst_default.HT_LANDMINE] = SkillAction[SkillConst_default.HT_ANKLESNARE] = SkillAction[SkillConst_default.HT_SHOCKWAVE] = SkillAction[SkillConst_default.HT_SANDMAN] = SkillAction[SkillConst_default.HT_FLASHER] = SkillAction[SkillConst_default.HT_FREEZINGTRAP] = SkillAction[SkillConst_default.HT_BLASTMINE] = SkillAction[SkillConst_default.HT_CLAYMORETRAP] = SkillAction[SkillConst_default.HT_REMOVETRAP] = SkillAction[SkillConst_default.HT_TALKIEBOX] = SkillAction[SkillConst_default.TF_PICKSTONE] = SkillAction[SkillConst_default.BS_GREED] = SkillAction[SkillConst_default.RA_ELECTRICSHOCKER] = SkillAction[SkillConst_default.RA_CLUSTERBOMB] = SkillAction[SkillConst_default.RA_MAGENTATRAP] = SkillAction[SkillConst_default.RA_COBALTTRAP] = SkillAction[SkillConst_default.RA_MAIZETRAP] = SkillAction[SkillConst_default.RA_VERDURETRAP] = SkillAction[SkillConst_default.RA_FIRINGTRAP] = SkillAction[SkillConst_default.RA_ICEBOUNDTRAP] = function(entity, tick) {
-		return {
-			action: entity.ACTION.PICKUP,
-			frame: 0,
-			repeat: false,
-			play: true,
-			next: {
-				action: entity.ACTION.IDLE,
-				frame: 0,
-				repeat: true,
-				play: true,
-				next: false
-			}
-		};
-	};
+	SkillAction[SkillConst_default.AL_BLESSING] = SkillAction[SkillConst_default.CASH_BLESSING] = makeGenericSkillAction("SKILL");
+	SkillAction[SkillConst_default.SM_BASH] = SkillAction[SkillConst_default.SM_MAGNUM] = SkillAction[SkillConst_default.KN_PIERCE] = SkillAction[SkillConst_default.KN_BRANDISHSPEAR] = SkillAction[SkillConst_default.KN_SPEARSTAB] = SkillAction[SkillConst_default.KN_BOWLINGBASH] = SkillAction[SkillConst_default.BS_HAMMERFALL] = SkillAction[SkillConst_default.AC_CHARGEARROW] = SkillAction[SkillConst_default.RG_BACKSTAP] = SkillAction[SkillConst_default.RG_RAID] = SkillAction[SkillConst_default.RG_INTIMIDATE] = SkillAction[SkillConst_default.CR_SHIELDCHARGE] = SkillAction[SkillConst_default.CR_HOLYCROSS] = SkillAction[SkillConst_default.BA_MUSICALSTRIKE] = SkillAction[SkillConst_default.DC_THROWARROW] = SkillAction[SkillConst_default.NPC_DARKCROSS] = SkillAction[SkillConst_default.LK_SPIRALPIERCE] = SkillAction[SkillConst_default.LK_HEADCRUSH] = SkillAction[SkillConst_default.LK_JOINTBEAT] = SkillAction[SkillConst_default.HW_MAGICPOWER] = SkillAction[SkillConst_default.PA_SACRIFICE] = SkillAction[SkillConst_default.ASC_METEORASSAULT] = SkillAction[SkillConst_default.TK_STORMKICK] = SkillAction[SkillConst_default.TK_DOWNKICK] = SkillAction[SkillConst_default.TK_TURNKICK] = SkillAction[SkillConst_default.TK_COUNTER] = SkillAction[SkillConst_default.TK_JUMPKICK] = SkillAction[SkillConst_default.CR_ACIDDEMONSTRATION] = SkillAction[SkillConst_default.GS_TRIPLEACTION] = SkillAction[SkillConst_default.GS_BULLSEYE] = SkillAction[SkillConst_default.GS_TRACKING] = SkillAction[SkillConst_default.GS_DISARM] = SkillAction[SkillConst_default.GS_PIERCINGSHOT] = SkillAction[SkillConst_default.GS_RAPIDSHOWER] = SkillAction[SkillConst_default.GS_DESPERADO] = SkillAction[SkillConst_default.GS_DUST] = SkillAction[SkillConst_default.GS_FULLBUSTER] = SkillAction[SkillConst_default.GS_SPREADATTACK] = SkillAction[SkillConst_default.GS_GROUNDDRIFT] = SkillAction[SkillConst_default.NJ_HUUMA] = SkillAction[SkillConst_default.NJ_KASUMIKIRI] = SkillAction[SkillConst_default.NJ_KIRIKAGE] = SkillAction[SkillConst_default.NJ_ISSEN] = SkillAction[SkillConst_default.RK_SONICWAVE] = SkillAction[SkillConst_default.RK_HUNDREDSPEAR] = SkillAction[SkillConst_default.RK_WINDCUTTER] = SkillAction[SkillConst_default.RK_IGNITIONBREAK] = SkillAction[SkillConst_default.RK_DRAGONBREATH] = SkillAction[SkillConst_default.GC_DARKILLUSION] = SkillAction[SkillConst_default.GC_COUNTERSLASH] = SkillAction[SkillConst_default.GC_WEAPONCRUSH] = SkillAction[SkillConst_default.GC_VENOMPRESSURE] = SkillAction[SkillConst_default.GC_PHANTOMMENACE] = SkillAction[SkillConst_default.GC_ROLLINGCUTTER] = SkillAction[SkillConst_default.GC_CROSSRIPPERSLASHER] = SkillAction[SkillConst_default.NC_PILEBUNKER] = SkillAction[SkillConst_default.NC_VULCANARM] = SkillAction[SkillConst_default.NC_FLAMELAUNCHER] = SkillAction[SkillConst_default.NC_COLDSLOWER] = SkillAction[SkillConst_default.NC_ARMSCANNON] = SkillAction[SkillConst_default.NC_POWERSWING] = SkillAction[SkillConst_default.NC_AXETORNADO] = SkillAction[SkillConst_default.SC_FATALMENACE] = SkillAction[SkillConst_default.LG_CANNONSPEAR] = SkillAction[SkillConst_default.LG_MOONSLASHER] = SkillAction[SkillConst_default.LG_BANISHINGPOINT] = SkillAction[SkillConst_default.LG_TRAMPLE] = SkillAction[SkillConst_default.LG_SHIELDPRESS] = SkillAction[SkillConst_default.LG_PINPOINTATTACK] = SkillAction[SkillConst_default.LG_RAGEBURST] = SkillAction[SkillConst_default.LG_OVERBRAND] = SkillAction[SkillConst_default.LG_RAYOFGENESIS] = SkillAction[SkillConst_default.LG_EARTHDRIVE] = makeAttackSkillAction("ATTACK");
+	SkillAction[SkillConst_default.MO_TRIPLEATTACK] = makeSliceAttackAction("ATTACK", 5, 4);
+	SkillAction[SkillConst_default.MO_CHAINCOMBO] = makeSliceAttackAction("ATTACK", 9, 4);
+	SkillAction[SkillConst_default.MO_COMBOFINISH] = makeSliceAttackAction("ATTACK", 13, 2);
+	SkillAction[SkillConst_default.CH_PALMSTRIKE] = makeSliceAttackAction("ATTACK", 13, 2);
+	SkillAction[SkillConst_default.CH_TIGERFIST] = makeSliceAttackAction("ATTACK", 9, 4);
+	SkillAction[SkillConst_default.CH_CHAINCRUSH] = makeSliceAttackAction("ATTACK", 5, 8);
+	SkillAction[SkillConst_default.SR_DRAGONCOMBO] = makeSliceAttackAction("ATTACK", 5, 4);
+	SkillAction[SkillConst_default.SR_SKYNETBLOW] = makeSliceAttackAction("ATTACK", 0, 5);
+	SkillAction[SkillConst_default.SR_FALLENEMPIRE] = makeSliceAttackAction("ATTACK", 13, 2);
+	SkillAction[SkillConst_default.SR_TIGERCANNON] = makeSliceAttackAction("ATTACK", 9, 4);
+	SkillAction[SkillConst_default.SR_CRESCENTELBOW] = makeSliceAttackAction("ATTACK", 13, 2);
+	SkillAction[SkillConst_default.SR_GATEOFHELL] = makeSliceAttackAction("ATTACK", 13, 2);
+	if (SkillConst_default.SH_CHUL_HO_SONIC_CLAW) SkillAction[SkillConst_default.SH_CHUL_HO_SONIC_CLAW] = makeSliceAttackAction("ATTACK", 0, 4);
+	if (SkillConst_default.SH_HOGOGONG_STRIKE) SkillAction[SkillConst_default.SH_HOGOGONG_STRIKE] = makeSliceAttackAction("ATTACK", 0, 4);
+	SkillAction[SkillConst_default.KN_SPEARBOOMERANG] = SkillAction[SkillConst_default.CR_SHIELDBOOMERANG] = SkillAction[SkillConst_default.AM_DEMONSTRATION] = SkillAction[SkillConst_default.AM_ACIDTERROR] = SkillAction[SkillConst_default.AM_POTIONPITCHER] = SkillAction[SkillConst_default.AM_CANNIBALIZE] = SkillAction[SkillConst_default.TF_SPRINKLESAND] = SkillAction[SkillConst_default.TF_THROWSTONE] = SkillAction[SkillConst_default.NJ_SYURIKEN] = SkillAction[SkillConst_default.NJ_KUNAI] = SkillAction[SkillConst_default.NJ_ZENYNAGE] = SkillAction[SkillConst_default.ITM_TOMAHAWK] = SkillAction[SkillConst_default.AS_VENOMKNIFE] = SkillAction[SkillConst_default.PA_SHIELDCHAIN] = SkillAction[SkillConst_default.NC_AXEBOOMERANG] = SkillAction[SkillConst_default.GN_SLINGITEM] = makeAttackSkillAction("ATTACK1");
+	SkillAction[SkillConst_default.TF_POISON] = SkillAction[SkillConst_default.MC_MAMMONITE] = SkillAction[SkillConst_default.MC_CARTREVOLUTION] = SkillAction[SkillConst_default.GN_CART_TORNADO] = makeAttackSkillAction("ATTACK2");
+	SkillAction[SkillConst_default.AC_DOUBLE] = SkillAction[SkillConst_default.HT_PHANTASMIC] = SkillAction[SkillConst_default.SN_SHARPSHOOTING] = SkillAction[SkillConst_default.RA_ARROWSTORM] = SkillAction[SkillConst_default.RA_AIMEDBOLT] = SkillAction[SkillConst_default.SC_TRIANGLESHOT] = makeAttackSkillAction("ATTACK");
+	SkillAction[SkillConst_default.ASC_BREAKER] = makeAttackSkillAction("ATTACK3");
+	SkillAction[SkillConst_default.HT_LANDMINE] = SkillAction[SkillConst_default.HT_ANKLESNARE] = SkillAction[SkillConst_default.HT_SHOCKWAVE] = SkillAction[SkillConst_default.HT_SANDMAN] = SkillAction[SkillConst_default.HT_FLASHER] = SkillAction[SkillConst_default.HT_FREEZINGTRAP] = SkillAction[SkillConst_default.HT_BLASTMINE] = SkillAction[SkillConst_default.HT_CLAYMORETRAP] = SkillAction[SkillConst_default.HT_REMOVETRAP] = SkillAction[SkillConst_default.HT_TALKIEBOX] = SkillAction[SkillConst_default.TF_PICKSTONE] = SkillAction[SkillConst_default.BS_GREED] = SkillAction[SkillConst_default.RA_ELECTRICSHOCKER] = SkillAction[SkillConst_default.RA_CLUSTERBOMB] = SkillAction[SkillConst_default.RA_MAGENTATRAP] = SkillAction[SkillConst_default.RA_COBALTTRAP] = SkillAction[SkillConst_default.RA_MAIZETRAP] = SkillAction[SkillConst_default.RA_VERDURETRAP] = SkillAction[SkillConst_default.RA_FIRINGTRAP] = SkillAction[SkillConst_default.RA_ICEBOUNDTRAP] = makeGenericSkillAction("PICKUP");
 	SkillAction[SkillConst_default.NJ_TATAMIGAESHI] = SkillAction[SkillConst_default.SR_EARTHSHAKER] = function(entity, tick) {
 		return {
 			action: entity.ACTION.PICKUP,
@@ -317927,21 +318349,7 @@ var init_SkillAction = __esmMin((() => {
 			next: false
 		};
 	};
-	SkillAction[SkillConst_default.SN_SIGHT] = function(entity, tick) {
-		return {
-			action: entity.ACTION.ACTION,
-			frame: 0,
-			repeat: false,
-			play: true,
-			next: {
-				action: entity.ACTION.IDLE,
-				frame: 0,
-				repeat: true,
-				play: true,
-				next: false
-			}
-		};
-	};
+	SkillAction[SkillConst_default.SN_SIGHT] = makeGenericSkillAction("ACTION");
 	SkillAction[SkillConst_default.DC_WINKCHARM] = SkillAction[SkillConst_default.DC_FORTUNEKISS] = SkillAction[SkillConst_default.DC_UGLYDANCE] = SkillAction[SkillConst_default.DC_HUMMING] = SkillAction[SkillConst_default.DC_DONTFORGETME] = SkillAction[SkillConst_default.DC_SERVICEFORYOU] = SkillAction[SkillConst_default.BA_APPLEIDUN] = SkillAction[SkillConst_default.BA_DISSONANCE] = SkillAction[SkillConst_default.BA_WHISTLE] = SkillAction[SkillConst_default.BA_ASSASSINCROSS] = SkillAction[SkillConst_default.BA_POEMBRAGI] = SkillAction[SkillConst_default.BD_LULLABY] = SkillAction[SkillConst_default.BD_RICHMANKIM] = SkillAction[SkillConst_default.BD_ETERNALCHAOS] = SkillAction[SkillConst_default.BD_DRUMBATTLEFIELD] = SkillAction[SkillConst_default.BD_SIEGFRIED] = SkillAction[SkillConst_default.CG_HERMODE] = SkillAction[SkillConst_default.BD_RINGNIBELUNGEN] = SkillAction[SkillConst_default.SKID_BD_ROKISWEIL] = SkillAction[SkillConst_default.BD_INTOABYSS] = SkillAction[SkillConst_default.CG_MOONLIT] = SkillAction[SkillConst_default.CG_MARIONETTE] = function(entity, tick) {
 		return {
 			action: entity.ACTION.SKILL,
@@ -317953,22 +318361,9 @@ var init_SkillAction = __esmMin((() => {
 			next: false
 		};
 	};
-	SkillAction[SkillConst_default.SM_ENDURE] = function(entity, tick) {
-		return {
-			action: entity.ACTION.READYFIGHT,
-			frame: 0,
-			repeat: false,
-			play: true,
-			next: {
-				action: entity.ACTION.IDLE,
-				frame: 0,
-				repeat: true,
-				play: true,
-				next: false
-			}
-		};
-	};
-	SkillAction[SkillConst_default.AC_SHOWER] = function(entity, tick) {
+	SkillAction[SkillConst_default.SM_ENDURE] = makeGenericSkillAction("READYFIGHT");
+	SkillAction[SkillConst_default.AC_SHOWER] = function(entity, tick, pkt) {
+		const holdDelay = pkt && pkt.attackMT ? Math.max(pkt.attackMT, 400) : 400;
 		return {
 			action: entity.ACTION.ATTACK,
 			frame: 0,
@@ -317976,6 +318371,7 @@ var init_SkillAction = __esmMin((() => {
 			speed: 50,
 			play: true,
 			next: {
+				delay: (tick || Date.now()) + holdDelay,
 				action: entity.ACTION.READYFIGHT,
 				frame: 0,
 				repeat: true,
@@ -318018,15 +318414,7 @@ var init_SkillAction = __esmMin((() => {
 			next: false
 		};
 	};
-	SkillAction[SkillConst_default.MO_EXTREMITYFIST] = function(entity, tick) {
-		return {
-			action: entity.ACTION.ATTACK,
-			delay: tick + 100,
-			frame: 0,
-			repeat: false,
-			play: true
-		};
-	};
+	SkillAction[SkillConst_default.MO_EXTREMITYFIST] = makeSliceAttackAction("ATTACK", 13, 2);
 	SkillAction[SkillConst_default.CG_ARROWVULCAN] = function(entity, tick) {
 		return {
 			action: entity.ACTION.ATTACK,
@@ -318542,10 +318930,17 @@ function onEntityVanish(pkt) {
 				if (entity.objecttype !== Entity.TYPE_PC) entity.aura.remove(EffectManager);
 				if (pkt.type === Entity.VT.DEAD) EntityManager.removeLife(pkt.GID);
 		}
-		entity.remove(pkt.type);
+		if (pkt.GID === SessionStorage_default.Entity.GID && pkt.type === 1) Escape_default.showDeathMenu(haveSiegfriedItem());
+		const deathDelay = pkt.type === Entity.VT.DEAD && entity.objecttype !== Entity.TYPE_PC && entity._deathSyncTick > Renderer.tick ? entity._deathSyncTick - Renderer.tick + C_DEATH_SYNC_OFFSET : 0;
 		EntityManager.removeGID(pkt.GID);
+		const playDeath = () => {
+			entity.remove(pkt.type);
+		};
+		if (deathDelay > 0) {
+			entity._deathSyncTick = 0;
+			Events.setTimeout(playDeath, deathDelay);
+		} else playDeath();
 	}
-	if (pkt.GID === SessionStorage_default.Entity.GID && pkt.type === 1) Escape_default.showDeathMenu(haveSiegfriedItem());
 }
 /**
 * An entity start walking
@@ -318554,7 +318949,7 @@ function onEntityVanish(pkt) {
 */
 function onEntityMove(pkt) {
 	const entity = EntityManager.get(pkt.GID);
-	if (entity) entity.walkTo(pkt.MoveData[0], pkt.MoveData[1], pkt.MoveData[2], pkt.MoveData[3], void 0, pkt.moveStartTime);
+	if (entity) entity.walkTo(pkt.MoveData[0], pkt.MoveData[1], pkt.MoveData[2], pkt.MoveData[3], void 0, pkt.moveStartTime, pkt.moveServerEndTime || pkt.moveEndTime);
 }
 /**
 * Entity stop walking
@@ -318584,28 +318979,60 @@ function onEntityStopMove(pkt) {
 function onEntityJump(pkt) {
 	const entity = EntityManager.get(pkt.AID);
 	if (entity) {
+		entity.resetRoute();
 		entity.position[0] = pkt.xPos;
 		entity.position[1] = pkt.yPos;
 		entity.position[2] = Altitude.getCellHeight(pkt.xPos, pkt.yPos);
 	}
 }
 /**
-* Body relocation packet support
+* Fast relocation packet support (e.g. Body Relocation, Fallen Angel)
 *
 * @param {object} pkt - PACKET.ZC.FASTMOVE
 */
 function onEntityFastMove(pkt) {
 	const entity = EntityManager.get(pkt.AID);
-	if (entity) {
-		entity.walkTo(entity.position[0], entity.position[1], pkt.targetXpos, pkt.targetYpos);
-		if (entity.walk.path.length) {
-			const speed = entity.walk.speed;
-			entity.walk.speed = 10;
-			entity.walk.onEnd = function onWalkEnd() {
-				entity.walk.speed = speed;
-			};
+	if (entity && entity.fastMoveTo(pkt.targetXpos, pkt.targetYpos, 15, null, false)) {
+		if (entity.objecttype === entity.constructor.TYPE_PC) {
+			if (DB.isMonk(entity.job)) {
+				entity._fastMoveTrail = true;
+				entity.setAction({
+					action: entity.ACTION.ATTACK,
+					frame: 0,
+					repeat: false,
+					play: false
+				});
+			} else if (DB.isGunslinger(entity.job)) {
+				entity._fastMoveTrail = true;
+				entity.setAction({
+					action: entity.ACTION.SKILL,
+					frame: 0,
+					repeat: false,
+					play: false
+				});
+			}
 		}
 	}
+}
+/**
+* Perform Entity Action with forced position relocation (knockback / slide)
+*
+* @param {object} pkt - PACKET.ZC.NOTIFY_ACT_POSITION
+*/
+function onEntityActionPosition(pkt) {
+	if (typeof pkt.xPos === "number" && typeof pkt.yPos === "number" && (pkt.xPos !== 0 || pkt.yPos !== 0)) {
+		const targetEntity = EntityManager.get(pkt.targetGID);
+		if (targetEntity) targetEntity.fastMoveTo(pkt.xPos, pkt.yPos, 20, null, true);
+	}
+	const srcEntity = EntityManager.get(pkt.GID);
+	const attackSpeed = srcEntity && typeof srcEntity.attack_speed === "number" && srcEntity.attack_speed > 0 ? srcEntity.attack_speed : AVG_ATTACK_SPEED;
+	onEntityAction({
+		...pkt,
+		attackMT: typeof pkt.attackMT === "number" && pkt.attackMT > 0 ? pkt.attackMT : attackSpeed,
+		attackedMT: typeof pkt.attackedMT === "number" && pkt.attackedMT > 0 ? pkt.attackedMT : AVG_ATTACKED_SPEED,
+		leftDamage: typeof pkt.leftDamage === "number" ? pkt.leftDamage : 0,
+		count: typeof pkt.count === "number" && pkt.count > 0 ? pkt.count : 1
+	});
 }
 /**
 * Display entity's emotion
@@ -318665,8 +319092,13 @@ function onEntityAction(pkt) {
 		case 10:
 		case 11:
 		case 13: {
-			if (pkt.attackMT > MAX_ATTACKMT) pkt.attackMT = MAX_ATTACKMT;
-			srcEntity.attack_speed = pkt.attackMT;
+			const attackMT = typeof pkt.attackMT === "number" && pkt.attackMT > 0 ? pkt.attackMT : srcEntity && srcEntity.attack_speed || AVG_ATTACK_SPEED;
+			const baseAttackMT = Math.min(attackMT, MAX_ATTACKMT);
+			pkt.attackMT = baseAttackMT;
+			pkt.attackedMT = typeof pkt.attackedMT === "number" && pkt.attackedMT > 0 ? pkt.attackedMT : AVG_ATTACKED_SPEED;
+			pkt.leftDamage = typeof pkt.leftDamage === "number" ? pkt.leftDamage : 0;
+			pkt.count = typeof pkt.count === "number" && pkt.count > 0 ? pkt.count : 1;
+			srcEntity.attack_speed = baseAttackMT;
 			let animSpeed = 0;
 			let delayTime = pkt.attackMT;
 			DB.getWeaponSound(srcWeapon);
@@ -318771,7 +319203,6 @@ function onEntityAction(pkt) {
 					});
 				}
 			}
-			srcEntity.attack_speed = pkt.attackMT;
 			if (pkt.leftDamage) {
 				const useATTACK = srcEntity.job == JobConst_default.KAGEROU || srcEntity.job == JobConst_default.KAGEROU_B || srcEntity.job == JobConst_default.OBORO || srcEntity.job == JobConst_default.OBORO_B;
 				srcEntity.setAction({
@@ -318803,7 +319234,7 @@ function onEntityAction(pkt) {
 					next: false
 				}
 			});
-			if (srcEntity.GID === SessionStorage_default.Entity.GID && SessionStorage_default.pet.friendly > 900 && (SessionStorage_default.pet.lastTalk || 0) + 1e4 < Date.now()) {
+			if (SessionStorage_default.Entity && srcEntity.GID === SessionStorage_default.Entity.GID && SessionStorage_default.pet && SessionStorage_default.pet.friendly > 900 && (SessionStorage_default.pet.lastTalk || 0) + 1e4 < Date.now()) {
 				if (parseInt(Math.random() * 10) < 3) {
 					const hunger = DB.getPetHungryState(SessionStorage_default.pet.oldHungry);
 					const talk = DB.getPetTalkNumber(SessionStorage_default.pet.job, PetMessageConst_default.PM_HUNTING, hunger);
@@ -318847,12 +319278,12 @@ function onEntityAction(pkt) {
 		});
 	}
 	if (pkt?.damage > 0) {
-		if (srcEntity.GID === SessionStorage_default.Entity.GID) ChatBox_default.addText(DB.getMessage(1607).replace("%s", dstEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
-		else if (dstEntity.GID === SessionStorage_default.Entity.GID) ChatBox_default.addText(DB.getMessage(1605).replace("%s", srcEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
+		if (SessionStorage_default.Entity && srcEntity.GID === SessionStorage_default.Entity.GID) ChatBox_default.addText(DB.getMessage(1607).replace("%s", dstEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
+		else if (SessionStorage_default.Entity && dstEntity.GID === SessionStorage_default.Entity.GID) ChatBox_default.addText(DB.getMessage(1605).replace("%s", srcEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
 		else if (srcEntity.GID === SessionStorage_default.homunId || srcEntity.GID === SessionStorage_default.merId || srcEntity.GID === SessionStorage_default.petId || srcEntity.GID === SessionStorage_default.elemId) ChatBox_default.addText(DB.getMessage(1608).replace("%s", srcEntity.display.name).replace("%s", dstEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
 		else if (dstEntity.GID === SessionStorage_default.homunId || dstEntity.GID === SessionStorage_default.merId || dstEntity.GID === SessionStorage_default.petId || dstEntity.GID === SessionStorage_default.elemId) ChatBox_default.addText(DB.getMessage(1606).replace("%s", dstEntity.display.name).replace("%s", srcEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.BATTLE);
-		else if (controller.isGroupMember(srcEntity.display.name)) ChatBox_default.addText(DB.getMessage(1608).replace("%s", srcEntity.display.name).replace("%s", dstEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.PARTY_BATTLE);
-		else if (controller.isGroupMember(dstEntity.display.name)) ChatBox_default.addText(DB.getMessage(1606).replace("%s", dstEntity.display.name).replace("%s", srcEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.PARTY_BATTLE);
+		else if (controller.isGroupMember(srcEntity.display?.name)) ChatBox_default.addText(DB.getMessage(1608).replace("%s", srcEntity.display.name).replace("%s", dstEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.PARTY_BATTLE);
+		else if (controller.isGroupMember(dstEntity.display?.name)) ChatBox_default.addText(DB.getMessage(1606).replace("%s", dstEntity.display.name).replace("%s", srcEntity.display.name).replace("%d", pkt.damage), ChatBox_default.TYPE.INFO, ChatBox_default.FILTER.PARTY_BATTLE);
 	}
 }
 /**
@@ -319159,9 +319590,10 @@ function onEntityUseSkill(pkt) {
 		if (srcEntity.action !== srcEntity.ACTION.DIE && srcEntity.action !== srcEntity.ACTION.SIT) {
 			if (pkt.SKID in SkillAction) {
 				const action = SkillAction[pkt.SKID];
-				if (action) srcEntity.setAction(action(srcEntity, Renderer.tick));
-			} else if (DB.isDoram(srcEntity.job)) srcEntity.setAction(SkillAction["DEFAULT_DORAM"](srcEntity, Renderer.tick));
-			else srcEntity.setAction(SkillAction["DEFAULT"](srcEntity, Renderer.tick));
+				if (action) srcEntity.setAction(action(srcEntity, Renderer.tick, pkt));
+			} else if (DB.isDoram(srcEntity.job)) srcEntity.setAction(SkillAction["DEFAULT_DORAM"](srcEntity, Renderer.tick, pkt));
+			else if (DB.isMonk(srcEntity.job)) srcEntity.setAction(SkillAction["DEFAULT_MONK"](srcEntity, Renderer.tick, pkt));
+			else srcEntity.setAction(SkillAction["DEFAULT"](srcEntity, Renderer.tick, pkt));
 		}
 	}
 	if (dstEntity) {
@@ -319246,8 +319678,10 @@ function onEntityUseSkillToAttack(pkt) {
 		if (srcEntity.action !== srcEntity.ACTION.DIE && srcEntity.action !== srcEntity.ACTION.SIT) {
 			if (pkt.SKID in SkillAction) {
 				const action = SkillAction[pkt.SKID];
-				if (action) srcEntity.setAction(action(srcEntity, Renderer.tick));
-			} else srcEntity.setAction(SkillAction["DEFAULT"](srcEntity, Renderer.tick));
+				if (action) srcEntity.setAction(action(srcEntity, Renderer.tick, pkt));
+			} else if (DB.isDoram(srcEntity.job)) srcEntity.setAction(SkillAction["DEFAULT_DORAM"](srcEntity, Renderer.tick, pkt));
+			else if (DB.isMonk(srcEntity.job)) srcEntity.setAction(SkillAction["DEFAULT_MONK"](srcEntity, Renderer.tick, pkt));
+			else srcEntity.setAction(SkillAction["DEFAULT"](srcEntity, Renderer.tick, pkt));
 			if (srcEntity.GID === SessionStorage_default.Entity.GID && SessionStorage_default.pet.friendly > 900 && (SessionStorage_default.pet.lastTalk || 0) + 1e4 < Date.now()) {
 				if (parseInt(Math.random() * 10) < 3) {
 					const hunger = DB.getPetHungryState(SessionStorage_default.pet.oldHungry);
@@ -319290,6 +319724,10 @@ function onEntityUseSkillToAttack(pkt) {
 				EffectManager.spamSkillBeforeHit(pkt.SKID, pkt.targetID, Renderer.tick + C_MULTIHIT_DELAY * i, pkt.AID);
 				addDamage(i, Renderer.tick + pkt.attackMT + C_MULTIHIT_DELAY * i);
 			}
+		}
+		if (typeof pkt.xPos === "number" && typeof pkt.yPos === "number" && (pkt.xPos !== 0 || pkt.yPos !== 0)) {
+			const pushedEntity = dstEntity || srcEntity;
+			if (pushedEntity) pushedEntity.fastMoveTo(pkt.xPos, pkt.yPos, 20, null, true);
 		}
 	}
 	if (srcEntity && dstEntity && pkt.action != SkillAction$1.SPLASH) EffectManager.spamSkill(pkt.SKID, pkt.targetID, null, Renderer.tick + pkt.attackMT, pkt.AID);
@@ -320007,6 +320445,8 @@ function onEntityMvpRewardItemMessage(pkt) {
 function onEntityWillBeHitSub(pkt, dstEntity) {
 	if ((pkt.damage > 0 || pkt.leftDamage > 0) && pkt.action !== 4 && pkt.action !== 9 && pkt.action !== 11) {
 		const count = pkt.count || 1;
+		const lastHitDelay = pkt.attackMT + C_MULTIHIT_DELAY * (pkt.leftDamage ? 1.75 : 1) * (count - 1);
+		dstEntity._deathSyncTick = Math.max(dstEntity._deathSyncTick || 0, Renderer.tick + lastHitDelay);
 		function impendingAttack() {
 			if (dstEntity.action !== dstEntity.ACTION.DIE) dstEntity.setAction({
 				action: dstEntity.ACTION.HURT,
@@ -320155,6 +320595,7 @@ function EntityEngine() {
 	Network.hookPacket(PACKET.ZC.NOTIFY_ACT, onEntityAction);
 	Network.hookPacket(PACKET.ZC.NOTIFY_ACT2, onEntityAction);
 	Network.hookPacket(PACKET.ZC.NOTIFY_ACT3, onEntityAction);
+	Network.hookPacket(PACKET.ZC.NOTIFY_ACT_POSITION, onEntityActionPosition);
 	Network.hookPacket(PACKET.ZC.NOTIFY_CHAT, onEntityTalk);
 	Network.hookPacket(PACKET.ZC.SHOWSCRIPT, onEntityTalk);
 	Network.hookPacket(PACKET.ZC.NPC_CHAT, onEntityTalkColor);
@@ -320210,7 +320651,7 @@ function EntityEngine() {
 	Network.hookPacket(PACKET.ZC.ACK_CHANGE_TITLE, onTitleChangeAck);
 	Network.hookPacket(PACKET.ZC.HAT_EFFECT, onHatEffects);
 }
-var SkillNameDisplayExclude, SkillBlueCombo, C_MULTIHIT_DELAY, AVG_ATTACK_SPEED, MAX_ATTACKMT, clanEmblems;
+var SkillNameDisplayExclude, SkillBlueCombo, C_MULTIHIT_DELAY, C_DEATH_SYNC_OFFSET, AVG_ATTACK_SPEED, AVG_ATTACKED_SPEED, MAX_ATTACKMT, clanEmblems;
 var init_Entity = __esmMin((() => {
 	init_DBManager();
 	init_SkillConst();
@@ -320287,7 +320728,9 @@ var init_Entity = __esmMin((() => {
 		SkillConst_default.SR_RAMPAGEBLASTER
 	];
 	C_MULTIHIT_DELAY = 200;
+	C_DEATH_SYNC_OFFSET = 200;
 	AVG_ATTACK_SPEED = 432;
+	AVG_ATTACKED_SPEED = 288;
 	MAX_ATTACKMT = AVG_ATTACK_SPEED * 2;
 	clanEmblems = {};
 }));
@@ -323593,6 +324036,57 @@ function onSkillToGround(pkt) {
 	position[1] = pkt.yPos;
 	position[2] = Altitude.getCellHeight(pkt.xPos, pkt.yPos);
 	EffectManager.spamSkill(pkt.SKID, pkt.AID, position, null, pkt.AID);
+	switch (pkt.SKID) {
+		case SkillConst_default.MO_BODYRELOCATION: {
+			const entity = EntityManager.get(pkt.AID);
+			if (entity && entity.fastMoveTo(pkt.xPos, pkt.yPos, 15, null, false)) {
+				entity._fastMoveTrail = true;
+				if (entity.objecttype === entity.constructor.TYPE_PC) entity.setAction({
+					action: entity.ACTION.ATTACK,
+					frame: 0,
+					repeat: false,
+					play: false
+				});
+			}
+			break;
+		}
+		case SkillConst_default.NJ_SHADOWJUMP: {
+			const entity = EntityManager.get(pkt.AID);
+			if (entity && entity.fastMoveTo(pkt.xPos, pkt.yPos, 15, null, false)) {
+				entity._fastMoveTrail = true;
+				entity.setAction({
+					action: entity.ACTION.SKILL,
+					frame: 0,
+					repeat: false,
+					play: false
+				});
+			}
+			break;
+		}
+		case SkillConst_default.RL_FALLEN_ANGEL: {
+			const entity = EntityManager.get(pkt.AID);
+			if (entity && entity.fastMoveTo(pkt.xPos, pkt.yPos, 15, null, false)) {
+				entity._fastMoveTrail = true;
+				entity.setAction({
+					action: entity.ACTION.SKILL,
+					frame: 0,
+					repeat: false,
+					play: false
+				});
+			}
+			break;
+		}
+		case SkillConst_default.SU_LOPE: {
+			const entity = EntityManager.get(pkt.AID);
+			if (entity && entity.fastMoveTo(pkt.xPos, pkt.yPos, 15, null, false)) entity.setAction({
+				action: entity.ACTION.SKILL,
+				frame: 0,
+				repeat: false,
+				play: true
+			});
+			break;
+		}
+	}
 }
 /**
 * Failed to cast a skill
@@ -325645,7 +326139,7 @@ function onResize(ui) {
 /**
 * Request move item from box to another
 */
-function requestMoveItem(index, fromContent, toContent, isAdding) {
+function requestMoveItem(index, fromContent, toContent, isAdding, transferAll = false) {
 	let count;
 	const item = isAdding ? _input[index] : _output[index];
 	const isStackable = item.type !== ItemType_default.WEAPON && item.type !== ItemType_default.EQUIP && item.type !== ItemType_default.PETEGG && item.type !== ItemType_default.PETEQUIP;
@@ -325654,7 +326148,7 @@ function requestMoveItem(index, fromContent, toContent, isAdding) {
 	if ((_type === NpcStore.Type.BUY || _type === NpcStore.Type.VENDING_STORE) && !isStackable && isAdding) {
 		if (toContent.querySelector(`.item[data-index="${item.index}"]`)) return false;
 	}
-	if (item.count === 1 || _type === NpcStore.Type.SELL && _preferences$2.select_all || !isStackable) {
+	if (transferAll || item.count === 1 || _type === NpcStore.Type.SELL && _preferences$2.select_all || !isStackable) {
 		transferItem(fromContent, toContent, isAdding, index, isFinite(item.count) ? item.count : 1);
 		return false;
 	}
@@ -325664,6 +326158,12 @@ function requestMoveItem(index, fromContent, toContent, isAdding) {
 		InputBox_default.remove();
 		if (_count > 0) transferItem(fromContent, toContent, isAdding, index, _count);
 	};
+}
+function transferSellItemStack(index) {
+	if (_type !== NpcStore.Type.SELL || !_input[index]) return false;
+	const root = NpcStore.getRoot();
+	requestMoveItem(index, root.querySelector(".InputWindow .content"), root.querySelector(".OutputWindow .content"), true, true);
+	return true;
 }
 /**
 * Drop an input in the InputWindow or OutputWindow
@@ -325690,6 +326190,11 @@ function onItemInfo(event) {
 	const item = _input[index];
 	event.stopImmediatePropagation();
 	if (!item) return false;
+	const inputWindow = NpcStore.getRoot().querySelector(".InputWindow");
+	if (_type === NpcStore.Type.SELL && event.altKey && event.which === 3 && inputWindow.contains(this)) {
+		transferSellItemStack(index);
+		return false;
+	}
 	if (ItemInfo_default.uid === item.ITID) {
 		ItemInfo_default.remove();
 		return false;
@@ -325795,6 +326300,7 @@ var init_NpcStore = __esmMin((() => {
 	init_InputBox();
 	init_ChatBox();
 	init_Inventory();
+	init_InventoryItemTransfer();
 	init_NpcStore$2();
 	init_NpcStore$1();
 	NpcStore = new GUIComponent("NpcStore", NpcStore_default$1);
@@ -326279,6 +326785,10 @@ var init_NpcStore = __esmMin((() => {
 			NpcStore.calculateWeight();
 		};
 	})();
+	NpcStore.inventoryTransferPriority = InventoryItemTransferPriority.NPC_STORE;
+	NpcStore.receiveInventoryItemStack = function receiveInventoryItemStack(item) {
+		return item ? transferSellItemStack(item.index) : false;
+	};
 	/**
 	* Handles the packet to send to the server when closing stores
 	*/
@@ -332750,13 +333260,13 @@ var init_spark_md5_min = __esmMin((() => {
 			x[3] = d + x[3] | 0;
 		}
 		function md5blk(s) {
-			var md5blks = [], i;
-			for (i = 0; i < 64; i += 4) md5blks[i >> 2] = s.charCodeAt(i) + (s.charCodeAt(i + 1) << 8) + (s.charCodeAt(i + 2) << 16) + (s.charCodeAt(i + 3) << 24);
+			var md5blks = [], i = 0;
+			for (; i < 64; i += 4) md5blks[i >> 2] = s.charCodeAt(i) + (s.charCodeAt(i + 1) << 8) + (s.charCodeAt(i + 2) << 16) + (s.charCodeAt(i + 3) << 24);
 			return md5blks;
 		}
 		function md5blk_array(a) {
-			var md5blks = [], i;
-			for (i = 0; i < 64; i += 4) md5blks[i >> 2] = a[i] + (a[i + 1] << 8) + (a[i + 2] << 16) + (a[i + 3] << 24);
+			var md5blks = [], i = 0;
+			for (; i < 64; i += 4) md5blks[i >> 2] = a[i] + (a[i + 1] << 8) + (a[i + 2] << 16) + (a[i + 3] << 24);
 			return md5blks;
 		}
 		function md51(s) {
@@ -332765,8 +333275,8 @@ var init_spark_md5_min = __esmMin((() => {
 				-271733879,
 				-1732584194,
 				271733878
-			], i, length, tail, tmp, lo, hi;
-			for (i = 64; i <= n; i += 64) md5cycle(state, md5blk(s.substring(i - 64, i)));
+			], i = 64, length, tail, tmp, lo, hi;
+			for (; i <= n; i += 64) md5cycle(state, md5blk(s.substring(i - 64, i)));
 			s = s.substring(i - 64);
 			length = s.length;
 			tail = [
@@ -332808,8 +333318,8 @@ var init_spark_md5_min = __esmMin((() => {
 				-271733879,
 				-1732584194,
 				271733878
-			], i, length, tail, tmp, lo, hi;
-			for (i = 64; i <= n; i += 64) md5cycle(state, md5blk_array(a.subarray(i - 64, i)));
+			], i = 64, length, tail, tmp, lo, hi;
+			for (; i <= n; i += 64) md5cycle(state, md5blk_array(a.subarray(i - 64, i)));
 			a = i - 64 < n ? a.subarray(i - 64) : /* @__PURE__ */ new Uint8Array(0);
 			length = a.length;
 			tail = [
@@ -332846,13 +333356,13 @@ var init_spark_md5_min = __esmMin((() => {
 			return state;
 		}
 		function rhex(n) {
-			var s = "", j;
-			for (j = 0; j < 4; j += 1) s += hex_chr[n >> j * 8 + 4 & 15] + hex_chr[n >> j * 8 & 15];
+			var s = "", j = 0;
+			for (; j < 4; j += 1) s += hex_chr[n >> j * 8 + 4 & 15] + hex_chr[n >> j * 8 & 15];
 			return s;
 		}
 		function hex(x) {
-			var i;
-			for (i = 0; i < x.length; i += 1) x[i] = rhex(x[i]);
+			var i = 0;
+			for (; i < x.length; i += 1) x[i] = rhex(x[i]);
 			return x.join("");
 		}
 		if (hex(md51("hello")) !== "5d41402abc4b2a76b9719d911017c592");
@@ -332879,8 +333389,8 @@ var init_spark_md5_min = __esmMin((() => {
 			return str;
 		}
 		function utf8Str2ArrayBuffer(str, returnUInt8Array) {
-			var length = str.length, buff = new ArrayBuffer(length), arr = new Uint8Array(buff), i;
-			for (i = 0; i < length; i += 1) arr[i] = str.charCodeAt(i);
+			var length = str.length, buff = new ArrayBuffer(length), arr = new Uint8Array(buff), i = 0;
+			for (; i < length; i += 1) arr[i] = str.charCodeAt(i);
 			return returnUInt8Array ? arr : buff;
 		}
 		function arrayBuffer2Utf8Str(buff) {
@@ -332893,8 +333403,8 @@ var init_spark_md5_min = __esmMin((() => {
 			return returnUInt8Array ? result : result.buffer;
 		}
 		function hexToBinaryString(hex) {
-			var bytes = [], length = hex.length, x;
-			for (x = 0; x < length - 1; x += 2) bytes.push(parseInt(hex.substr(x, 2), 16));
+			var bytes = [], length = hex.length, x = 0;
+			for (; x < length - 1; x += 2) bytes.push(parseInt(hex.substr(x, 2), 16));
 			return String.fromCharCode.apply(String, bytes);
 		}
 		function SparkMD5() {
@@ -332907,8 +333417,8 @@ var init_spark_md5_min = __esmMin((() => {
 		SparkMD5.prototype.appendBinary = function(contents) {
 			this._buff += contents;
 			this._length += contents.length;
-			var length = this._buff.length, i;
-			for (i = 64; i <= length; i += 64) md5cycle(this._hash, md5blk(this._buff.substring(i - 64, i)));
+			var length = this._buff.length, i = 64;
+			for (; i <= length; i += 64) md5cycle(this._hash, md5blk(this._buff.substring(i - 64, i)));
 			this._buff = this._buff.substring(i - 64);
 			return this;
 		};
@@ -333017,8 +333527,8 @@ var init_spark_md5_min = __esmMin((() => {
 				0,
 				0,
 				0
-			], i, ret;
-			for (i = 0; i < length; i += 1) tail[i >> 2] |= buff[i] << (i % 4 << 3);
+			], i = 0, ret;
+			for (; i < length; i += 1) tail[i >> 2] |= buff[i] << (i % 4 << 3);
 			this._finish(tail, length);
 			ret = hex(this._hash);
 			if (raw) ret = hexToBinaryString(ret);

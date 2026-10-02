@@ -249791,8 +249791,9 @@ var init_SakuraWeatherEffect = __esmMin((() => {
 				const radY = leave.angY * Math.PI / 180;
 				const driftX = leave.swayFacX * Math.sin(radX);
 				const driftY = leave.swayFacY * Math.sin(radY);
-				leave.x += driftX * .1;
-				leave.y += driftY * .1;
+				const driftScale = dt / RAG_TICK_MS$1;
+				leave.x += driftX * .1 * driftScale;
+				leave.y += driftY * .1 * driftScale;
 				leave._lastTick = tick;
 				let alpha = 1;
 				let alphaCap = 1;
@@ -249918,11 +249919,14 @@ var init_PokJukWeatherEffect = __esmMin((() => {
 			};
 		}
 		render(gl, tick) {
-			for (let i = 0; i < this.fireworks.length; i++) {
-				const fw = this.fireworks[i];
-				this.updateFirework(fw);
-				this.drawFirework(fw);
+			const dt = Math.min(tick - (this._lastTick || tick), 250);
+			this._lastTick = tick;
+			this._accumTime = (this._accumTime || 0) + dt;
+			while (this._accumTime >= 16) {
+				this._accumTime -= 16;
+				for (let i = 0; i < this.fireworks.length; i++) this.updateFirework(this.fireworks[i]);
 			}
+			for (let i = 0; i < this.fireworks.length; i++) this.drawFirework(this.fireworks[i]);
 		}
 		updateFirework(fw) {
 			fw.process++;
@@ -250295,6 +250299,7 @@ var init_CloudWeatherEffect = __esmMin((() => {
 			cloud.direction[2] = (Math.random() * .1 - .05) * speed;
 			cloud.born_tick = cloud.death_tick ? cloud.death_tick + 2e3 : now;
 			cloud.death_tick = cloud.born_tick + 6e3;
+			cloud._lastTick = cloud.born_tick;
 		}
 		render(gl, tick) {
 			if (!this._display) return;
@@ -250326,7 +250331,9 @@ var init_CloudWeatherEffect = __esmMin((() => {
 				SpriteRenderer.zIndex = zindex;
 				SpriteRenderer.color[3] = opacity;
 				SpriteRenderer.image.texture = this._textures[cloud.sprite];
-				vec3$8.add(cloud.position, cloud.position, cloud.direction);
+				const dt = Math.min(tick - (cloud._lastTick || cloud.born_tick), 250);
+				cloud._lastTick = tick;
+				vec3$8.scaleAndAdd(cloud.position, cloud.position, cloud.direction, dt / 25);
 				SpriteRenderer.position.set(cloud.position);
 				SpriteRenderer.runWithDepth(!overlay, false, !overlay, () => {
 					SpriteRenderer.render();
@@ -256505,6 +256512,7 @@ function cloudInit(cloud) {
 	cloud.direction[2] = Math.random() * .002 - .001;
 	cloud.born_tick = cloud.death_tick ? cloud.death_tick + 2e3 : Date.now();
 	cloud.death_tick = cloud.born_tick + 6e3;
+	cloud._lastTick = cloud.born_tick;
 }
 /**
 * Rendering clouds on maps
@@ -256539,7 +256547,9 @@ function render$7(gl, modelView, projection, fog, tick) {
 		SpriteRenderer.zIndex = 0;
 		SpriteRenderer.color[3] = opacity;
 		SpriteRenderer.image.texture = _textures[cloud.sprite];
-		vec3$8.add(cloud.position, cloud.position, cloud.direction);
+		const dt = Math.min(tick - (cloud._lastTick || cloud.born_tick), 250);
+		cloud._lastTick = tick;
+		vec3$8.scaleAndAdd(cloud.position, cloud.position, cloud.direction, dt / 25);
 		SpriteRenderer.position.set(cloud.position);
 		SpriteRenderer.runWithDepth(true, false, true, function() {
 			SpriteRenderer.render();
@@ -260921,14 +260931,13 @@ var init_SwirlingAura = __esmMin((() => {
 			this.bands = [];
 			for (let ec = 0; ec < 3; ec++) this.bands.push({
 				life: 1,
-				process: 0,
+				initialRotStart: ec * 90,
 				rotStart: ec * 90,
 				maxHeight: (15 - 2 * ec) * GAME_TO_WORLD,
 				distance: (3.9 + .2 * ec) * GAME_TO_WORLD * INNER_CIRCLE_SCALE,
 				riseAngle: (55 - 5 * ec) * DEG_TO_RAD$1,
 				spinSpeed: ec + 3,
-				height: new Float32Array(E_DIVISION),
-				flag1: new Uint8Array(E_DIVISION)
+				height: new Float32Array(E_DIVISION)
 			});
 			this.basicAngle = FULL_DISPLAY_ANGLE / 20;
 			this.vertices = /* @__PURE__ */ new Float32Array(210);
@@ -260940,19 +260949,17 @@ var init_SwirlingAura = __esmMin((() => {
 		/**
 		* Update height profile for a band
 		*/
-		updateHeightProfile(band) {
+		updateHeightProfile(band, process) {
 			const middle = 10;
 			const step = 9;
-			for (let i = 0; i < E_DIVISION; i++) if (band.flag1[i] === 0) {
+			for (let i = 0; i < E_DIVISION; i++) {
 				const sinLimit = (90 + (i - middle) * step) * DEG_TO_RAD$1;
 				const sinLimitValue = Math.sin(sinLimit);
 				const maxPossible = band.maxHeight * sinLimitValue;
-				if (band.process <= 90) {
-					const sinProcess = Math.sin(band.process * DEG_TO_RAD$1);
-					band.height[i] = band.maxHeight * sinLimitValue * sinProcess;
-				}
-				band.height[i] = Math.max(0, Math.min(band.height[i], maxPossible));
-				if (band.height[i] >= maxPossible * .99) band.flag1[i] = 1;
+				if (process <= 90) {
+					const sinProcess = Math.sin(process * DEG_TO_RAD$1);
+					band.height[i] = Math.max(0, Math.min(band.maxHeight * sinLimitValue * sinProcess, maxPossible));
+				} else band.height[i] = maxPossible;
 			}
 		}
 		/**
@@ -261057,13 +261064,13 @@ var init_SwirlingAura = __esmMin((() => {
 			gl.enableVertexAttribArray(attribute.aPosition);
 			gl.enableVertexAttribArray(attribute.aTextureCoord);
 			const self = this;
+			const process = (tick - this.tick) / 25;
 			SpriteRenderer.runWithDepth(true, false, false, function() {
 				for (let ec = 0; ec < self.bands.length; ec++) {
 					const band = self.bands[ec];
 					if (!band.life) continue;
-					band.process++;
-					band.rotStart = (band.rotStart + band.spinSpeed) % 360;
-					self.updateHeightProfile(band);
+					band.rotStart = (band.initialRotStart + process * band.spinSpeed) % 360;
+					self.updateHeightProfile(band, process);
 					self.fillBandMesh(band);
 					gl.bindBuffer(gl.ARRAY_BUFFER, self.buffers[ec]);
 					gl.bufferSubData(gl.ARRAY_BUFFER, 0, self.vertices);
@@ -261225,6 +261232,8 @@ var init_GroundAura = __esmMin((() => {
 			this.aura[1].direction = -1;
 			this.cosCache = {};
 			this.sinCache = {};
+			this._lastTick = tick;
+			this._accumTime = 0;
 		}
 		/**
 		* Initialize instance
@@ -261246,16 +261255,29 @@ var init_GroundAura = __esmMin((() => {
 		render(gl, tick) {
 			const uniform = _program$7.uniform;
 			gl.bindTexture(gl.TEXTURE_2D, this.texture);
-			for (let i = 0; i < this.aura.length; i++) {
-				this.aura[i].riseAngle += 3;
-				if (this.aura[i].riseAngle && !(this.aura[i].riseAngle % 180)) {
-					this.aura[i].direction *= -1;
-					if (this.aura[i].direction < 0 && this.aura[i].size[0] < this.aura[i].initialSize[0] || this.aura[i].direction > 0 && this.aura[i].size[0] > this.aura[i].initialSize[0]) {
-						this.aura[i].size[0] = this.aura[i].initialSize[0];
-						this.aura[i].size[1] = this.aura[i].initialSize[1];
+			const RAG_TICK_MS = 25;
+			const dt = Math.min(tick - (this._lastTick || tick), 250);
+			this._lastTick = tick;
+			this._accumTime = (this._accumTime || 0) + dt;
+			while (this._accumTime >= RAG_TICK_MS) {
+				this._accumTime -= RAG_TICK_MS;
+				for (let i = 0; i < this.aura.length; i++) {
+					this.aura[i].riseAngle += 3;
+					if (this.aura[i].riseAngle && !(this.aura[i].riseAngle % 180)) {
+						this.aura[i].direction *= -1;
+						if (this.aura[i].direction < 0 && this.aura[i].size[0] < this.aura[i].initialSize[0] || this.aura[i].direction > 0 && this.aura[i].size[0] > this.aura[i].initialSize[0]) {
+							this.aura[i].size[0] = this.aura[i].initialSize[0];
+							this.aura[i].size[1] = this.aura[i].initialSize[1];
+						}
+					}
+					if (this.aura[i].riseAngle >= 360) this.aura[i].riseAngle -= 360;
+					if (this.aura[i].life) {
+						const auraAngle = i * 23;
+						const sizeModifier = calculateSize(this, this.aura, auraAngle, i);
+						this.aura[i].size[0] += sizeModifier[0] * this.aura[i].direction / (this.size / 2);
+						this.aura[i].size[1] += sizeModifier[1] * this.aura[i].direction / (this.size / 2);
 					}
 				}
-				if (this.aura[i].riseAngle >= 360) this.aura[i].riseAngle -= 360;
 			}
 			const groundZ = Altitude.getCellHeight(this.position[0], this.position[1]);
 			const worldPos = [
@@ -261269,9 +261291,6 @@ var init_GroundAura = __esmMin((() => {
 				for (let i = 0; i < self.aura.length; i++) {
 					if (!self.aura[i].life) continue;
 					const auraAngle = i * 23;
-					const sizeModifier = calculateSize(self, self.aura, auraAngle, i);
-					self.aura[i].size[0] += sizeModifier[0] * self.aura[i].direction / (self.size / 2);
-					self.aura[i].size[1] += sizeModifier[1] * self.aura[i].direction / (self.size / 2);
 					gl.uniform2f(uniform.uSize, self.aura[i].size[0], self.aura[i].size[1]);
 					gl.uniform1f(uniform.uAngle, auraAngle * Math.PI / 180);
 					gl.uniform4f(uniform.uColor, 1, 1, 1, .8);
@@ -261364,10 +261383,10 @@ function wrapDegrees(angle) {
 * Advance a phase angle toward a random target, reseed when reached.
 * Returns { angle, target }
 */
-function advancePhase(current, target) {
+function advancePhase(current, target, stepScale = 1) {
 	let diff = target - current;
 	diff = (diff + 540) % 360 - 180;
-	const step = 2 + Math.random();
+	const step = (2 + Math.random()) * stepScale;
 	if (Math.abs(diff) <= step) {
 		current = target;
 		target = randRange(0, 360);
@@ -261497,6 +261516,7 @@ var init_Level99Bubble = __esmMin((() => {
 			this.position = position;
 			this.textureName = textureName || "whitelight.tga";
 			this.tick = tick || 0;
+			this._lastTick = tick || Date.now();
 			this.flag1 = flag1 === 0 || flag1 ? flag1 : 1;
 			const isGhost = this.flag1 === 11 || this.flag1 === 3;
 			this.baseRadius = this.flag1 === 1 ? REF_RADIUS : isGhost ? 3.2 : .8;
@@ -261575,9 +261595,9 @@ var init_Level99Bubble = __esmMin((() => {
 		/**
 		* Update all phases in a column (advance toward random targets)
 		*/
-		updatePhases(column) {
+		updatePhases(column, stepScale = 1) {
 			for (let i = 0; i < 16; i++) {
-				const result = advancePhase(column.phases[i], column.phaseTargets[i]);
+				const result = advancePhase(column.phases[i], column.phaseTargets[i], stepScale);
 				column.phases[i] = result.angle;
 				column.phaseTargets[i] = result.target;
 			}
@@ -261589,17 +261609,17 @@ var init_Level99Bubble = __esmMin((() => {
 		* - Y drift: y -= v each frame
 		* - Reset when y < resetY: x=z=0, y=rand[0,seedMax], reseed phases
 		*/
-		updateAnchor(column, anchorIndex) {
+		updateAnchor(column, anchorIndex, stepScale = 1) {
 			const anchor = column.anchors[anchorIndex];
 			const signs = ANCHOR_SIGNS[anchorIndex];
 			const phaseOffsets = ANCHOR_PHASE_OFFSETS[anchorIndex];
 			if (anchor.y < 0) {
 				const phaseA = column.phases[phaseOffsets.pa] * DEG_TO_RAD;
 				const phaseB = column.phases[phaseOffsets.pb] * DEG_TO_RAD;
-				anchor.x += signs.kx * this.driftK * Math.sin(phaseA);
-				anchor.z += signs.kz * this.driftK * Math.sin(phaseB);
+				anchor.x += signs.kx * this.driftK * Math.sin(phaseA) * stepScale;
+				anchor.z += signs.kz * this.driftK * Math.sin(phaseB) * stepScale;
 			}
-			anchor.y -= this.fallSpeed * debugConfig.fallSpeedMult;
+			anchor.y -= this.fallSpeed * debugConfig.fallSpeedMult * stepScale;
 			const resetLimit = this.resetY * debugConfig.respawnDepthMult;
 			if (anchor.y < resetLimit) {
 				anchor.x = 0;
@@ -261663,12 +261683,16 @@ var init_Level99Bubble = __esmMin((() => {
 			gl.bindTexture(gl.TEXTURE_2D, this.texture);
 			if (debugConfig.showRedBg) this.renderBackground(gl, basePos);
 			const radius = this.baseRadius * GAME_TO_WORLD * debugConfig.scaleMult;
+			const RAG_TICK_MS = 25;
+			const dt = Math.min(tick - (this._lastTick || tick), 250);
+			this._lastTick = tick;
+			const stepScale = dt / RAG_TICK_MS;
 			for (let ec = 0; ec < this.columns.length; ec++) {
 				const column = this.columns[ec];
 				if (!column.life) continue;
-				this.updatePhases(column);
+				this.updatePhases(column, stepScale);
 				for (let ai = 0; ai < column.anchors.length; ai++) {
-					this.updateAnchor(column, ai);
+					this.updateAnchor(column, ai, stepScale);
 					const anchor = column.anchors[ai];
 					const anchorWorldX = anchor.x * GAME_TO_WORLD;
 					const anchorWorldY = anchor.y * GAME_TO_WORLD;
@@ -306132,7 +306156,7 @@ var init_EntityAttachments = __esmMin((() => {
 		*/
 		add(attachment) {
 			if (attachment.uid && !attachment.stackable) this.remove(attachment.uid);
-			attachment.startTick = Date.now();
+			attachment.startTick = attachment.startTick || Renderer.tick || Date.now();
 			attachment.opacity = !isNaN(attachment.opacity) ? attachment.opacity : 1;
 			attachment.direction = attachment.hasOwnProperty("frame") ? false : true;
 			attachment.frame = attachment.frame || 0;
@@ -306172,6 +306196,7 @@ var init_EntityAttachments = __esmMin((() => {
 				return;
 			}
 			Client.loadFile(attachment.spr, function onLoad() {
+				attachment.startTick = Renderer.tick || Date.now();
 				this.list.push(attachment);
 			}.bind(this), null, { to_rgba: true });
 		}
@@ -306296,15 +306321,18 @@ var init_EntityAttachments = __esmMin((() => {
 			}
 			frame = attachment.direction ? (Camera.direction + this.entity.direction + 8) % 8 : attachment.frame;
 			frame %= act.actions.length;
-			const animations = act.actions[frame].animations;
-			const delay = attachment.delay || act.actions[frame].delay;
+			const action = act.actions[frame];
+			const animations = action.animations;
+			const delay = Math.max(1, attachment.delay || action.delay || 100);
 			SpriteRenderer.depth = attachment.depth || 0;
+			const elapsed = Math.max(0, tick - attachment.startTick);
+			const animIndex = Math.floor(elapsed / delay);
 			if ("animationId" in attachment) layers = animations[attachment.animationId].layers;
 			else if (attachment.repeat) {
-				if (attachment.duration > 0 && tick - attachment.startTick >= attachment.duration) return true;
-				layers = animations[Math.floor((tick - attachment.startTick) / delay) % animations.length].layers;
+				if (attachment.duration > 0 && elapsed >= attachment.duration) return true;
+				layers = animations[animIndex % animations.length].layers;
 			} else {
-				animation = Math.min(Math.floor((tick - attachment.startTick) / delay), animations.length - 1);
+				animation = Math.min(animIndex, animations.length - 1);
 				layers = animations[animation].layers;
 				if (animation === animations.length - 1 && !attachment.stopAtEnd) clean = true;
 			}

@@ -221973,7 +221973,7 @@ var init_UIVersionManager = __esmMin((() => {
 		* Also skips char-phase controllers registered via selectAllChar().
 		*/
 		static selectAll() {
-			for (const entry of UIVersionManager._registry) if (!entry.versionInfo.job && entry.phase !== "char") entry.controller.selectUIVersion();
+			for (const entry of UIVersionManager._registry) if (!entry.versionInfo.job && entry.phase !== "char") entry.proxy.selectUIVersion();
 		}
 		/**
 		* Select the correct UI version for char-phase controllers
@@ -224801,13 +224801,14 @@ var init_MiniMap = __esmMin((() => {
 		prere: {}
 	};
 	Controller$5 = UIVersionManager.getUIController(publicName$12, versionInfo$12);
-	/**
-	* Proxy for getMemberColor
-	*/
-	Controller$5.getMemberColor = function getMemberColor(key) {
-		const ui = Controller$5.getUI();
-		return ui && ui.getMemberColor ? ui.getMemberColor(key) : "white";
-	};
+	Object.defineProperty(Controller$5, "getMemberColor", {
+		value: function getMemberColor(key) {
+			const ui = Controller$5.getUI();
+			return ui && typeof ui.getMemberColor === "function" ? ui.getMemberColor(key) : "white";
+		},
+		writable: true,
+		configurable: true
+	});
 }));
 //#endregion
 //#region src/UI/Components/PartyFriends/PartyHelper/PartyHelper.html?raw

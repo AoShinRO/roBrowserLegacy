@@ -222082,26 +222082,33 @@ var init_UIVersionManager = __esmMin((() => {
 			return SelectedUI;
 		}
 		static getUIController(publicName, versionInfo, options = {}) {
-			let _selectedUI;
 			const CONTROLLER_OWN = /* @__PURE__ */ new Set([
 				"selectUIVersion",
 				"selectUIVersionWithJob",
 				"selectSpecificUIVersion",
 				"getUI"
 			]);
+			let _selectedUI;
+			const _pending = Object.create(null);
+			function _applyPending() {
+				if (_selectedUI) for (const prop in _pending) _selectedUI[prop] = _pending[prop];
+			}
 			const UIController = {
 				selectUIVersion() {
 					_selectedUI = UIVersionManager.selectUIVersion(publicName, versionInfo);
+					_applyPending();
 				},
 				selectUIVersionWithJob(job) {
 					_selectedUI = versionInfo.job[job] || versionInfo.job.default;
 					_UIAliases[publicName] = _selectedUI.name;
 					console.log("[UIVersion] " + publicName + ": ", _selectedUI.name);
+					_applyPending();
 				},
 				selectSpecificUIVersion(version) {
 					_selectedUI = versionInfo.common[version] || versionInfo.default;
 					_UIAliases[publicName] = _selectedUI.name;
 					console.log("[UIVersion] " + publicName + ": ", _selectedUI.name);
+					_applyPending();
 				},
 				getUI() {
 					return _selectedUI;
@@ -222116,11 +222123,12 @@ var init_UIVersionManager = __esmMin((() => {
 				},
 				set(target, prop, value) {
 					if (CONTROLLER_OWN.has(prop) || Object.prototype.hasOwnProperty.call(target, prop)) return Reflect.set(target, prop, value);
+					_pending[prop] = value;
 					if (_selectedUI) _selectedUI[prop] = value;
 					return true;
 				},
 				has(target, prop) {
-					return prop in target || _selectedUI !== void 0 && prop in _selectedUI;
+					return prop in target || prop in _pending || _selectedUI !== void 0 && prop in _selectedUI;
 				}
 			});
 			UIVersionManager._registry.push({

@@ -222086,6 +222086,7 @@ var init_UIVersionManager = __esmMin((() => {
 				"selectUIVersion",
 				"selectUIVersionWithJob",
 				"selectSpecificUIVersion",
+				"selectUIVersionDefault",
 				"getUI"
 			]);
 			let _selectedUI;
@@ -222110,6 +222111,11 @@ var init_UIVersionManager = __esmMin((() => {
 					console.log("[UIVersion] " + publicName + ": ", _selectedUI.name);
 					_applyPending();
 				},
+				selectUIVersionDefault() {
+					_selectedUI = versionInfo.default;
+					_UIAliases[publicName] = _selectedUI.name;
+					_applyPending();
+				},
 				getUI() {
 					return _selectedUI;
 				}
@@ -222117,7 +222123,7 @@ var init_UIVersionManager = __esmMin((() => {
 			const proxy = new Proxy(UIController, {
 				get(target, prop, receiver) {
 					if (CONTROLLER_OWN.has(prop) || Object.prototype.hasOwnProperty.call(target, prop)) return Reflect.get(target, prop, receiver);
-					if (!_selectedUI) return;
+					if (!_selectedUI) return prop in _pending ? _pending[prop] : void 0;
 					const val = _selectedUI[prop];
 					return typeof val === "function" ? val.bind(_selectedUI) : val;
 				},
@@ -222155,6 +222161,14 @@ var init_UIVersionManager = __esmMin((() => {
 		*/
 		static selectAllChar() {
 			for (const entry of UIVersionManager._registry) if (entry.phase === "char") entry.controller.selectUIVersion();
+		}
+		/**
+		* Select versionInfo.default for every registered controller.
+		* Test-only helper: bypasses PACKETVER/renewal so components work
+		* without a server selection. Not called by the game runtime.
+		*/
+		static selectAllDefaults() {
+			for (const entry of UIVersionManager._registry) entry.controller.selectUIVersionDefault();
 		}
 		static getEquipmentVersion() {
 			if (Configs.get("clientVersionMode") === "PacketVer") {

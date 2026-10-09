@@ -353,16 +353,6 @@ class SpriteBatcher {
 		// Depth state first: applyDepthState is a no-op if the cached GL state matches.
 		this.applyDepthState(gl, this._depthTest, this._depthMask);
 
-		// --- Blend --------------------------------------------------------
-		if (this._glBlendMode !== this._blendMode) {
-			if (this._blendMode === BLEND_ONE) {
-				gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-			} else {
-				gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-			}
-			this._glBlendMode = this._blendMode;
-		}
-
 		// --- Upload -------------------------------------------------------
 		gl.bindBuffer(gl.ARRAY_BUFFER, this._instanceBuffer);
 		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._data, 0, this._count * FLOATS_PER_INSTANCE);

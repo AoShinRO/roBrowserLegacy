@@ -551,6 +551,7 @@ class SpriteRenderer {
 		_depthTest = depthTest;
 		_depthMask = depthMask;
 		this.disableDepthCorrection = depthCorrection;
+		_batcher.applyDepthState(_gl, _depthTest, _depthMask);
 
 		try {
 			fn();
@@ -561,6 +562,11 @@ class SpriteRenderer {
 			_depthTest = prevDepthTest;
 			_depthMask = prevDepthMask;
 			this.disableDepthCorrection = prevDepthCorrection;
+			// Restore GL to the caller's state immediately. Non-batched draws in
+			// the same frame (weather, effects, water, models) don't go through
+			// the batcher and would otherwise inherit the temporary state that
+			// the flush above just installed.
+			_batcher.applyDepthState(_gl, _depthTest, _depthMask);
 		}
 	}
 }

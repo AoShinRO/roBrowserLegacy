@@ -175,7 +175,12 @@ export default class TextureArrayManager {
 		const layer = this._allocLayer();
 		if (layer < 0) return null;
 
-		this._blitIntoLayer(srcTexture, layer, width, height);
+		// Do not cache the entry when the upload failed: the slot has been
+		// recycled into _freeLayers and may be handed to a different texture,
+		// which would alias this key to whatever data ends up there.
+		if (!this._blitIntoLayer(srcTexture, layer, width, height)) {
+			return null;
+		}
 
 		const entry = {
 			layer,
@@ -259,17 +264,18 @@ export default class TextureArrayManager {
 
 		const status = gl.checkFramebufferStatus(gl.READ_FRAMEBUFFER);
 		if (status !== gl.FRAMEBUFFER_COMPLETE) {
-			// Recycle the slot on failure.
+			// Recycle the slot; the caller must not cache an entry for it.
 			this._freeLayers.push(layer);
 			gl.bindFramebuffer(gl.READ_FRAMEBUFFER, prevRead);
 			gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, prevDraw);
-			return null;
+			return false;
 		}
 
 		gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
 
 		gl.bindFramebuffer(gl.READ_FRAMEBUFFER, prevRead);
 		gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, prevDraw);
+		return true;
 	}
 
 	dispose() {

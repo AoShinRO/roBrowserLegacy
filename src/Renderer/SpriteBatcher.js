@@ -263,6 +263,13 @@ class SpriteBatcher {
 		// --- Palette layer (non-array palette sprites only) ----------------
 		let paletteLayer = 0;
 		if (!isArray && state.image.palette) {
+			// Same invariant as the sprite-array path above: if the palette
+			// array is at max capacity, the next allocation will evict a live
+			// layer. That layer may still be referenced by instances already
+			// queued in _data, so flush before evicting.
+			if (this._count > 0 && this._paletteManager.atCapacity) {
+				this.flush(gl);
+			}
 			const palEntry = this._paletteManager.getLayer(
 				state.image.palette,
 				PALETTE_LAYER_WIDTH,

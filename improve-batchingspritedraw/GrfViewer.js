@@ -207967,11 +207967,6 @@ var init_SpriteBatcher = __esmMin((() => {
 			if (this._count === 0) return;
 			gl.useProgram(this._program);
 			this.applyDepthState(gl, this._depthTest, this._depthMask);
-			if (this._glBlendMode !== this._blendMode) {
-				if (this._blendMode === 1) gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-				else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-				this._glBlendMode = this._blendMode;
-			}
 			gl.bindBuffer(gl.ARRAY_BUFFER, this._instanceBuffer);
 			gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._data, 0, this._count * 22);
 			gl.activeTexture(gl.TEXTURE1);
@@ -208363,6 +208358,7 @@ var init_SpriteRenderer = __esmMin((() => {
 			_depthTest = depthTest;
 			_depthMask = depthMask;
 			this.disableDepthCorrection = depthCorrection;
+			_batcher.applyDepthState(_gl$2, _depthTest, _depthMask);
 			try {
 				fn();
 			} finally {
@@ -208370,6 +208366,7 @@ var init_SpriteRenderer = __esmMin((() => {
 				_depthTest = prevDepthTest;
 				_depthMask = prevDepthMask;
 				this.disableDepthCorrection = prevDepthCorrection;
+				_batcher.applyDepthState(_gl$2, _depthTest, _depthMask);
 			}
 		}
 	};

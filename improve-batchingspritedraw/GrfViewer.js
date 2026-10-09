@@ -207503,12 +207503,16 @@ var init_TextureArrayManager = __esmMin((() => {
 	TextureArrayManager = class {
 		constructor(gl, options = {}) {
 			this._gl = gl;
-			this._layerSize = options.layerSize || 128;
+			const layerSize = options.layerSize || 128;
+			this._layerWidth = options.layerWidth || layerSize;
+			this._layerHeight = options.layerHeight || layerSize;
 			this._initialCap = options.initialCapacity || 64;
 			this._maxCap = options.maxCapacity || 128;
 			this._texture = null;
 			this._capacity = 0;
 			this._nextFreeLayer = 0;
+			this._freeLayers = [];
+			this._useCounter = 0;
 			this._entries = /* @__PURE__ */ new Map();
 			this._readFBO = null;
 			this._drawFBO = null;
@@ -207523,6 +207527,13 @@ var init_TextureArrayManager = __esmMin((() => {
 		get usedLayers() {
 			return this._nextFreeLayer;
 		}
+		/**
+		* True when the next allocation will need to evict a live layer.
+		* Callers (SpriteBatcher) use this to flush pending work first.
+		*/
+		get atCapacity() {
+			return this._freeLayers.length === 0 && this._nextFreeLayer >= this._capacity && this._capacity >= this._maxCap;
+		}
 		_init() {
 			const gl = this._gl;
 			this._readFBO = gl.createFramebuffer();
@@ -207536,7 +207547,7 @@ var init_TextureArrayManager = __esmMin((() => {
 			const gl = this._gl;
 			const tex = gl.createTexture();
 			gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
-			gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, this._layerSize, this._layerSize, capacity);
+			gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, this._layerWidth, this._layerHeight, capacity);
 			gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 			gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 			gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -207544,12 +207555,45 @@ var init_TextureArrayManager = __esmMin((() => {
 			gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
 			return tex;
 		}
+		_touch(entry) {
+			entry.lastUsed = ++this._useCounter;
+		}
+		/**
+		* Allocate a layer slot. Preference order:
+		*   1. Recycle a slot freed by a previous eviction.
+		*   2. Use the next never-allocated slot.
+		*   3. Grow the array (doubling) if allowed.
+		*   4. Evict the LRU entry and reuse its slot.
+		* Returns -1 if none succeed.
+		*/
+		_allocLayer() {
+			if (this._freeLayers.length > 0) return this._freeLayers.pop();
+			if (this._nextFreeLayer < this._capacity) return this._nextFreeLayer++;
+			if (this._grow()) return this._nextFreeLayer++;
+			if (this._evictLRU()) return this._freeLayers.pop();
+			return -1;
+		}
+		_evictLRU() {
+			let oldestKey = null;
+			let oldestEntry = null;
+			for (const [k, e] of this._entries) if (!oldestEntry || e.lastUsed < oldestEntry.lastUsed) {
+				oldestEntry = e;
+				oldestKey = k;
+			}
+			if (!oldestEntry) return false;
+			this._entries.delete(oldestKey);
+			this._freeLayers.push(oldestEntry.layer);
+			return true;
+		}
 		getLayerFromPixels(srcTexture, pixels, width, height) {
 			const cached = this._entries.get(srcTexture);
-			if (cached) return cached;
-			if (width > this._layerSize || height > this._layerSize) return null;
-			if (this._nextFreeLayer >= this._capacity && !this._grow()) return null;
-			const layer = this._nextFreeLayer++;
+			if (cached) {
+				this._touch(cached);
+				return cached;
+			}
+			if (width > this._layerWidth || height > this._layerHeight) return null;
+			const layer = this._allocLayer();
+			if (layer < 0) return null;
 			const gl = this._gl;
 			gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._texture);
 			gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, width, height, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
@@ -207558,8 +207602,9 @@ var init_TextureArrayManager = __esmMin((() => {
 				layer,
 				width,
 				height,
-				uvScaleX: width / this._layerSize,
-				uvScaleY: height / this._layerSize
+				uvScaleX: width / this._layerWidth,
+				uvScaleY: height / this._layerHeight,
+				lastUsed: ++this._useCounter
 			};
 			this._entries.set(srcTexture, entry);
 			return entry;
@@ -207572,22 +207617,39 @@ var init_TextureArrayManager = __esmMin((() => {
 		*/
 		getLayer(srcTexture, width, height) {
 			const cached = this._entries.get(srcTexture);
-			if (cached) return cached;
-			if (width > this._layerSize || height > this._layerSize) return null;
-			if (this._nextFreeLayer >= this._capacity) {
-				if (!this._grow()) return null;
+			if (cached) {
+				this._touch(cached);
+				return cached;
 			}
-			const layer = this._nextFreeLayer++;
+			if (width > this._layerWidth || height > this._layerHeight) return null;
+			const layer = this._allocLayer();
+			if (layer < 0) return null;
 			this._blitIntoLayer(srcTexture, layer, width, height);
 			const entry = {
 				layer,
 				width,
 				height,
-				uvScaleX: width / this._layerSize,
-				uvScaleY: height / this._layerSize
+				uvScaleX: width / this._layerWidth,
+				uvScaleY: height / this._layerHeight,
+				lastUsed: ++this._useCounter
 			};
 			this._entries.set(srcTexture, entry);
 			return entry;
+		}
+		/**
+		* Upload pixels to a fresh layer without registering them for reuse.
+		* Used to reserve e.g. palette layer 0 as a dummy/identity layer.
+		* @returns {number} layer index or -1
+		*/
+		reserveLayer(pixels, width, height) {
+			if (width > this._layerWidth || height > this._layerHeight) return -1;
+			const layer = this._allocLayer();
+			if (layer < 0) return -1;
+			const gl = this._gl;
+			gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._texture);
+			gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, width, height, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+			gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
+			return layer;
 		}
 		_grow() {
 			if (this._capacity >= this._maxCap) return false;
@@ -207602,7 +207664,7 @@ var init_TextureArrayManager = __esmMin((() => {
 				gl.framebufferTextureLayer(gl.READ_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, oldTex, 0, i);
 				gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this._drawFBO);
 				gl.framebufferTextureLayer(gl.DRAW_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, newTex, 0, i);
-				gl.blitFramebuffer(0, 0, this._layerSize, this._layerSize, 0, 0, this._layerSize, this._layerSize, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+				gl.blitFramebuffer(0, 0, this._layerWidth, this._layerHeight, 0, 0, this._layerWidth, this._layerHeight, gl.COLOR_BUFFER_BIT, gl.NEAREST);
 			}
 			gl.bindFramebuffer(gl.READ_FRAMEBUFFER, prevRead);
 			gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, prevDraw);
@@ -207620,7 +207682,7 @@ var init_TextureArrayManager = __esmMin((() => {
 			gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this._drawFBO);
 			gl.framebufferTextureLayer(gl.DRAW_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this._texture, 0, layer);
 			if (gl.checkFramebufferStatus(gl.READ_FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
-				this._nextFreeLayer--;
+				this._freeLayers.push(layer);
 				gl.bindFramebuffer(gl.READ_FRAMEBUFFER, prevRead);
 				gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, prevDraw);
 				return null;
@@ -207635,6 +207697,7 @@ var init_TextureArrayManager = __esmMin((() => {
 			if (this._readFBO) gl.deleteFramebuffer(this._readFBO);
 			if (this._drawFBO) gl.deleteFramebuffer(this._drawFBO);
 			this._entries.clear();
+			this._freeLayers.length = 0;
 			this._texture = null;
 			this._readFBO = null;
 			this._drawFBO = null;
@@ -207647,14 +207710,14 @@ var init_TextureArrayManager = __esmMin((() => {
 //#region src/Renderer/SpriteBatcher.vs?raw
 var SpriteBatcher_default$1;
 var init_SpriteBatcher$2 = __esmMin((() => {
-	SpriteBatcher_default$1 = "#version 300 es\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nprecision highp sampler2DArray;\r\n\r\nin vec2 aPosition;\r\nin vec2 aTextureCoord;\r\n\r\n// Per-instance\r\nin vec3  iPosition;\r\nin vec4  iColor;\r\nin vec2  iSize;\r\nin vec2  iOffset;\r\nin float iZindex;\r\nin float iDepth;\r\nin float iShadow;\r\nin float iAngle;\r\nin float iFlags;\r\nin vec2  iTextSize;\r\nin float iTextureLayer;\r\nin vec2  iUvScale;\r\n\r\nout vec2  vTextureCoord;\r\nout vec2  vUv;\r\nout vec4  vColor;\r\nout float vShadow;\r\nout vec2  vTextSize;\r\nflat out int vTextureLayer;\r\nflat out int   vFlags;\r\n\r\nuniform mat4 uModelViewMat;\r\nuniform mat4 uViewModelMat;\r\nuniform mat4 uProjectionMat;\r\n\r\nuniform float uCameraZoom;\r\nuniform float uCameraLatitude;\r\n\r\nconst float PI = 3.141592653589793;\r\nconst int FLAG_DISABLE_DEPTH_CORRECTION = 4;\r\nconst int FLAG_IGNORE_ZINDEX_CAP        = 8;\r\n\r\nmat4 Project( mat4 mat, vec3 pos) {\r\n    float x =  pos.x + 0.5;\r\n    float y = -pos.z;\r\n    float z =  pos.y + 0.5;\r\n    mat[3].x += mat[0].x * x + mat[1].x * y + mat[2].x * z;\r\n    mat[3].y += mat[0].y * x + mat[1].y * y + mat[2].y * z;\r\n    mat[3].z += (mat[0].z * x + mat[1].z * y + mat[2].z * z);\r\n    mat[3].w += (mat[0].w * x + mat[1].w * y + mat[2].w * z);\r\n    mat[0].xyz = vec3( 1.0, 0.0, 0.0 );\r\n    mat[1].xyz = vec3( 0.0, 1.0, 0.0 );\r\n    mat[2].xyz = vec3( 0.0, 0.0, 1.0 );\r\n    return mat;\r\n}\r\n\r\nvoid main(void) {\r\n    float rad = -iAngle * PI / 180.0;\r\n    float c = cos(rad);\r\n    float s = sin(rad);\r\n\r\n    vec2 local = vec2(aPosition.x * iSize.x, aPosition.y * iSize.y);\r\n    vec2 rotated;\r\n    rotated.x = local.x * c - local.y * s;\r\n    rotated.y = local.x * s + local.y * c;\r\n\r\n    vec4 position = vec4(rotated, 0.0, 1.0);\r\n    position.x += iOffset.x;\r\n    position.y -= iOffset.y + 0.5;\r\n\r\n    mat4 modelView = Project(uModelViewMat, iPosition);\r\n    vec4 viewPosition = modelView * position;\r\n    vec4 viewCenter   = modelView * vec4( 0.0, 0.0, 0.0, 1.0 );\r\n\r\n    gl_Position = uProjectionMat * viewPosition;\r\n\r\n    int flags = int(iFlags);\r\n    bool disableDepthCorrection = (flags & FLAG_DISABLE_DEPTH_CORRECTION) != 0;\r\n    bool ignoreZindexCap        = (flags & FLAG_IGNORE_ZINDEX_CAP) != 0;\r\n\r\n    if (!disableDepthCorrection) {\r\n        vec3 cameraPos     = (uViewModelMat * vec4(0.0, 0.0, 0.0, 1.0)).xyz;\r\n        vec3 cameraForward = normalize((uViewModelMat * vec4(0.0, 0.0, -1.0, 0.0)).xyz);\r\n\r\n        vec3 planePoint  = (uViewModelMat * viewCenter).xyz;\r\n        vec3 planeNormal = normalize(vec3(cameraForward.x, 0.0, cameraForward.z));\r\n        if (length(planeNormal) < 0.000001) {\r\n            planeNormal = cameraForward;\r\n        }\r\n\r\n        vec3  worldVertex = (uViewModelMat * viewPosition).xyz;\r\n        vec3  rayDir      = normalize(worldVertex - cameraPos);\r\n        float denom       = max(dot(planeNormal, rayDir), 0.000001);\r\n        float dist        = dot(planePoint - cameraPos, planeNormal) / denom;\r\n\r\n        vec4  planeClip      = uProjectionMat * (uModelViewMat * vec4(cameraPos + rayDir * dist, 1.0));\r\n        float correctedZBase = planeClip.z * (gl_Position.w / max(planeClip.w, 0.000001));\r\n\r\n        gl_Position.z = ignoreZindexCap ? correctedZBase : min(gl_Position.z, correctedZBase);\r\n    }\r\n    gl_Position.z -= (iZindex * 0.01 + iDepth) / max(uCameraZoom, 1.0);\r\n\r\n    vTextureCoord = aTextureCoord;\r\n    vUv           = aTextureCoord * iUvScale;\r\n    vColor        = iColor;\r\n    vShadow       = iShadow;\r\n    vTextSize     = iTextSize;\r\n    vTextureLayer = int(iTextureLayer);\r\n    vFlags        = flags;\r\n}";
+	SpriteBatcher_default$1 = "#version 300 es\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nprecision highp sampler2DArray;\r\n\r\nin vec2 aPosition;\r\nin vec2 aTextureCoord;\r\n\r\n// Per-instance\r\nin vec3  iPosition;\r\nin vec4  iColor;\r\nin vec2  iSize;\r\nin vec2  iOffset;\r\nin float iZindex;\r\nin float iDepth;\r\nin float iShadow;\r\nin float iAngle;\r\nin float iFlags;\r\nin vec2  iTextSize;\r\nin float iTextureLayer;\r\nin vec2  iUvScale;\r\nin float iPaletteLayer;\r\n\r\nout vec2  vTextureCoord;\r\nout vec2  vUv;\r\nout vec4  vColor;\r\nout float vShadow;\r\nout vec2  vTextSize;\r\nflat out int vTextureLayer;\r\nflat out int vPaletteLayer;\r\nflat out int   vFlags;\r\n\r\nuniform mat4 uModelViewMat;\r\nuniform mat4 uViewModelMat;\r\nuniform mat4 uProjectionMat;\r\n\r\nuniform float uCameraZoom;\r\nuniform float uCameraLatitude;\r\n\r\nconst float PI = 3.141592653589793;\r\nconst int FLAG_DISABLE_DEPTH_CORRECTION = 4;\r\nconst int FLAG_IGNORE_ZINDEX_CAP        = 8;\r\n\r\nmat4 Project( mat4 mat, vec3 pos) {\r\n    float x =  pos.x + 0.5;\r\n    float y = -pos.z;\r\n    float z =  pos.y + 0.5;\r\n    mat[3].x += mat[0].x * x + mat[1].x * y + mat[2].x * z;\r\n    mat[3].y += mat[0].y * x + mat[1].y * y + mat[2].y * z;\r\n    mat[3].z += (mat[0].z * x + mat[1].z * y + mat[2].z * z);\r\n    mat[3].w += (mat[0].w * x + mat[1].w * y + mat[2].w * z);\r\n    mat[0].xyz = vec3( 1.0, 0.0, 0.0 );\r\n    mat[1].xyz = vec3( 0.0, 1.0, 0.0 );\r\n    mat[2].xyz = vec3( 0.0, 0.0, 1.0 );\r\n    return mat;\r\n}\r\n\r\nvoid main(void) {\r\n    float rad = -iAngle * PI / 180.0;\r\n    float c = cos(rad);\r\n    float s = sin(rad);\r\n\r\n    vec2 local = vec2(aPosition.x * iSize.x, aPosition.y * iSize.y);\r\n    vec2 rotated;\r\n    rotated.x = local.x * c - local.y * s;\r\n    rotated.y = local.x * s + local.y * c;\r\n\r\n    vec4 position = vec4(rotated, 0.0, 1.0);\r\n    position.x += iOffset.x;\r\n    position.y -= iOffset.y + 0.5;\r\n\r\n    mat4 modelView = Project(uModelViewMat, iPosition);\r\n    vec4 viewPosition = modelView * position;\r\n    vec4 viewCenter   = modelView * vec4( 0.0, 0.0, 0.0, 1.0 );\r\n\r\n    gl_Position = uProjectionMat * viewPosition;\r\n\r\n    int flags = int(iFlags);\r\n    bool disableDepthCorrection = (flags & FLAG_DISABLE_DEPTH_CORRECTION) != 0;\r\n    bool ignoreZindexCap        = (flags & FLAG_IGNORE_ZINDEX_CAP) != 0;\r\n\r\n    if (!disableDepthCorrection) {\r\n        vec3 cameraPos     = (uViewModelMat * vec4(0.0, 0.0, 0.0, 1.0)).xyz;\r\n        vec3 cameraForward = normalize((uViewModelMat * vec4(0.0, 0.0, -1.0, 0.0)).xyz);\r\n\r\n        vec3 planePoint  = (uViewModelMat * viewCenter).xyz;\r\n        vec3 planeNormal = normalize(vec3(cameraForward.x, 0.0, cameraForward.z));\r\n        if (length(planeNormal) < 0.000001) {\r\n            planeNormal = cameraForward;\r\n        }\r\n\r\n        vec3  worldVertex = (uViewModelMat * viewPosition).xyz;\r\n        vec3  rayDir      = normalize(worldVertex - cameraPos);\r\n        float denom       = max(dot(planeNormal, rayDir), 0.000001);\r\n        float dist        = dot(planePoint - cameraPos, planeNormal) / denom;\r\n\r\n        vec4  planeClip      = uProjectionMat * (uModelViewMat * vec4(cameraPos + rayDir * dist, 1.0));\r\n        float correctedZBase = planeClip.z * (gl_Position.w / max(planeClip.w, 0.000001));\r\n\r\n        gl_Position.z = ignoreZindexCap ? correctedZBase : min(gl_Position.z, correctedZBase);\r\n    }\r\n    gl_Position.z -= (iZindex * 0.01 + iDepth) / max(uCameraZoom, 1.0);\r\n\r\n    vTextureCoord = aTextureCoord;\r\n    vUv           = aTextureCoord * iUvScale;\r\n    vColor        = iColor;\r\n    vShadow       = iShadow;\r\n    vTextSize     = iTextSize;\r\n    vTextureLayer = int(iTextureLayer);\r\n    vPaletteLayer = int(iPaletteLayer);\r\n    vFlags        = flags;\r\n}";
 }));
 //#endregion
 //#region src/Renderer/SpriteBatcher.fs?raw
 var SpriteBatcher_default;
 var init_SpriteBatcher$1 = __esmMin((() => {
-	SpriteBatcher_default = "#version 300 es\r\nprecision highp float;\r\nprecision highp sampler2DArray;\r\n\r\nin vec2  vTextureCoord;\r\nin vec2  vUv;\r\nin vec4  vColor;\r\nin float vShadow;\r\nin vec2  vTextSize;\r\nflat in int vTextureLayer;\r\nflat in int   vFlags;\r\nout vec4 fragColor;\r\n\r\nuniform sampler2D      uDiffuse;\r\nuniform sampler2D      uPalette;\r\nuniform sampler2DArray uSpriteArray;\r\n\r\nuniform bool  uFogUse;\r\nuniform float uFogNear;\r\nuniform float uFogFar;\r\nuniform vec3  uFogColor;\r\n\r\nconst int FLAG_USE_PAL   = 2;\r\nconst int FLAG_USE_ARRAY = 16;\r\n\r\nvec4 bilinearSample(vec2 uv, sampler2D indexT, sampler2D LUT, vec2 textSize) {\r\n    vec2 TextInterval = 1.0 / textSize;\r\n\r\n    float tlLUT = texture(indexT, uv).x;\r\n    float trLUT = texture(indexT, uv + vec2(TextInterval.x, 0.0)).x;\r\n    float blLUT = texture(indexT, uv + vec2(0.0, TextInterval.y)).x;\r\n    float brLUT = texture(indexT, uv + TextInterval).x;\r\n\r\n    vec4 transparent = vec4(0.0);\r\n\r\n    vec4 tl = tlLUT == 0.0 ? transparent : vec4(texture(LUT, vec2(tlLUT, 1.0)).rgb, 1.0);\r\n    vec4 tr = trLUT == 0.0 ? transparent : vec4(texture(LUT, vec2(trLUT, 1.0)).rgb, 1.0);\r\n    vec4 bl = blLUT == 0.0 ? transparent : vec4(texture(LUT, vec2(blLUT, 1.0)).rgb, 1.0);\r\n    vec4 br = brLUT == 0.0 ? transparent : vec4(texture(LUT, vec2(brLUT, 1.0)).rgb, 1.0);\r\n\r\n    vec2 f  = fract(uv.xy * textSize);\r\n    vec4 tA = mix(tl, tr, f.x);\r\n    vec4 tB = mix(bl, br, f.x);\r\n\r\n    return mix(tA, tB, f.y);\r\n}\r\n\r\nvoid main(void) {\r\n    if (vColor.a == 0.0) {\r\n        discard;\r\n    }\r\n\r\n    vec4 textureSample;\r\n\r\n    if ((vFlags & FLAG_USE_ARRAY) != 0) {\r\n        textureSample = texture(uSpriteArray, vec3(vUv, float(vTextureLayer)));\r\n    } else if ((vFlags & FLAG_USE_PAL) != 0) {\r\n        textureSample = bilinearSample(vTextureCoord, uDiffuse, uPalette, vTextSize);\r\n    } else {\r\n        textureSample = texture(uDiffuse, vTextureCoord.st);\r\n    }\r\n\r\n    if (textureSample.a == 0.0) {\r\n        discard;\r\n    }\r\n\r\n    textureSample.rgb *= vShadow;\r\n    fragColor = textureSample * vColor;\r\n\r\n    if (uFogUse) {\r\n        float depth     = gl_FragCoord.z / gl_FragCoord.w;\r\n        float fogFactor = smoothstep(uFogNear, uFogFar, depth);\r\n        fragColor       = mix(fragColor, vec4(uFogColor, fragColor.w), fogFactor);\r\n    }\r\n}";
-})), OFF_POSITION, OFF_COLOR, OFF_SIZE, OFF_OFFSET, OFF_ZINDEX, OFF_DEPTH, OFF_SHADOW, OFF_ANGLE, OFF_FLAGS, OFF_TEXTSIZE, OFF_TEXTURE_LAYER, OFF_UV_SCALE, DEFAULT_MAX_INSTANCES, ARRAY_LAYER_SIZE, ARRAY_INITIAL_CAP, ARRAY_MAX_CAP, SpriteBatcher;
+	SpriteBatcher_default = "#version 300 es\r\nprecision highp float;\r\nprecision highp sampler2DArray;\r\n\r\nin vec2  vTextureCoord;\r\nin vec2  vUv;\r\nin vec4  vColor;\r\nin float vShadow;\r\nin vec2  vTextSize;\r\nflat in int vTextureLayer;\r\nflat in int vPaletteLayer;\r\nflat in int vFlags;\r\nout vec4 fragColor;\r\n\r\nuniform sampler2D      uDiffuse;\r\nuniform sampler2DArray uPaletteArray;\r\nuniform sampler2DArray uSpriteArray;\r\n\r\nuniform bool  uFogUse;\r\nuniform float uFogNear;\r\nuniform float uFogFar;\r\nuniform vec3  uFogColor;\r\n\r\nconst int FLAG_USE_PAL   = 2;\r\nconst int FLAG_USE_ARRAY = 16;\r\n\r\nvec4 paletteSample(sampler2DArray LUT, float idx, int layer) {\r\n    return vec4(texture(LUT, vec3(idx, 0.5, float(layer))).rgb, 1.0);\r\n}\r\n\r\nvec4 bilinearSample(vec2 uv, sampler2D indexT, sampler2DArray LUT, vec2 textSize, int palLayer) {\r\n    vec2 TextInterval = 1.0 / textSize;\r\n\r\n    float tlLUT = texture(indexT, uv).x;\r\n    float trLUT = texture(indexT, uv + vec2(TextInterval.x, 0.0)).x;\r\n    float blLUT = texture(indexT, uv + vec2(0.0, TextInterval.y)).x;\r\n    float brLUT = texture(indexT, uv + TextInterval).x;\r\n\r\n    vec4 transparent = vec4(0.0);\r\n\r\n    vec4 tl = tlLUT == 0.0 ? transparent : paletteSample(LUT, tlLUT, palLayer);\r\n    vec4 tr = trLUT == 0.0 ? transparent : paletteSample(LUT, trLUT, palLayer);\r\n    vec4 bl = blLUT == 0.0 ? transparent : paletteSample(LUT, blLUT, palLayer);\r\n    vec4 br = brLUT == 0.0 ? transparent : paletteSample(LUT, brLUT, palLayer);\r\n\r\n    vec2 f  = fract(uv.xy * textSize);\r\n    vec4 tA = mix(tl, tr, f.x);\r\n    vec4 tB = mix(bl, br, f.x);\r\n\r\n    return mix(tA, tB, f.y);\r\n}\r\n\r\nvoid main(void) {\r\n    if (vColor.a == 0.0) {\r\n        discard;\r\n    }\r\n\r\n    vec4 textureSample;\r\n\r\n    if ((vFlags & FLAG_USE_ARRAY) != 0) {\r\n        textureSample = texture(uSpriteArray, vec3(vUv, float(vTextureLayer)));\r\n    } else if ((vFlags & FLAG_USE_PAL) != 0) {\r\n        textureSample = bilinearSample(vTextureCoord, uDiffuse, uPaletteArray, vTextSize, vPaletteLayer);\r\n    } else {\r\n        textureSample = texture(uDiffuse, vTextureCoord.st);\r\n    }\r\n\r\n    if (textureSample.a == 0.0) {\r\n        discard;\r\n    }\r\n\r\n    textureSample.rgb *= vShadow;\r\n    fragColor = textureSample * vColor;\r\n\r\n    if (uFogUse) {\r\n        float depth     = gl_FragCoord.z / gl_FragCoord.w;\r\n        float fogFactor = smoothstep(uFogNear, uFogFar, depth);\r\n        fragColor       = mix(fragColor, vec4(uFogColor, fragColor.w), fogFactor);\r\n    }\r\n}";
+})), OFF_POSITION, OFF_COLOR, OFF_SIZE, OFF_OFFSET, OFF_ZINDEX, OFF_DEPTH, OFF_SHADOW, OFF_ANGLE, OFF_FLAGS, OFF_TEXTSIZE, OFF_TEXTURE_LAYER, OFF_UV_SCALE, OFF_PALETTE_LAYER, DEFAULT_MAX_INSTANCES, ARRAY_LAYER_SIZE, ARRAY_INITIAL_CAP, ARRAY_MAX_CAP, PALETTE_LAYER_WIDTH, PALETTE_LAYER_HEIGHT, PALETTE_INITIAL_CAP, PALETTE_MAX_CAP, SpriteBatcher;
 var init_SpriteBatcher = __esmMin((() => {
 	init_WebGL();
 	init_Camera();
@@ -207673,14 +207736,19 @@ var init_SpriteBatcher = __esmMin((() => {
 	OFF_TEXTSIZE = 16;
 	OFF_TEXTURE_LAYER = 18;
 	OFF_UV_SCALE = 19;
+	OFF_PALETTE_LAYER = 21;
 	DEFAULT_MAX_INSTANCES = 2048;
 	ARRAY_LAYER_SIZE = 256;
 	ARRAY_INITIAL_CAP = 64;
 	ARRAY_MAX_CAP = 128;
+	PALETTE_LAYER_WIDTH = 256;
+	PALETTE_LAYER_HEIGHT = 1;
+	PALETTE_INITIAL_CAP = 32;
+	PALETTE_MAX_CAP = 128;
 	SpriteBatcher = class {
 		constructor(maxInstances = DEFAULT_MAX_INSTANCES) {
 			this._maxInstances = maxInstances;
-			this._data = new Float32Array(maxInstances * 21);
+			this._data = new Float32Array(maxInstances * 22);
 			this._count = 0;
 			this._gl = null;
 			this._program = null;
@@ -207690,11 +207758,13 @@ var init_SpriteBatcher = __esmMin((() => {
 			this._attributes = null;
 			this._uniforms = null;
 			this._arrayManager = null;
+			this._paletteManager = null;
 			this._texture = null;
-			this._palette = null;
 			this._blendMode = 0;
 			this._isArrayBatch = false;
-			this._glBlendMode = 0;
+			this._depthTest = true;
+			this._depthMask = true;
+			this._glBlendMode = -1;
 			this._glDepthTest = null;
 			this._glDepthMask = null;
 		}
@@ -207713,10 +207783,22 @@ var init_SpriteBatcher = __esmMin((() => {
 				this._uniforms = this._program.uniform;
 			}
 			if (!this._arrayManager) this._arrayManager = new TextureArrayManager(gl, {
-				layerSize: ARRAY_LAYER_SIZE,
+				layerWidth: ARRAY_LAYER_SIZE,
+				layerHeight: ARRAY_LAYER_SIZE,
 				initialCapacity: ARRAY_INITIAL_CAP,
 				maxCapacity: ARRAY_MAX_CAP
 			});
+			if (!this._paletteManager) {
+				this._paletteManager = new TextureArrayManager(gl, {
+					layerWidth: PALETTE_LAYER_WIDTH,
+					layerHeight: PALETTE_LAYER_HEIGHT,
+					initialCapacity: PALETTE_INITIAL_CAP,
+					maxCapacity: PALETTE_MAX_CAP
+				});
+				const identity = new Uint8Array(PALETTE_LAYER_WIDTH * PALETTE_LAYER_HEIGHT * 4);
+				for (let i = 0; i < PALETTE_LAYER_WIDTH; i++) identity[i * 4 + 3] = 255;
+				this._paletteManager.reserveLayer(identity, PALETTE_LAYER_WIDTH, PALETTE_LAYER_HEIGHT);
+			}
 			if (!this._quadBuffer) {
 				this._quadBuffer = gl.createBuffer();
 				gl.bindBuffer(gl.ARRAY_BUFFER, this._quadBuffer);
@@ -207758,7 +207840,7 @@ var init_SpriteBatcher = __esmMin((() => {
 				gl.bindBuffer(gl.ARRAY_BUFFER, this._instanceBuffer);
 				const setInst = (loc, size, offsetFloats) => {
 					gl.enableVertexAttribArray(loc);
-					gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 84, offsetFloats * 4);
+					gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 88, offsetFloats * 4);
 					gl.vertexAttribDivisor(loc, 1);
 				};
 				setInst(attr.iPosition, 3, OFF_POSITION);
@@ -207773,6 +207855,7 @@ var init_SpriteBatcher = __esmMin((() => {
 				setInst(attr.iTextSize, 2, OFF_TEXTSIZE);
 				setInst(attr.iTextureLayer, 1, OFF_TEXTURE_LAYER);
 				setInst(attr.iUvScale, 2, OFF_UV_SCALE);
+				setInst(attr.iPaletteLayer, 1, OFF_PALETTE_LAYER);
 				gl.bindVertexArray(null);
 			}
 		}
@@ -207789,10 +207872,12 @@ var init_SpriteBatcher = __esmMin((() => {
 			gl.uniform1f(uniform.uFogFar, fog.far);
 			gl.uniform3fv(uniform.uFogColor, fog.color);
 			gl.uniform1i(uniform.uDiffuse, 0);
-			gl.uniform1i(uniform.uPalette, 1);
+			gl.uniform1i(uniform.uPaletteArray, 1);
 			gl.uniform1i(uniform.uSpriteArray, 2);
 			gl.activeTexture(gl.TEXTURE2);
 			gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._arrayManager.texture);
+			gl.activeTexture(gl.TEXTURE1);
+			gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._paletteManager.texture);
 			gl.activeTexture(gl.TEXTURE0);
 		}
 		applyDepthState(gl, depthTest, depthMask) {
@@ -207806,28 +207891,37 @@ var init_SpriteBatcher = __esmMin((() => {
 				gl.depthMask(depthMask);
 			}
 		}
-		addSprite(gl, state, isBlendModeOne) {
+		addSprite(gl, state, isBlendModeOne, depthTest, depthMask) {
+			if (depthTest === void 0) depthTest = true;
+			if (depthMask === void 0) depthMask = true;
 			const blendMode = isBlendModeOne === true ? 1 : isBlendModeOne === false ? 0 : this._blendMode;
 			const frame = state.sprite;
+			const arrayEligible = !!(frame && frame.type === 1 && state.image.texture);
+			if (arrayEligible && this._count > 0 && this._arrayManager.atCapacity) this.flush(gl);
 			let arrayEntry = null;
-			if (frame && frame.type === 1 && state.image.texture) {
+			if (arrayEligible) {
 				if (frame.data instanceof Uint8Array && frame.width === frame.originalWidth) arrayEntry = this._arrayManager.getLayerFromPixels(state.image.texture, frame.data, frame.width, frame.height);
 				else arrayEntry = this._arrayManager.getLayer(state.image.texture, frame.width, frame.height);
 			}
-			if (frame && frame.type === 1 && state.image.texture) arrayEntry = this._arrayManager.getLayer(state.image.texture, frame.width, frame.height);
 			const isArray = !!arrayEntry;
 			const nextTexture = isArray ? null : state.image.texture;
-			const nextPalette = isArray ? null : state.image.palette;
+			let paletteLayer = 0;
+			if (!isArray && state.image.palette) {
+				const palEntry = this._paletteManager.getLayer(state.image.palette, PALETTE_LAYER_WIDTH, PALETTE_LAYER_HEIGHT);
+				if (palEntry) paletteLayer = palEntry.layer;
+			}
 			const blendChanged = blendMode !== this._blendMode;
+			const depthChanged = depthTest !== this._depthTest || depthMask !== this._depthMask;
 			const arrayChanged = this._count > 0 && isArray !== this._isArrayBatch;
-			const textureChanged = this._count > 0 && !isArray && (nextTexture !== this._texture || nextPalette !== this._palette);
-			if (this._count > 0 && (blendChanged || arrayChanged || textureChanged)) this.flush(gl);
-			if (blendChanged) this._blendMode = blendMode;
+			const textureChanged = this._count > 0 && !isArray && nextTexture !== this._texture;
+			if (this._count > 0 && (blendChanged || depthChanged || arrayChanged || textureChanged)) this.flush(gl);
+			this._blendMode = blendMode;
+			this._depthTest = depthTest;
+			this._depthMask = depthMask;
 			this._texture = nextTexture;
-			this._palette = nextPalette;
 			this._isArrayBatch = isArray;
 			if (this._count >= this._maxInstances) this.flush(gl);
-			const off = this._count * 21;
+			const off = this._count * 22;
 			const d = this._data;
 			d[off + OFF_POSITION + 0] = state.position[0];
 			d[off + OFF_POSITION + 1] = state.position[1];
@@ -207864,18 +207958,22 @@ var init_SpriteBatcher = __esmMin((() => {
 				d[off + OFF_UV_SCALE + 0] = 1;
 				d[off + OFF_UV_SCALE + 1] = 1;
 			}
+			d[off + OFF_PALETTE_LAYER] = paletteLayer;
 			this._count++;
 		}
 		flush(gl) {
 			if (this._count === 0) return;
 			gl.useProgram(this._program);
+			this.applyDepthState(gl, this._depthTest, this._depthMask);
 			if (this._glBlendMode !== this._blendMode) {
 				if (this._blendMode === 1) gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 				else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 				this._glBlendMode = this._blendMode;
 			}
 			gl.bindBuffer(gl.ARRAY_BUFFER, this._instanceBuffer);
-			gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._data, 0, this._count * 21);
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._data, 0, this._count * 22);
+			gl.activeTexture(gl.TEXTURE1);
+			gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._paletteManager.texture);
 			if (this._isArrayBatch) {
 				gl.activeTexture(gl.TEXTURE2);
 				gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._arrayManager.texture);
@@ -207883,33 +207981,28 @@ var init_SpriteBatcher = __esmMin((() => {
 			} else {
 				gl.activeTexture(gl.TEXTURE0);
 				gl.bindTexture(gl.TEXTURE_2D, this._texture);
-				if (this._palette) {
-					gl.activeTexture(gl.TEXTURE1);
-					gl.bindTexture(gl.TEXTURE_2D, this._palette);
-					gl.activeTexture(gl.TEXTURE0);
-				}
 			}
 			gl.bindVertexArray(this._vao);
 			gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this._count);
 			gl.bindVertexArray(null);
 			this._count = 0;
 			this._texture = null;
-			this._palette = null;
 			this._isArrayBatch = false;
 		}
 		reset() {
 			this._count = 0;
 			this._texture = null;
-			this._palette = null;
 			this._isArrayBatch = false;
 		}
 		dispose(gl) {
 			if (this._arrayManager) this._arrayManager.dispose();
+			if (this._paletteManager) this._paletteManager.dispose();
 			if (this._vao) gl.deleteVertexArray(this._vao);
 			if (this._quadBuffer) gl.deleteBuffer(this._quadBuffer);
 			if (this._instanceBuffer) gl.deleteBuffer(this._instanceBuffer);
 			if (this._program && this._program.program) gl.deleteProgram(this._program.program);
 			this._arrayManager = null;
+			this._paletteManager = null;
 			this._vao = null;
 			this._quadBuffer = null;
 			this._instanceBuffer = null;
@@ -207926,7 +208019,7 @@ var init_SpriteBatcher = __esmMin((() => {
 */
 function RenderCanvas3D(isBlendModeOne) {
 	if (!this.image.texture || !this.color[3]) return;
-	_batcher.addSprite(_gl$2, this, isBlendModeOne);
+	_batcher.addSprite(_gl$2, this, isBlendModeOne, _depthTest, _depthMask);
 }
 /**
 * Convert a sprite frame (RGBA or palette-indexed) into canvas ImageData,
@@ -208265,28 +208358,16 @@ var init_SpriteRenderer = __esmMin((() => {
 			const prevDepthTest = _depthTest;
 			const prevDepthMask = _depthMask;
 			const prevDepthCorrection = this.disableDepthCorrection;
-			if (_depthTest !== depthTest) {
-				_depthTest = depthTest;
-				depthTest ? _gl$2.enable(_gl$2.DEPTH_TEST) : _gl$2.disable(_gl$2.DEPTH_TEST);
-			}
-			if (_depthMask !== depthMask) {
-				_depthMask = depthMask;
-				_gl$2.depthMask(depthMask);
-			}
-			if (this.disableDepthCorrection !== depthCorrection) this.disableDepthCorrection = depthCorrection;
+			_depthTest = depthTest;
+			_depthMask = depthMask;
+			this.disableDepthCorrection = depthCorrection;
 			try {
 				fn();
 			} finally {
 				_batcher.flush(_gl$2);
-				if (_depthTest !== prevDepthTest) {
-					_depthTest = prevDepthTest;
-					prevDepthTest ? _gl$2.enable(_gl$2.DEPTH_TEST) : _gl$2.disable(_gl$2.DEPTH_TEST);
-				}
-				if (_depthMask !== prevDepthMask) {
-					_depthMask = prevDepthMask;
-					_gl$2.depthMask(prevDepthMask);
-				}
-				if (this.disableDepthCorrection !== prevDepthCorrection) this.disableDepthCorrection = prevDepthCorrection;
+				_depthTest = prevDepthTest;
+				_depthMask = prevDepthMask;
+				this.disableDepthCorrection = prevDepthCorrection;
 			}
 		}
 	};
@@ -311454,6 +311535,22 @@ var init_EntityWalk = __esmMin((() => {
 }));
 //#endregion
 //#region src/Renderer/Entity/EntityRender.js
+function acquireSnapshotBuffers() {
+	const buf = _snapshotPool.pop();
+	if (buf) return buf;
+	return {
+		position: /* @__PURE__ */ new Float32Array(3),
+		_position: /* @__PURE__ */ new Int32Array(2),
+		color: /* @__PURE__ */ new Float32Array(4)
+	};
+}
+function releaseSnapshotBuffers(snapshot) {
+	if (_snapshotPool.length < 64) _snapshotPool.push({
+		position: snapshot.position,
+		_position: snapshot._position,
+		color: snapshot.color
+	});
+}
 /**
 * Render an Entity
 *
@@ -311551,22 +311648,26 @@ function renderSecondBody(entity, layers, spr, pal, files, type, _position, opti
 			entity.ACTION.SKILL
 		].includes(entity.action) || entity.isFastMoving) && now - trail.lastTick > interval;
 		if (shouldCapture) {
+			const buffers = acquireSnapshotBuffers();
+			buffers.position.set(entity.position);
+			buffers._position.set(_position);
+			buffers.color.set(entity.effectColor);
 			trail.snapshots.unshift({
-				position: gl_matrix_default.vec3.clone(entity.position),
+				position: buffers.position,
+				_position: buffers._position,
+				color: buffers.color,
 				tick: now,
 				layers,
 				spr,
-				pal,
-				_position: new Int32Array(_position),
-				color: [...entity.effectColor]
+				pal
 			});
 			trail.lastTick = now;
-			if (trail.snapshots.length > maxLen) trail.snapshots.pop();
+			if (trail.snapshots.length > maxLen) releaseSnapshotBuffers(trail.snapshots.pop());
 		}
 		if (trail.snapshots.length) {
-			const originalPos = gl_matrix_default.vec3.clone(SpriteRenderer.position);
+			_scratchPosition.set(SpriteRenderer.position);
 			const originalZ = SpriteRenderer.zIndex;
-			const originalColor = new Float32Array(entity.effectColor);
+			_scratchColor.set(entity.effectColor);
 			SpriteRenderer.runWithDepth(true, false, false, function() {
 				const duration = blurType === 4 || blurType === 3 ? 800 : 400;
 				for (let idx = 0; idx < trail.snapshots.length; idx++) {
@@ -311587,9 +311688,9 @@ function renderSecondBody(entity, layers, spr, pal, files, type, _position, opti
 					for (let i = 0; i < snp.layers.length; ++i) entity.renderLayer(snp.layers[i], snp.spr, snp.pal, files.size, snp._position, type, false);
 				}
 			});
-			SpriteRenderer.position.set(originalPos);
+			SpriteRenderer.position.set(_scratchPosition);
 			SpriteRenderer.zIndex = originalZ;
-			entity.effectColor.set(originalColor);
+			entity.effectColor.set(_scratchColor);
 		}
 	}
 }
@@ -311756,7 +311857,7 @@ function Init$3() {
 	this.renderLayer = renderLayer;
 	this.renderEntity = renderEntity;
 }
-var WALK_DIST_TO_MOTION, renderGUI, SPRITE_LIFT, calculateBoundingRect, renderEntity, renderElement;
+var WALK_DIST_TO_MOTION, _snapshotPool, _scratchPosition, _scratchColor, renderGUI, SPRITE_LIFT, calculateBoundingRect, renderEntity, renderElement;
 var init_EntityRender = __esmMin((() => {
 	init_gl_matrix();
 	init_Camera();
@@ -311770,6 +311871,9 @@ var init_EntityRender = __esmMin((() => {
 	init_Graphics();
 	init_GR2ModelRenderer();
 	WALK_DIST_TO_MOTION = 170.2;
+	_snapshotPool = [];
+	_scratchPosition = /* @__PURE__ */ new Float32Array(3);
+	_scratchColor = /* @__PURE__ */ new Float32Array(4);
 	renderGUI = (function renderGUIClosure() {
 		const mat4 = gl_matrix_default.mat4;
 		const vec4 = gl_matrix_default.vec4;

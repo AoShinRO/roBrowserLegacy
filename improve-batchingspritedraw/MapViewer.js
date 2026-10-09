@@ -207628,7 +207628,7 @@ var init_TextureArrayManager = __esmMin((() => {
 			if (width > this._layerWidth || height > this._layerHeight) return null;
 			const layer = this._allocLayer();
 			if (layer < 0) return null;
-			this._blitIntoLayer(srcTexture, layer, width, height);
+			if (!this._blitIntoLayer(srcTexture, layer, width, height)) return null;
 			const entry = {
 				layer,
 				width,
@@ -207689,11 +207689,12 @@ var init_TextureArrayManager = __esmMin((() => {
 				this._freeLayers.push(layer);
 				gl.bindFramebuffer(gl.READ_FRAMEBUFFER, prevRead);
 				gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, prevDraw);
-				return null;
+				return false;
 			}
 			gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
 			gl.bindFramebuffer(gl.READ_FRAMEBUFFER, prevRead);
 			gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, prevDraw);
+			return true;
 		}
 		dispose() {
 			const gl = this._gl;
@@ -207911,6 +207912,7 @@ var init_SpriteBatcher = __esmMin((() => {
 			const nextTexture = isArray ? null : state.image.texture;
 			let paletteLayer = 0;
 			if (!isArray && state.image.palette) {
+				if (this._count > 0 && this._paletteManager.atCapacity) this.flush(gl);
 				const palEntry = this._paletteManager.getLayer(state.image.palette, PALETTE_LAYER_WIDTH, PALETTE_LAYER_HEIGHT);
 				if (palEntry) paletteLayer = palEntry.layer;
 			}

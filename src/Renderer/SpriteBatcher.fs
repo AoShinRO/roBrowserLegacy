@@ -8,11 +8,12 @@ in vec4  vColor;
 in float vShadow;
 in vec2  vTextSize;
 flat in int vTextureLayer;
-flat in int   vFlags;
+flat in int vPaletteLayer;
+flat in int vFlags;
 out vec4 fragColor;
 
 uniform sampler2D      uDiffuse;
-uniform sampler2D      uPalette;
+uniform sampler2DArray uPaletteArray;
 uniform sampler2DArray uSpriteArray;
 
 uniform bool  uFogUse;
@@ -23,7 +24,11 @@ uniform vec3  uFogColor;
 const int FLAG_USE_PAL   = 2;
 const int FLAG_USE_ARRAY = 16;
 
-vec4 bilinearSample(vec2 uv, sampler2D indexT, sampler2D LUT, vec2 textSize) {
+vec4 paletteSample(sampler2DArray LUT, float idx, int layer) {
+    return vec4(texture(LUT, vec3(idx, 0.5, float(layer))).rgb, 1.0);
+}
+
+vec4 bilinearSample(vec2 uv, sampler2D indexT, sampler2DArray LUT, vec2 textSize, int palLayer) {
     vec2 TextInterval = 1.0 / textSize;
 
     float tlLUT = texture(indexT, uv).x;
@@ -33,10 +38,10 @@ vec4 bilinearSample(vec2 uv, sampler2D indexT, sampler2D LUT, vec2 textSize) {
 
     vec4 transparent = vec4(0.0);
 
-    vec4 tl = tlLUT == 0.0 ? transparent : vec4(texture(LUT, vec2(tlLUT, 1.0)).rgb, 1.0);
-    vec4 tr = trLUT == 0.0 ? transparent : vec4(texture(LUT, vec2(trLUT, 1.0)).rgb, 1.0);
-    vec4 bl = blLUT == 0.0 ? transparent : vec4(texture(LUT, vec2(blLUT, 1.0)).rgb, 1.0);
-    vec4 br = brLUT == 0.0 ? transparent : vec4(texture(LUT, vec2(brLUT, 1.0)).rgb, 1.0);
+    vec4 tl = tlLUT == 0.0 ? transparent : paletteSample(LUT, tlLUT, palLayer);
+    vec4 tr = trLUT == 0.0 ? transparent : paletteSample(LUT, trLUT, palLayer);
+    vec4 bl = blLUT == 0.0 ? transparent : paletteSample(LUT, blLUT, palLayer);
+    vec4 br = brLUT == 0.0 ? transparent : paletteSample(LUT, brLUT, palLayer);
 
     vec2 f  = fract(uv.xy * textSize);
     vec4 tA = mix(tl, tr, f.x);
@@ -55,7 +60,7 @@ void main(void) {
     if ((vFlags & FLAG_USE_ARRAY) != 0) {
         textureSample = texture(uSpriteArray, vec3(vUv, float(vTextureLayer)));
     } else if ((vFlags & FLAG_USE_PAL) != 0) {
-        textureSample = bilinearSample(vTextureCoord, uDiffuse, uPalette, vTextSize);
+        textureSample = bilinearSample(vTextureCoord, uDiffuse, uPaletteArray, vTextSize, vPaletteLayer);
     } else {
         textureSample = texture(uDiffuse, vTextureCoord.st);
     }

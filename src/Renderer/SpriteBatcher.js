@@ -3,7 +3,6 @@
  *
  * Instanced sprite rendering batcher (WebGL2).
  *
- *
  * This file is part of ROBrowser, (http://www.robrowser.com/).
  */
 
@@ -15,7 +14,7 @@ import _fragmentShader from './SpriteBatcher.fs?raw';
 
 // ---- Layout ---------------------------------------------------------------
 
-export const FLOATS_PER_INSTANCE = 21;
+export const FLOATS_PER_INSTANCE = 22;
 export const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
 
 const OFF_POSITION = 0; // vec3
@@ -30,6 +29,7 @@ const OFF_FLAGS = 15; // float -> int
 const OFF_TEXTSIZE = 16; // vec2
 const OFF_TEXTURE_LAYER = 18; // float
 const OFF_UV_SCALE = 19; // vec2
+const OFF_PALETTE_LAYER = 21; // float
 
 export const FLAG_USE_PAL = 1 << 1;
 export const FLAG_DISABLE_DEPTH_CORRECTION = 1 << 2;
@@ -44,6 +44,12 @@ const DEFAULT_MAX_INSTANCES = 2048;
 const ARRAY_LAYER_SIZE = 256;
 const ARRAY_INITIAL_CAP = 64;
 const ARRAY_MAX_CAP = 128;
+
+// Palette textures are 256x1 (256 RGBA entries).
+const PALETTE_LAYER_WIDTH = 256;
+const PALETTE_LAYER_HEIGHT = 1;
+const PALETTE_INITIAL_CAP = 32;
+const PALETTE_MAX_CAP = 128;
 
 // ---- Class ----------------------------------------------------------------
 
@@ -62,15 +68,18 @@ class SpriteBatcher {
 		this._uniforms = null;
 
 		this._arrayManager = null;
+		this._paletteManager = null;
 
-		// Pending batch identity
+		// Pending batch identity. Palettes no longer participate in the key
+		// (they live in a texture array); only the diffuse texture does.
 		this._texture = null;
-		this._palette = null;
 		this._blendMode = BLEND_DEFAULT;
 		this._isArrayBatch = false;
+		this._depthTest = true;
+		this._depthMask = true;
 
 		// Cached GL state
-		this._glBlendMode = 0;
+		this._glBlendMode = -1;
 		this._glDepthTest = null;
 		this._glDepthMask = null;
 	}
@@ -94,10 +103,26 @@ class SpriteBatcher {
 
 		if (!this._arrayManager) {
 			this._arrayManager = new TextureArrayManager(gl, {
-				layerSize: ARRAY_LAYER_SIZE,
+				layerWidth: ARRAY_LAYER_SIZE,
+				layerHeight: ARRAY_LAYER_SIZE,
 				initialCapacity: ARRAY_INITIAL_CAP,
 				maxCapacity: ARRAY_MAX_CAP
 			});
+		}
+
+		if (!this._paletteManager) {
+			this._paletteManager = new TextureArrayManager(gl, {
+				layerWidth: PALETTE_LAYER_WIDTH,
+				layerHeight: PALETTE_LAYER_HEIGHT,
+				initialCapacity: PALETTE_INITIAL_CAP,
+				maxCapacity: PALETTE_MAX_CAP
+			});
+			// Reserve layer 0 as an identity dummy for non-palette sprites.
+			// The shader skips the palette lookup when FLAG_USE_PAL is clear,
+			// but a valid layer 0 removes any chance of sampling uninitialized data.
+			const identity = new Uint8Array(PALETTE_LAYER_WIDTH * PALETTE_LAYER_HEIGHT * 4);
+			for (let i = 0; i < PALETTE_LAYER_WIDTH; i++) identity[i * 4 + 3] = 255;
+			this._paletteManager.reserveLayer(identity, PALETTE_LAYER_WIDTH, PALETTE_LAYER_HEIGHT);
 		}
 
 		if (!this._quadBuffer) {
@@ -153,6 +178,7 @@ class SpriteBatcher {
 			setInst(attr.iTextSize, 2, OFF_TEXTSIZE);
 			setInst(attr.iTextureLayer, 1, OFF_TEXTURE_LAYER);
 			setInst(attr.iUvScale, 2, OFF_UV_SCALE);
+			setInst(attr.iPaletteLayer, 1, OFF_PALETTE_LAYER);
 
 			gl.bindVertexArray(null);
 		}
@@ -175,11 +201,13 @@ class SpriteBatcher {
 		gl.uniform3fv(uniform.uFogColor, fog.color);
 
 		gl.uniform1i(uniform.uDiffuse, 0);
-		gl.uniform1i(uniform.uPalette, 1);
+		gl.uniform1i(uniform.uPaletteArray, 1);
 		gl.uniform1i(uniform.uSpriteArray, 2);
 
 		gl.activeTexture(gl.TEXTURE2);
 		gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._arrayManager.texture);
+		gl.activeTexture(gl.TEXTURE1);
+		gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._paletteManager.texture);
 		gl.activeTexture(gl.TEXTURE0);
 	}
 
@@ -195,15 +223,28 @@ class SpriteBatcher {
 		}
 	}
 
-	addSprite(gl, state, isBlendModeOne) {
+	addSprite(gl, state, isBlendModeOne, depthTest, depthMask) {
+		if (depthTest === undefined) depthTest = true;
+		if (depthMask === undefined) depthMask = true;
+
 		// --- Blend mode ---------------------------------------------------
 		const blendMode =
 			isBlendModeOne === true ? BLEND_ONE : isBlendModeOne === false ? BLEND_DEFAULT : this._blendMode;
 
-		// --- Array path (RGBA) -------------------------------------
+		// --- Classify sprite -----------------------------------------------
 		const frame = state.sprite;
+		const arrayEligible = !!(frame && frame.type === 1 && state.image.texture);
+
+		// If the array is full, the next array allocation will evict a live
+		// layer. Flush any in-flight batch first so those instances don't end
+		// up referencing overwritten layer data.
+		if (arrayEligible && this._count > 0 && this._arrayManager.atCapacity) {
+			this.flush(gl);
+		}
+
+		// --- Array path (RGBA) --------------------------------------------
 		let arrayEntry = null;
-		if (frame && frame.type === 1 && state.image.texture) {
+		if (arrayEligible) {
 			if (frame.data instanceof Uint8Array && frame.width === frame.originalWidth) {
 				arrayEntry = this._arrayManager.getLayerFromPixels(
 					state.image.texture,
@@ -215,31 +256,39 @@ class SpriteBatcher {
 				arrayEntry = this._arrayManager.getLayer(state.image.texture, frame.width, frame.height);
 			}
 		}
-		if (frame && frame.type === 1 && state.image.texture) {
-			arrayEntry = this._arrayManager.getLayer(state.image.texture, frame.width, frame.height);
-		}
 		const isArray = !!arrayEntry;
 
 		const nextTexture = isArray ? null : state.image.texture;
-		const nextPalette = isArray ? null : state.image.palette;
+
+		// --- Palette layer (non-array palette sprites only) ----------------
+		let paletteLayer = 0;
+		if (!isArray && state.image.palette) {
+			const palEntry = this._paletteManager.getLayer(
+				state.image.palette,
+				PALETTE_LAYER_WIDTH,
+				PALETTE_LAYER_HEIGHT
+			);
+			if (palEntry) paletteLayer = palEntry.layer;
+		}
 
 		const blendChanged = blendMode !== this._blendMode;
+		const depthChanged = depthTest !== this._depthTest || depthMask !== this._depthMask;
 		const arrayChanged = this._count > 0 && isArray !== this._isArrayBatch;
-		const textureChanged =
-			this._count > 0 && !isArray && (nextTexture !== this._texture || nextPalette !== this._palette);
+		const textureChanged = this._count > 0 && !isArray && nextTexture !== this._texture;
 
-		if (this._count > 0 && (blendChanged || arrayChanged || textureChanged)) {
+		if (this._count > 0 && (blendChanged || depthChanged || arrayChanged || textureChanged)) {
 			this.flush(gl);
 		}
 
-		if (blendChanged) this._blendMode = blendMode;
+		this._blendMode = blendMode;
+		this._depthTest = depthTest;
+		this._depthMask = depthMask;
 		this._texture = nextTexture;
-		this._palette = nextPalette;
 		this._isArrayBatch = isArray;
 
 		if (this._count >= this._maxInstances) this.flush(gl);
 
-		// --- Write instance ----------------------------------------------
+		// --- Write instance ------------------------------------------------
 		const off = this._count * FLOATS_PER_INSTANCE;
 		const d = this._data;
 
@@ -285,6 +334,7 @@ class SpriteBatcher {
 			d[off + OFF_UV_SCALE + 0] = 1.0;
 			d[off + OFF_UV_SCALE + 1] = 1.0;
 		}
+		d[off + OFF_PALETTE_LAYER] = paletteLayer;
 
 		this._count++;
 	}
@@ -292,6 +342,10 @@ class SpriteBatcher {
 	flush(gl /*, state */) {
 		if (this._count === 0) return;
 		gl.useProgram(this._program);
+
+		// Depth state first: applyDepthState is a no-op if the cached GL state matches.
+		this.applyDepthState(gl, this._depthTest, this._depthMask);
+
 		// --- Blend --------------------------------------------------------
 		if (this._glBlendMode !== this._blendMode) {
 			if (this._blendMode === BLEND_ONE) {
@@ -306,7 +360,12 @@ class SpriteBatcher {
 		gl.bindBuffer(gl.ARRAY_BUFFER, this._instanceBuffer);
 		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._data, 0, this._count * FLOATS_PER_INSTANCE);
 
-		// --- Texturas -----------------------------------------------------
+		// --- Textures -----------------------------------------------------
+		// Rebind every flush so a mid-batch grow (which replaces the manager
+		// texture) is picked up immediately.
+		gl.activeTexture(gl.TEXTURE1);
+		gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._paletteManager.texture);
+
 		if (this._isArrayBatch) {
 			gl.activeTexture(gl.TEXTURE2);
 			gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._arrayManager.texture);
@@ -314,11 +373,6 @@ class SpriteBatcher {
 		} else {
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, this._texture);
-			if (this._palette) {
-				gl.activeTexture(gl.TEXTURE1);
-				gl.bindTexture(gl.TEXTURE_2D, this._palette);
-				gl.activeTexture(gl.TEXTURE0);
-			}
 		}
 
 		// --- Draw ---------------------------------------------------------
@@ -329,25 +383,25 @@ class SpriteBatcher {
 		// --- Reset --------------------------------------------------------
 		this._count = 0;
 		this._texture = null;
-		this._palette = null;
 		this._isArrayBatch = false;
 	}
 
 	reset() {
 		this._count = 0;
 		this._texture = null;
-		this._palette = null;
 		this._isArrayBatch = false;
 	}
 
 	dispose(gl) {
 		if (this._arrayManager) this._arrayManager.dispose();
+		if (this._paletteManager) this._paletteManager.dispose();
 		if (this._vao) gl.deleteVertexArray(this._vao);
 		if (this._quadBuffer) gl.deleteBuffer(this._quadBuffer);
 		if (this._instanceBuffer) gl.deleteBuffer(this._instanceBuffer);
 		if (this._program && this._program.program) gl.deleteProgram(this._program.program);
 
 		this._arrayManager = null;
+		this._paletteManager = null;
 		this._vao = null;
 		this._quadBuffer = null;
 		this._instanceBuffer = null;

@@ -8,10 +8,26 @@
  * This file is part of ROBrowser, (http://www.robrowser.com/).
  */
 
+/**
+ * LRU eviction decision
+ * ---------------------
+ * When the array reaches maxCapacity and `_grow()` cannot expand further, we
+ * evict the least-recently-used layer and reuse its slot rather than forcing
+ * the batcher to flush + rebuild the whole array from scratch. LRU preserves
+ * batching efficiency in long-running scenes where the visible sprite working
+ * set slowly rotates (background NPCs fading in/out, etc.). The evicted layer
+ * is re-uploaded the next time its source texture is requested.
+ *
+ * Callers must flush any pending batch before triggering an eviction, because
+ * an evicted layer may be referenced by in-flight instances of that batch.
+ * SpriteBatcher honors this by checking `atCapacity` and flushing first.
+ */
 export default class TextureArrayManager {
 	constructor(gl, options = {}) {
 		this._gl = gl;
-		this._layerSize = options.layerSize || 128;
+		const layerSize = options.layerSize || 128;
+		this._layerWidth = options.layerWidth || layerSize;
+		this._layerHeight = options.layerHeight || layerSize;
 		this._initialCap = options.initialCapacity || 64;
 		this._maxCap = options.maxCapacity || 128;
 
@@ -19,7 +35,12 @@ export default class TextureArrayManager {
 		this._capacity = 0;
 		this._nextFreeLayer = 0;
 
-		// Map<WebGLTexture, { layer, uvScaleX, uvScaleY, width, height }>
+		// Slots freed by eviction, reused before growing.
+		this._freeLayers = [];
+		// Monotonic access counter for LRU ordering.
+		this._useCounter = 0;
+
+		// Map<WebGLTexture, { layer, uvScaleX, uvScaleY, width, height, lastUsed }>
 		this._entries = new Map();
 
 		this._readFBO = null;
@@ -38,6 +59,14 @@ export default class TextureArrayManager {
 		return this._nextFreeLayer;
 	}
 
+	/**
+	 * True when the next allocation will need to evict a live layer.
+	 * Callers (SpriteBatcher) use this to flush pending work first.
+	 */
+	get atCapacity() {
+		return this._freeLayers.length === 0 && this._nextFreeLayer >= this._capacity && this._capacity >= this._maxCap;
+	}
+
 	_init() {
 		const gl = this._gl;
 		this._readFBO = gl.createFramebuffer();
@@ -53,7 +82,7 @@ export default class TextureArrayManager {
 		const gl = this._gl;
 		const tex = gl.createTexture();
 		gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
-		gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, this._layerSize, this._layerSize, capacity);
+		gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, this._layerWidth, this._layerHeight, capacity);
 		gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 		gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 		gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -62,16 +91,54 @@ export default class TextureArrayManager {
 		return tex;
 	}
 
+	_touch(entry) {
+		entry.lastUsed = ++this._useCounter;
+	}
+
+	/**
+	 * Allocate a layer slot. Preference order:
+	 *   1. Recycle a slot freed by a previous eviction.
+	 *   2. Use the next never-allocated slot.
+	 *   3. Grow the array (doubling) if allowed.
+	 *   4. Evict the LRU entry and reuse its slot.
+	 * Returns -1 if none succeed.
+	 */
+	_allocLayer() {
+		if (this._freeLayers.length > 0) return this._freeLayers.pop();
+		if (this._nextFreeLayer < this._capacity) return this._nextFreeLayer++;
+		if (this._grow()) return this._nextFreeLayer++;
+		if (this._evictLRU()) return this._freeLayers.pop();
+		return -1;
+	}
+
+	_evictLRU() {
+		let oldestKey = null;
+		let oldestEntry = null;
+		for (const [k, e] of this._entries) {
+			if (!oldestEntry || e.lastUsed < oldestEntry.lastUsed) {
+				oldestEntry = e;
+				oldestKey = k;
+			}
+		}
+		if (!oldestEntry) return false;
+		this._entries.delete(oldestKey);
+		this._freeLayers.push(oldestEntry.layer);
+		return true;
+	}
+
 	getLayerFromPixels(srcTexture, pixels, width, height) {
 		const cached = this._entries.get(srcTexture);
-		if (cached) return cached;
+		if (cached) {
+			this._touch(cached);
+			return cached;
+		}
 
-		if (width > this._layerSize || height > this._layerSize) return null;
-		if (this._nextFreeLayer >= this._capacity && !this._grow()) return null;
+		if (width > this._layerWidth || height > this._layerHeight) return null;
 
-		const layer = this._nextFreeLayer++;
+		const layer = this._allocLayer();
+		if (layer < 0) return null;
+
 		const gl = this._gl;
-
 		gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._texture);
 		gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, width, height, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 		gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
@@ -80,8 +147,9 @@ export default class TextureArrayManager {
 			layer,
 			width,
 			height,
-			uvScaleX: width / this._layerSize,
-			uvScaleY: height / this._layerSize
+			uvScaleX: width / this._layerWidth,
+			uvScaleY: height / this._layerHeight,
+			lastUsed: ++this._useCounter
 		};
 		this._entries.set(srcTexture, entry);
 		return entry;
@@ -95,28 +163,46 @@ export default class TextureArrayManager {
 	 */
 	getLayer(srcTexture, width, height) {
 		const cached = this._entries.get(srcTexture);
-		if (cached) return cached;
+		if (cached) {
+			this._touch(cached);
+			return cached;
+		}
 
-		if (width > this._layerSize || height > this._layerSize) {
+		if (width > this._layerWidth || height > this._layerHeight) {
 			return null;
 		}
 
-		if (this._nextFreeLayer >= this._capacity) {
-			if (!this._grow()) return null;
-		}
+		const layer = this._allocLayer();
+		if (layer < 0) return null;
 
-		const layer = this._nextFreeLayer++;
 		this._blitIntoLayer(srcTexture, layer, width, height);
 
 		const entry = {
 			layer,
 			width,
 			height,
-			uvScaleX: width / this._layerSize,
-			uvScaleY: height / this._layerSize
+			uvScaleX: width / this._layerWidth,
+			uvScaleY: height / this._layerHeight,
+			lastUsed: ++this._useCounter
 		};
 		this._entries.set(srcTexture, entry);
 		return entry;
+	}
+
+	/**
+	 * Upload pixels to a fresh layer without registering them for reuse.
+	 * Used to reserve e.g. palette layer 0 as a dummy/identity layer.
+	 * @returns {number} layer index or -1
+	 */
+	reserveLayer(pixels, width, height) {
+		if (width > this._layerWidth || height > this._layerHeight) return -1;
+		const layer = this._allocLayer();
+		if (layer < 0) return -1;
+		const gl = this._gl;
+		gl.bindTexture(gl.TEXTURE_2D_ARRAY, this._texture);
+		gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, width, height, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+		gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
+		return layer;
 	}
 
 	_grow() {
@@ -140,12 +226,12 @@ export default class TextureArrayManager {
 			gl.blitFramebuffer(
 				0,
 				0,
-				this._layerSize,
-				this._layerSize,
+				this._layerWidth,
+				this._layerHeight,
 				0,
 				0,
-				this._layerSize,
-				this._layerSize,
+				this._layerWidth,
+				this._layerHeight,
 				gl.COLOR_BUFFER_BIT,
 				gl.NEAREST
 			);
@@ -173,7 +259,8 @@ export default class TextureArrayManager {
 
 		const status = gl.checkFramebufferStatus(gl.READ_FRAMEBUFFER);
 		if (status !== gl.FRAMEBUFFER_COMPLETE) {
-			this._nextFreeLayer--;
+			// Recycle the slot on failure.
+			this._freeLayers.push(layer);
 			gl.bindFramebuffer(gl.READ_FRAMEBUFFER, prevRead);
 			gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, prevDraw);
 			return null;
@@ -191,6 +278,7 @@ export default class TextureArrayManager {
 		if (this._readFBO) gl.deleteFramebuffer(this._readFBO);
 		if (this._drawFBO) gl.deleteFramebuffer(this._drawFBO);
 		this._entries.clear();
+		this._freeLayers.length = 0;
 		this._texture = null;
 		this._readFBO = null;
 		this._drawFBO = null;

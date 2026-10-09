@@ -30,7 +30,7 @@ function RenderCanvas3D(isBlendModeOne) {
 	if (!this.image.texture || !this.color[3]) {
 		return;
 	}
-	_batcher.addSprite(_gl, this, isBlendModeOne);
+	_batcher.addSprite(_gl, this, isBlendModeOne, _depthTest, _depthMask);
 }
 
 /**
@@ -535,7 +535,9 @@ class SpriteRenderer {
 			return;
 		}
 
-		// Flush before changing GL state.
+		// Flush pending work with the *previous* state before changing it.
+		// The batcher applies depth state lazily, so this guarantees the old
+		// state is honored for whatever is already queued.
 		if (_batcher && _batcher.hasPending) {
 			_batcher.flush(_gl);
 		}
@@ -544,17 +546,11 @@ class SpriteRenderer {
 		const prevDepthMask = _depthMask;
 		const prevDepthCorrection = this.disableDepthCorrection;
 
-		if (_depthTest !== depthTest) {
-			_depthTest = depthTest;
-			depthTest ? _gl.enable(_gl.DEPTH_TEST) : _gl.disable(_gl.DEPTH_TEST);
-		}
-		if (_depthMask !== depthMask) {
-			_depthMask = depthMask;
-			_gl.depthMask(depthMask);
-		}
-		if (this.disableDepthCorrection !== depthCorrection) {
-			this.disableDepthCorrection = depthCorrection;
-		}
+		// Update logical state; GL is touched by SpriteBatcher.applyDepthState
+		// on the next flush that actually emits instances.
+		_depthTest = depthTest;
+		_depthMask = depthMask;
+		this.disableDepthCorrection = depthCorrection;
 
 		try {
 			fn();
@@ -562,17 +558,9 @@ class SpriteRenderer {
 			// Flush anything accumulated under the temporary state.
 			_batcher.flush(_gl);
 
-			if (_depthTest !== prevDepthTest) {
-				_depthTest = prevDepthTest;
-				prevDepthTest ? _gl.enable(_gl.DEPTH_TEST) : _gl.disable(_gl.DEPTH_TEST);
-			}
-			if (_depthMask !== prevDepthMask) {
-				_depthMask = prevDepthMask;
-				_gl.depthMask(prevDepthMask);
-			}
-			if (this.disableDepthCorrection !== prevDepthCorrection) {
-				this.disableDepthCorrection = prevDepthCorrection;
-			}
+			_depthTest = prevDepthTest;
+			_depthMask = prevDepthMask;
+			this.disableDepthCorrection = prevDepthCorrection;
 		}
 	}
 }

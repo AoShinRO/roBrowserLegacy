@@ -20,6 +20,7 @@ in float iFlags;
 in vec2  iTextSize;
 in float iTextureLayer;
 in vec2  iUvScale;
+in float iPaletteLayer;
 
 out vec2  vTextureCoord;
 out vec2  vUv;
@@ -27,6 +28,7 @@ out vec4  vColor;
 out float vShadow;
 out vec2  vTextSize;
 flat out int vTextureLayer;
+flat out int vPaletteLayer;
 flat out int   vFlags;
 
 uniform mat4 uModelViewMat;
@@ -106,5 +108,6 @@ void main(void) {
     vShadow       = iShadow;
     vTextSize     = iTextSize;
     vTextureLayer = int(iTextureLayer);
+    vPaletteLayer = int(iPaletteLayer);
     vFlags        = flags;
 }

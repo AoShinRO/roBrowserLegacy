@@ -207906,6 +207906,7 @@ var init_SpriteBatcher = __esmMin((() => {
 			}
 			const isArray = !!arrayEntry;
 			const nextTexture = isArray ? null : state.image.texture;
+			if (!isArray && state.image.palette && this._count > 0 && this._paletteManager.atCapacity) this.flush(gl);
 			let paletteLayer = 0;
 			if (!isArray && state.image.palette) {
 				if (this._count > 0 && this._paletteManager.atCapacity) this.flush(gl);
@@ -207916,8 +207917,8 @@ var init_SpriteBatcher = __esmMin((() => {
 			const depthChanged = depthTest !== this._depthTest || depthMask !== this._depthMask;
 			const arrayChanged = this._count > 0 && isArray !== this._isArrayBatch;
 			const textureChanged = this._count > 0 && !isArray && nextTexture !== this._texture;
-			if (this._count > 0 && (blendChanged || depthChanged || arrayChanged || textureChanged)) this.flush(gl);
 			this._blendMode = blendMode;
+			if (this._count > 0 && (blendChanged || depthChanged || arrayChanged || textureChanged)) this.flush(gl);
 			this._depthTest = depthTest;
 			this._depthMask = depthMask;
 			this._texture = nextTexture;
@@ -207967,6 +207968,8 @@ var init_SpriteBatcher = __esmMin((() => {
 			if (this._count === 0) return;
 			gl.useProgram(this._program);
 			this.applyDepthState(gl, this._depthTest, this._depthMask);
+			if (this._blendMode === 1) gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+			else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 			gl.bindBuffer(gl.ARRAY_BUFFER, this._instanceBuffer);
 			gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._data, 0, this._count * 22);
 			gl.activeTexture(gl.TEXTURE1);

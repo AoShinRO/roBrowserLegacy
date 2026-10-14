@@ -8,7 +8,7 @@
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropNames$1 = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __esmMin = (fn, res, err) => () => {
@@ -19,7 +19,7 @@ var __esmMin = (fn, res, err) => () => {
 		throw err = [e], e;
 	}
 };
-var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
 var __exportAll = (all, no_symbols) => {
 	let target = {};
 	for (var name in all) __defProp(target, name, {
@@ -30,7 +30,7 @@ var __exportAll = (all, no_symbols) => {
 	return target;
 };
 var __copyProps = (to, from, except, desc) => {
-	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames$1(from), i = 0, n = keys.length, key; i < n; i++) {
 		key = keys[i];
 		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
 			get: ((k) => from[k]).bind(null, key),
@@ -207761,11 +207761,10 @@ var init_SpriteBatcher = __esmMin((() => {
 			this._arrayManager = null;
 			this._paletteManager = null;
 			this._texture = null;
-			this._blendMode = 0;
+			this._blendDst = null;
 			this._isArrayBatch = false;
 			this._depthTest = true;
 			this._depthMask = true;
-			this._glBlendMode = -1;
 			this._glDepthTest = null;
 			this._glDepthMask = null;
 		}
@@ -207892,10 +207891,13 @@ var init_SpriteBatcher = __esmMin((() => {
 				gl.depthMask(depthMask);
 			}
 		}
-		addSprite(gl, state, isBlendModeOne, depthTest, depthMask) {
-			if (depthTest === void 0) depthTest = true;
-			if (depthMask === void 0) depthMask = true;
-			const blendMode = isBlendModeOne === true ? 1 : isBlendModeOne === false ? 0 : this._blendMode;
+		addSprite(gl, state, blendDst, depthTest, depthMask) {
+			if (depthTest === void 0) depthTest = false;
+			if (depthMask === void 0) depthMask = false;
+			let blendMode;
+			if (blendDst === true) blendMode = gl.ONE;
+			else if (blendDst && typeof blendDst === "number") blendMode = blendDst;
+			else blendMode = gl.ONE_MINUS_SRC_ALPHA;
 			const frame = state.sprite;
 			const arrayEligible = !!(frame && frame.type === 1 && state.image.texture);
 			if (arrayEligible && this._count > 0 && this._arrayManager.atCapacity) this.flush(gl);
@@ -207913,11 +207915,11 @@ var init_SpriteBatcher = __esmMin((() => {
 				const palEntry = this._paletteManager.getLayer(state.image.palette, PALETTE_LAYER_WIDTH, PALETTE_LAYER_HEIGHT);
 				if (palEntry) paletteLayer = palEntry.layer;
 			}
-			const blendChanged = blendMode !== this._blendMode;
+			const blendChanged = blendMode !== this._blendDst;
 			const depthChanged = depthTest !== this._depthTest || depthMask !== this._depthMask;
 			const arrayChanged = this._count > 0 && isArray !== this._isArrayBatch;
 			const textureChanged = this._count > 0 && !isArray && nextTexture !== this._texture;
-			this._blendMode = blendMode;
+			this._blendDst = blendMode;
 			if (this._count > 0 && (blendChanged || depthChanged || arrayChanged || textureChanged)) this.flush(gl);
 			this._depthTest = depthTest;
 			this._depthMask = depthMask;
@@ -207968,8 +207970,7 @@ var init_SpriteBatcher = __esmMin((() => {
 			if (this._count === 0) return;
 			gl.useProgram(this._program);
 			this.applyDepthState(gl, this._depthTest, this._depthMask);
-			if (this._blendMode === 1) gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-			else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+			gl.blendFunc(gl.SRC_ALPHA, this._blendDst ?? gl.ONE_MINUS_SRC_ALPHA);
 			gl.bindBuffer(gl.ARRAY_BUFFER, this._instanceBuffer);
 			gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._data, 0, this._count * 22);
 			gl.activeTexture(gl.TEXTURE1);
@@ -255115,8 +255116,7 @@ var init_TwoDEffect = __esmMin((() => {
 			const duration = this.endTick - this.startTick;
 			let steps = start / duration * 100;
 			if (steps > 100) steps = 100;
-			if (this.blendMode > 0 && this.blendMode < 16) gl.blendFunc(gl.SRC_ALPHA, blendMode$2[this.blendMode]);
-			else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+			const blendDst = this.blendMode > 0 && this.blendMode < 16 ? blendMode$2[this.blendMode] : void 0;
 			SpriteRenderer.image.texture = this.texture;
 			SpriteRenderer.zIndex = this.zIndex;
 			const cRad = Camera.angle[1] * Math.PI / 180;
@@ -255241,7 +255241,7 @@ var init_TwoDEffect = __esmMin((() => {
 				SpriteRenderer.angle = angle;
 			} else SpriteRenderer.angle = this.angle;
 			SpriteRenderer.runWithDepth(this.overlay === false, this.overlay === false, this.overlay === true, () => {
-				SpriteRenderer.render();
+				SpriteRenderer.render(blendDst);
 			});
 			if (this.ownerEntity) {
 				if (this.endTick < tick) this.ownerEntity.attachments.remove(this.spriteName + "-" + this.sizeStartX + "-" + this.rotateLate);
@@ -255291,7 +255291,6 @@ var init_TwoDEffect = __esmMin((() => {
 			SpriteRenderer.zIndex = 0;
 		}
 		static afterRender(gl) {
-			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 			SpriteRenderer.unbind(gl);
 		}
 	};
@@ -255600,8 +255599,7 @@ var init_ThreeDEffect = __esmMin((() => {
 		}
 		render(gl, tick) {
 			if (this.startTick > tick) return;
-			if (this.blendMode > 0 && this.blendMode < 16) gl.blendFunc(gl.SRC_ALPHA, blendMode$1[this.blendMode]);
-			else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+			const blendDst = this.blendMode > 0 && this.blendMode < 16 ? blendMode$1[this.blendMode] : void 0;
 			const start = tick - this.startTick;
 			const end = this.endTick - this.startTick;
 			let steps = start / end * 100;
@@ -255802,12 +255800,12 @@ var init_ThreeDEffect = __esmMin((() => {
 					renderer.size[0] = width;
 					renderer.size[1] = height;
 					SpriteRenderer.runWithDepth(this.overlay === false, false, this.overlay === true, () => {
-						SpriteRenderer.render();
+						SpriteRenderer.render(blendDst);
 					});
 					++i;
 				} while (i < layercount);
 			} else SpriteRenderer.runWithDepth(this.overlay === false, false, this.overlay === true, () => {
-				SpriteRenderer.render();
+				SpriteRenderer.render(blendDst);
 			});
 			this.needCleanUp = this.endTick < tick;
 		}
@@ -255850,7 +255848,6 @@ var init_ThreeDEffect = __esmMin((() => {
 			SpriteRenderer.zIndex = 0;
 		}
 		static afterRender(gl) {
-			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 			SpriteRenderer.unbind(gl);
 		}
 	};
@@ -282953,7 +282950,7 @@ var init_liblua5_1 = __esmMin((() => {
 }));
 //#endregion
 //#region node_modules/lodash/lodash.js
-var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
 	/**
 	* @license
 	* Lodash <https://lodash.com/>
@@ -297539,7 +297536,7 @@ var require_lodash = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(freeModule.exports = _)._ = _;
 			freeExports._ = _;
 		} else root._ = _;
-	}).call(exports);
+	}).call(this$2);
 }));
 //#endregion
 //#region src/Vendors/wasmoon-lua5.1.js
@@ -344995,8 +344992,8 @@ var require_rijndael_precalculated = /* @__PURE__ */ __commonJSMin(((exports, mo
 }));
 //#endregion
 //#region node_modules/rijndael-js/lib/utils.js
-var require_utils = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var root = typeof self === "object" && self.self === self && self || typeof global === "object" && global.global === global && global || exports;
+var require_utils = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	var root = typeof self === "object" && self.self === self && self || typeof global === "object" && global.global === global && global || this$1;
 	var has = (type) => typeof root[type] !== "undefined";
 	var is = (value, type) => has(type) && value instanceof root[type];
 	module.exports.toArray = (data) => {

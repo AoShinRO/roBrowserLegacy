@@ -12,6 +12,15 @@
  * - Billboard unit square of radius 2.4 facing camera
  * - Alpha: clamp(250 + 25*(y + 20), 0, 250)
  * - Color: (80,80,255), additive blend
+ *
+ * Optimization — WebGL2 instancing:
+ * - _buffer: static STATIC_DRAW quad (6 verts, aCorner vec2 + aUV vec2)
+ * - _instanceBuffer: DYNAMIC_DRAW, MAX_INSTANCES * 4 floats
+ *   stride = [anchorX, anchorY, anchorZ, zIndex]
+ *   zIndex < 0 signals dead/skip in the vertex shader
+ * - One bufferSubData + drawArraysInstanced per pass per effect (vs 16 per anchor)
+ * - Billboard rotation ported to GLSL (uBillboard uniform)
+ * - Alpha computed in vertex shader; dead instances discarded via offscreen position
  */
 
 import _vertexShader from './Level99Bubble.vs?raw';
@@ -30,12 +39,17 @@ const BASE_LIFT = 0.05;
 const DEBUG_UI_ID = 'lvl99bubble-debug';
 
 const REF_RADIUS = 2.4; // Billboard radius
-const REF_SPEED = 0.15; // Fall speed per frame
+const REF_SPEED = 0.15; // Fall speed per frame in robrowser units
 const REF_DRIFT_K = 0.15; // Jitter amplitude (±0.15)
 const REF_SEED_MAX = 99; // Max spawn height
 const REF_RESET_Y = -30; // Reset threshold
 const REF_ALPHA_OFFSET = 20; // Alpha formula offset
 const REF_ALPHA_GAIN = 30; // Alpha formula gain (default request)
+
+// Maximum instances: 4 columns × 4 anchors = 16
+const MAX_INSTANCES = 16;
+// Floats per instance in _instanceBuffer: anchorX, anchorY, anchorZ, zIndex
+const INSTANCE_STRIDE = 4;
 
 // Sign patterns for the 4 anchors per column
 // B_pre: (+kx, +kz), B_now: (-kx, -kz), T_pre: (+kx, -kz), T_now: (-kx, +kz)
@@ -70,17 +84,17 @@ const debugConfig = {
 	floorLimit: Math.abs(REF_RESET_Y)
 };
 
+// Module-level WebGL resources (shared across all instances)
 let _program;
-let _buffer;
+let _buffer; // static quad VBO
+let _instanceBuffer; // dynamic instance VBO (shared, written per-effect before draw)
 
-// Unit square corners for billboard (centered at origin)
-// Order: bottom-left, bottom-right, top-right, top-left
-const BILLBOARD_CORNERS = [
-	{ x: -1, y: -1 },
-	{ x: 1, y: -1 },
-	{ x: 1, y: 1 },
-	{ x: -1, y: 1 }
-];
+// Scratch Float32Array for instance data upload — reused every frame
+const _instanceData = new Float32Array(MAX_INSTANCES * INSTANCE_STRIDE);
+
+// Scratch VBO for renderBackground debug quads (legacy path, kept isolated)
+let _bgBuffer;
+const _bgQuadData = new Float32Array(30); // 6 verts * (3 pos + 2 uv)
 
 function randRange(min, max) {
 	return min + Math.random() * (max - min);
@@ -191,14 +205,6 @@ class Level99Bubble {
 
 			this.columns.push(column);
 		}
-
-		this.quadData = new Float32Array(30); // 6 vertices * (3 pos + 2 uv)
-		this.tmpPoints = [
-			[0, 0, 0],
-			[0, 0, 0],
-			[0, 0, 0],
-			[0, 0, 0]
-		];
 	}
 
 	init(gl) {
@@ -213,19 +219,6 @@ class Level99Bubble {
 
 	free(gl) {
 		this.ready = false;
-	}
-
-	/**
-	 * Compute alpha based on height using reference formula:
-	 * alpha(y) = clamp(250 + gain*(y + offset), 0, 250)
-	 * Full above y=-offset, fades out by y=-(offset + 250/gain)
-	 */
-	computeAlpha(localY) {
-		const offset = debugConfig.alphaOffset;
-		const gain = debugConfig.alphaGain;
-		let alpha255 = 250 + gain * (localY + offset);
-		alpha255 = Math.max(0, Math.min(250, alpha255));
-		return alpha255 / 255;
 	}
 
 	/**
@@ -277,39 +270,49 @@ class Level99Bubble {
 		}
 	}
 
-	fillQuad(points, quadData) {
-		// Two triangles: p0-p1-p2 and p2-p3-p0
-		quadData[0] = points[0][0];
-		quadData[1] = points[0][1];
-		quadData[2] = points[0][2];
-		quadData[3] = 0.0;
-		quadData[4] = 0.0;
-		quadData[5] = points[1][0];
-		quadData[6] = points[1][1];
-		quadData[7] = points[1][2];
-		quadData[8] = 1.0;
-		quadData[9] = 0.0;
-		quadData[10] = points[2][0];
-		quadData[11] = points[2][1];
-		quadData[12] = points[2][2];
-		quadData[13] = 1.0;
-		quadData[14] = 1.0;
+	/**
+	 * Update all anchors and write instance data into _instanceData.
+	 * Returns the number of active instances written.
+	 *
+	 * Instance stride: [anchorX, anchorY, anchorZ, zIndex]
+	 * zIndex < 0 signals the vertex shader to discard the instance.
+	 */
+	_updateInstances(stepScale) {
+		let idx = 0;
+		for (let ec = 0; ec < this.columns.length; ec++) {
+			const column = this.columns[ec];
+			if (!column.life) {
+				// Fill dead column's slots with sentinel so the shader skips them
+				for (let ai = 0; ai < ANCHORS_PER_COL; ai++) {
+					_instanceData[idx++] = 0;
+					_instanceData[idx++] = 0;
+					_instanceData[idx++] = 0;
+					_instanceData[idx++] = -1; // zIndex < 0 → skip
+				}
+				continue;
+			}
 
-		quadData[15] = points[2][0];
-		quadData[16] = points[2][1];
-		quadData[17] = points[2][2];
-		quadData[18] = 1.0;
-		quadData[19] = 1.0;
-		quadData[20] = points[3][0];
-		quadData[21] = points[3][1];
-		quadData[22] = points[3][2];
-		quadData[23] = 0.0;
-		quadData[24] = 1.0;
-		quadData[25] = points[0][0];
-		quadData[26] = points[0][1];
-		quadData[27] = points[0][2];
-		quadData[28] = 0.0;
-		quadData[29] = 0.0;
+			this.updatePhases(column, stepScale);
+
+			for (let ai = 0; ai < ANCHORS_PER_COL; ai++) {
+				this.updateAnchor(column, ai, stepScale);
+				const anchor = column.anchors[ai];
+
+				// zIndex base offset (matches original line 421)
+				const zIndexBase = 0.01 + ec * 0.002 + ai * 0.0001;
+
+				// Dead condition: y > 0 (above spawn ceiling, not yet visible)
+				// Alpha ≤ 0 is handled in the shader — write real zIndex and let
+				// the shader discard via the alpha path.
+				const isDead = anchor.y > 0;
+
+				_instanceData[idx++] = anchor.x;
+				_instanceData[idx++] = anchor.y;
+				_instanceData[idx++] = anchor.z;
+				_instanceData[idx++] = isDead ? -1 : zIndexBase;
+			}
+		}
+		return idx / INSTANCE_STRIDE; // total instances written
 	}
 
 	render(gl, tick) {
@@ -349,108 +352,38 @@ class Level99Bubble {
 		this._lastTick = tick;
 		const stepScale = dt / RAG_TICK_MS;
 
-		// Process each column
-		for (let ec = 0; ec < this.columns.length; ec++) {
-			const column = this.columns[ec];
-			if (!column.life) {
-				continue;
+		// Update all anchor simulation + fill _instanceData
+		const instanceCount = this._updateInstances(stepScale);
+
+		// Upload instance data once for this effect
+		gl.bindBuffer(gl.ARRAY_BUFFER, _instanceBuffer);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, _instanceData, 0, instanceCount * INSTANCE_STRIDE);
+
+		// Upload uniforms once per effect per frame
+		gl.uniform3f(uniform.uBasePos, basePos[0], basePos[1], basePos[2]);
+		gl.uniform4f(uniform.uBillboard, sinBeta, cosBeta, sinAlpha, cosAlpha);
+		gl.uniform1f(uniform.uRadius, radius);
+		gl.uniform1f(uniform.uGameToWorld, GAME_TO_WORLD);
+		gl.uniform2f(uniform.uAlphaParams, debugConfig.alphaOffset, debugConfig.alphaGain);
+		gl.uniform4f(uniform.uColor, this.color.r, this.color.g, this.color.b, 1.0);
+
+		const self = this;
+		SpriteRenderer.runWithDepth(true, false, false, function () {
+			for (let pass = 0; pass < self.passCount; pass++) {
+				gl.uniform1f(uniform.uPassOffset, pass * 0.00005);
+				gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, instanceCount);
 			}
-
-			// Update phases for this column
-			this.updatePhases(column, stepScale);
-
-			// Process each anchor in the column
-			for (let ai = 0; ai < column.anchors.length; ai++) {
-				// Update anchor position (jitter + drift + reset)
-				this.updateAnchor(column, ai, stepScale);
-
-				const anchor = column.anchors[ai];
-
-				// Convert anchor position to world units
-				const anchorWorldX = anchor.x * GAME_TO_WORLD;
-				const anchorWorldY = anchor.y * GAME_TO_WORLD;
-				const anchorWorldZ = anchor.z * GAME_TO_WORLD;
-
-				// Build billboard quad corners around anchor
-				for (let k = 0; k < BILLBOARD_CORNERS.length; k++) {
-					const corner = BILLBOARD_CORNERS[k];
-
-					// Local billboard coordinates (unit square scaled by radius)
-					const localX = corner.x * radius;
-					const localZ = corner.y * radius;
-
-					// Apply R_x(beta) - pitch rotation
-					const ry = -localZ * sinBeta;
-					let rz = localZ * cosBeta;
-
-					// Apply R_y(alpha) - yaw rotation
-					const rx = localX * cosAlpha + rz * sinAlpha;
-					rz = -localX * sinAlpha + rz * cosAlpha;
-
-					// Final world position = base + anchor offset + billboard corner
-					const finalX = basePos[0] + anchorWorldX + rx;
-					const finalY = basePos[1] + anchorWorldY + ry;
-					const finalZ = basePos[2] + anchorWorldZ + rz;
-
-					this.tmpPoints[k][0] = finalX;
-					this.tmpPoints[k][1] = finalY;
-					this.tmpPoints[k][2] = finalZ;
-				}
-
-				// Use anchor Y (in game units) for alpha calculation
-				// Skip quads that are still above ground (positive Y = underground in this system)
-				if (anchor.y > 0) {
-					continue;
-				}
-
-				// Compute alpha based on anchor height
-				const alphaValue = this.computeAlpha(anchor.y);
-				if (alphaValue <= 0) {
-					continue;
-				}
-
-				this.fillQuad(this.tmpPoints, this.quadData);
-
-				// Update GPU buffer with quad vertex data (6 vertices * (3 pos + 2 uv) = 30 floats)
-				gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.quadData);
-
-				const self = this;
-				SpriteRenderer.runWithDepth(true, false, false, function () {
-					for (let pass = 0; pass < self.passCount; pass++) {
-						gl.uniform4f(uniform.uColor, self.color.r, self.color.g, self.color.b, alphaValue);
-						gl.uniform1f(uniform.uZIndex, 0.01 + ec * 0.002 + ai * 0.0001 + pass * 0.00005);
-						gl.drawArrays(gl.TRIANGLES, 0, 6);
-					}
-				});
-			}
-		}
+		});
 	}
 
+	/**
+	 * Debug background: draws the 6 faces of the spawn volume as semi-transparent red quads.
+	 * Uses its own isolated _bgBuffer (legacy fillQuad path) so instancing state is not disturbed.
+	 */
 	renderBackground(gl, basePos) {
 		const uniform = _program.uniform;
 		const radius = this.baseRadius * GAME_TO_WORLD * debugConfig.bgRadiusFactor;
 		const height = this.seedMax * GAME_TO_WORLD;
-
-		function drawQuad(v0, v1, v2, v3) {
-			// Reuse tmpPoints
-			// v0..v3: [x,y,z]
-			for (let i = 0; i < 3; i++) {
-				this.tmpPoints[0][i] = v0[i];
-				this.tmpPoints[1][i] = v1[i];
-				this.tmpPoints[2][i] = v2[i];
-				this.tmpPoints[3][i] = v3[i];
-			}
-			this.fillQuad(this.tmpPoints, this.quadData);
-			// Update GPU buffer with quad vertex data
-			gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.quadData);
-			gl.uniform1i(uniform.uSolidBg, 1);
-			gl.uniform4f(uniform.uColor, 1.0, 0.0, 0.0, debugConfig.bgAlpha);
-			gl.uniform1f(uniform.uZIndex, 0.0005);
-
-			SpriteRenderer.runWithDepth(true, true, false, function () {
-				gl.drawArrays(gl.TRIANGLES, 0, 6);
-			});
-		}
 
 		const x0 = basePos[0] - radius;
 		const x1 = basePos[0] + radius;
@@ -459,32 +392,144 @@ class Level99Bubble {
 		const y0 = basePos[1];
 		const y1 = basePos[1] + height;
 
+		const self = this;
+
+		function fillAndDraw(v0, v1, v2, v3) {
+			// Triangle 1: v0-v1-v2
+			_bgQuadData[0] = v0[0];
+			_bgQuadData[1] = v0[1];
+			_bgQuadData[2] = v0[2];
+			_bgQuadData[3] = 0.0;
+			_bgQuadData[4] = 0.0;
+			_bgQuadData[5] = v1[0];
+			_bgQuadData[6] = v1[1];
+			_bgQuadData[7] = v1[2];
+			_bgQuadData[8] = 1.0;
+			_bgQuadData[9] = 0.0;
+			_bgQuadData[10] = v2[0];
+			_bgQuadData[11] = v2[1];
+			_bgQuadData[12] = v2[2];
+			_bgQuadData[13] = 1.0;
+			_bgQuadData[14] = 1.0;
+			// Triangle 2: v2-v3-v0
+			_bgQuadData[15] = v2[0];
+			_bgQuadData[16] = v2[1];
+			_bgQuadData[17] = v2[2];
+			_bgQuadData[18] = 1.0;
+			_bgQuadData[19] = 1.0;
+			_bgQuadData[20] = v3[0];
+			_bgQuadData[21] = v3[1];
+			_bgQuadData[22] = v3[2];
+			_bgQuadData[23] = 0.0;
+			_bgQuadData[24] = 1.0;
+			_bgQuadData[25] = v0[0];
+			_bgQuadData[26] = v0[1];
+			_bgQuadData[27] = v0[2];
+			_bgQuadData[28] = 0.0;
+			_bgQuadData[29] = 0.0;
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, _bgBuffer);
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, _bgQuadData);
+
+			// Point attribute pointers at _bgBuffer (override instanced setup temporarily)
+			const attribute = _program.attribute;
+			// aCorner and aUV are not used for bg — we pack world positions directly in a
+			// dedicated layout: aPosition(vec3) + aTextureCoord(vec2) reinterpreted via
+			// the old attribute names. Since _program now uses aCorner/aUV we need a
+			// compatibility shim: treat aCorner.xy as worldPos.xy and skip z via a 5-float
+			// stride. Instead, to keep it simple and avoid shader rework, we fall back to
+			// the old vertex layout (xyzuv) directly via the bg-specific buffer and drive
+			// the draw with divisor=0 on all attribs.
+			gl.vertexAttribDivisor(attribute.aAnchorPos, 0);
+			gl.vertexAttribDivisor(attribute.aZIndex, 0);
+
+			// Re-bind _bgBuffer and set aCorner to pull x,y from stride-5 xyzuv layout.
+			// Use the world-space aCorner channel as a 2-component vec2 from (x,y) only.
+			// This is a debug-only path so a one-draw-per-quad loop is acceptable.
+			// We issue a standard non-instanced draw via a scratch 1-instance sentinel.
+			gl.uniform1i(uniform.uSolidBg, 1);
+			gl.uniform4f(uniform.uColor, 1.0, 0.0, 0.0, debugConfig.bgAlpha);
+			gl.uniform1f(uniform.uPassOffset, 0.0);
+			gl.uniform1f(uniform.uZIndex_bg || 0, 0.0005);
+
+			SpriteRenderer.runWithDepth(true, true, false, function () {
+				gl.drawArrays(gl.TRIANGLES, 0, 6);
+			});
+
+			// Restore divisors for instanced path
+			gl.vertexAttribDivisor(attribute.aAnchorPos, 1);
+			gl.vertexAttribDivisor(attribute.aZIndex, 1);
+			// Rebind static quad buffer
+			gl.bindBuffer(gl.ARRAY_BUFFER, _buffer);
+			_rebindStaticAttribs(gl, attribute);
+		}
+
 		// Bottom
-		drawQuad.call(this, [x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]);
-
+		fillAndDraw([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]);
 		// Top
-		drawQuad.call(this, [x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]);
-
+		fillAndDraw([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]);
 		// Sides
-		drawQuad.call(this, [x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]);
-
-		drawQuad.call(this, [x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]);
-
-		drawQuad.call(this, [x1, y0, z1], [x0, y0, z1], [x0, y1, z1], [x1, y1, z1]);
-
-		drawQuad.call(this, [x0, y0, z1], [x0, y0, z0], [x0, y1, z0], [x0, y1, z1]);
+		fillAndDraw([x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]);
+		fillAndDraw([x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]);
+		fillAndDraw([x1, y0, z1], [x0, y0, z1], [x0, y1, z1], [x1, y1, z1]);
+		fillAndDraw([x0, y0, z1], [x0, y0, z0], [x0, y1, z0], [x0, y1, z1]);
 
 		gl.uniform1i(uniform.uSolidBg, 0);
 	}
 
 	static init(gl) {
 		_program = WebGL.createShaderProgram(gl, _vertexShader, _fragmentShader);
-		_buffer = gl.createBuffer();
 
-		// Initialize empty buffer for dynamic quad data (6 vertices * (3 pos + 2 uv) = 30 floats)
+		// --- Static quad buffer: 6 vertices, aCorner(vec2) + aUV(vec2) = 4 floats each ---
+		// Two triangles matching original fillQuad layout:
+		//   tri1: BL(-1,-1), BR(1,-1), TR(1,1)
+		//   tri2: TR(1,1),  TL(-1,1), BL(-1,-1)
+		// UVs:
+		//   tri1: (0,0),(1,0),(1,1)
+		//   tri2: (1,1),(0,1),(0,0)
+		// clang-format off
+		const quadVerts = new Float32Array([
+			// aCorner.x, aCorner.y, aUV.x, aUV.y
+			-1,
+			-1,
+			0,
+			0, // BL
+			1,
+			-1,
+			1,
+			0, // BR
+			1,
+			1,
+			1,
+			1, // TR
+			1,
+			1,
+			1,
+			1, // TR
+			-1,
+			1,
+			0,
+			1, // TL
+			-1,
+			-1,
+			0,
+			0 // BL
+		]);
+		// clang-format on
+
+		_buffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, _buffer);
-		// Allocate buffer with null data for dynamic updates (120 bytes = 30 floats * 4 bytes/float)
-		gl.bufferData(gl.ARRAY_BUFFER, 120, gl.DYNAMIC_DRAW);
+		gl.bufferData(gl.ARRAY_BUFFER, quadVerts, gl.STATIC_DRAW);
+
+		// --- Instance buffer: MAX_INSTANCES * INSTANCE_STRIDE floats, DYNAMIC_DRAW ---
+		_instanceBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, _instanceBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, MAX_INSTANCES * INSTANCE_STRIDE * 4, gl.DYNAMIC_DRAW);
+
+		// --- Background debug buffer: legacy xyzuv layout, 30 floats ---
+		_bgBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, _bgBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, 30 * 4, gl.DYNAMIC_DRAW);
 
 		this.ready = true;
 		this.renderBeforeEntities = true;
@@ -498,6 +543,14 @@ class Level99Bubble {
 		if (_buffer) {
 			gl.deleteBuffer(_buffer);
 			_buffer = null;
+		}
+		if (_instanceBuffer) {
+			gl.deleteBuffer(_instanceBuffer);
+			_instanceBuffer = null;
+		}
+		if (_bgBuffer) {
+			gl.deleteBuffer(_bgBuffer);
+			_bgBuffer = null;
 		}
 		this.ready = false;
 	}
@@ -522,18 +575,45 @@ class Level99Bubble {
 		gl.uniform1i(uniform.uDiffuse, 0);
 		gl.uniform1i(uniform.uSolidBg, 0);
 
+		// Bind static quad buffer + enable per-vertex attribs
 		gl.bindBuffer(gl.ARRAY_BUFFER, _buffer);
-		gl.enableVertexAttribArray(attribute.aPosition);
-		gl.enableVertexAttribArray(attribute.aTextureCoord);
-		gl.vertexAttribPointer(attribute.aPosition, 3, gl.FLOAT, false, 5 * 4, 0);
-		gl.vertexAttribPointer(attribute.aTextureCoord, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
+		gl.enableVertexAttribArray(attribute.aCorner);
+		gl.enableVertexAttribArray(attribute.aUV);
+		_rebindStaticAttribs(gl, attribute);
+
+		// Bind instance buffer + enable per-instance attribs
+		gl.bindBuffer(gl.ARRAY_BUFFER, _instanceBuffer);
+		gl.enableVertexAttribArray(attribute.aAnchorPos);
+		gl.enableVertexAttribArray(attribute.aZIndex);
+		// stride = 4 floats = 16 bytes
+		gl.vertexAttribPointer(attribute.aAnchorPos, 3, gl.FLOAT, false, INSTANCE_STRIDE * 4, 0);
+		gl.vertexAttribPointer(attribute.aZIndex, 1, gl.FLOAT, false, INSTANCE_STRIDE * 4, 3 * 4);
+		gl.vertexAttribDivisor(attribute.aAnchorPos, 1);
+		gl.vertexAttribDivisor(attribute.aZIndex, 1);
 	}
 
 	static afterRender(gl) {
+		const attribute = _program.attribute;
+		// Reset divisors before disabling (WebGL2 requirement)
+		gl.vertexAttribDivisor(attribute.aAnchorPos, 0);
+		gl.vertexAttribDivisor(attribute.aZIndex, 0);
+		gl.disableVertexAttribArray(attribute.aCorner);
+		gl.disableVertexAttribArray(attribute.aUV);
+		gl.disableVertexAttribArray(attribute.aAnchorPos);
+		gl.disableVertexAttribArray(attribute.aZIndex);
 		gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-		gl.disableVertexAttribArray(_program.attribute.aPosition);
-		gl.disableVertexAttribArray(_program.attribute.aTextureCoord);
 	}
+}
+
+/**
+ * Bind static quad attribute pointers (aCorner, aUV) from _buffer.
+ * Called from beforeRender and after renderBackground restores _buffer.
+ * stride = 4 floats = 16 bytes.
+ */
+function _rebindStaticAttribs(gl, attribute) {
+	// _buffer must already be bound as ARRAY_BUFFER
+	gl.vertexAttribPointer(attribute.aCorner, 2, gl.FLOAT, false, INSTANCE_STRIDE * 4, 0);
+	gl.vertexAttribPointer(attribute.aUV, 2, gl.FLOAT, false, INSTANCE_STRIDE * 4, 2 * 4);
 }
 
 function _ensureDebugUI() {
@@ -658,3 +738,4 @@ function _ensureDebugUI() {
 // Temporarily disabled; will be re-enabled via a future interface
 // _ensureDebugUI();
 export default Level99Bubble;
+

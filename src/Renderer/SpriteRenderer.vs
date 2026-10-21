@@ -5,6 +5,7 @@ in vec2 aPosition;
 in vec2 aTextureCoord;
 
 out vec2 vTextureCoord;
+uniform vec4 uTextureRect;
 
 uniform mat4 uModelViewMat;
 uniform mat4 uViewModelMat;
@@ -89,5 +90,5 @@ void main(void) {
     }
     gl_Position.z -= (uSpriteRendererZindex * 0.01 + uSpriteRendererDepth) / max(uCameraZoom, 1.0);
 
-    vTextureCoord = aTextureCoord;
+    vTextureCoord = mix(uTextureRect.xy, uTextureRect.zw, aTextureCoord);
 }

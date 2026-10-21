@@ -93,6 +93,12 @@ void main(void) {
     if (abs(vSource.z + 1.0) > 0.5) { // a palette: not -1
         textureSample = bilinearSample( vTextureCoord );
     }
+    else if (vSource.x > 2.5) {
+        textureSample = texture( uDiffuse, toTexture(vTextureCoord.st) );
+        if (textureSample.a > 0.0) {
+            textureSample.rgb /= textureSample.a;
+        }
+    }
     else if (vSource.x > 1.5) {
         textureSample = texture( uRGBAAtlas, vec3(toTexture(vTextureCoord.st), vSource.y) );
     }

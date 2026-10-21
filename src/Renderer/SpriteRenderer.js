@@ -20,6 +20,7 @@ import _fragmentShader from './SpriteRenderer.fs?raw';
  * Import
  */
 const mat4 = glMatrix.mat4;
+const DEFAULT_UV = new Float32Array([0, 0, 1, 1]);
 
 /**
  * Render in 3D mode
@@ -78,6 +79,8 @@ function RenderCanvas3D(isBlendModeOne) {
 
 	gl.uniform1i(uniform.uIgnoreZindexCap, this.ignoreDepthMinCap);
 	gl.uniform1f(uniform.uSpriteRendererZindex, this.zIndex++);
+	gl.uniform4fv(uniform.uTextureRect, this.image.uvRect || DEFAULT_UV);
+	gl.uniform1i(uniform.uPremultiplied, !!this.image.premultiplied);
 
 	// Rotate
 	if (this.angle !== _angle) {
@@ -107,6 +110,8 @@ function RenderCanvas3D(isBlendModeOne) {
 		gl.bindTexture(gl.TEXTURE_2D, (_texture = this.image.texture));
 	}
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+	this.image.uvRect = null;
+	this.image.premultiplied = false;
 }
 
 /**
@@ -130,6 +135,7 @@ function RecordCanvas3D(isBlendModeOne) {
 		v0 = 0,
 		u1 = 1,
 		v1 = 1;
+	const customUV = image.uvRect;
 
 	// A frame of a sprite file (set by Entity.renderLayer) is drawn from the
 	// shared atlas, and its palette from the palette atlas, so the next layer
@@ -156,8 +162,18 @@ function RecordCanvas3D(isBlendModeOne) {
 			}
 		}
 	}
+	if (customUV) {
+		source = 3;
+		palette = null;
+		u0 = customUV[0];
+		v0 = customUV[1];
+		u1 = customUV[2];
+		v1 = customUV[3];
+	}
 	image.frame = null;
 	image.spr = null;
+	image.uvRect = null;
+	image.premultiplied = false;
 
 	const data = SpriteBatch.record(
 		this.shadowQueue ? SpriteBatch.SHADOW : SpriteBatch.MAIN,
@@ -527,10 +543,24 @@ function syncAfterBatch() {
  * Sprite Renderer NameSpace
  */
 class SpriteRenderer {
+	static get is3D() {
+		return this.render === RenderCanvas3D;
+	}
+
+	static get batchActive() {
+		return SpriteBatch.active;
+	}
+
+	static get gl() {
+		return _gl;
+	}
+
 	/**
 	 * @type {function} functions to use to render
 	 */
 	static render = null;
+	static beforeBatchFlush = null;
+	static afterBatchFlush = null;
 
 	/**
 	 * @type {number} sprite shadow (mult * color)
@@ -573,6 +603,8 @@ class SpriteRenderer {
 	static image = {
 		texture: null,
 		palette: null,
+		uvRect: null,
+		premultiplied: false,
 		size: new Float32Array(2),
 		// The sprite file and frame the texture belongs to, when known; lets a
 		// batch draw it from the file's atlas. Cleared by every draw.
@@ -799,8 +831,10 @@ class SpriteRenderer {
 		if (!SpriteBatch.active) {
 			return;
 		}
+		if (this.beforeBatchFlush) this.beforeBatchFlush();
 		SpriteBatch.flush({ depthTest: _depthTest, depthMask: _depthMask, blendOne: _blendOne });
 		syncAfterBatch();
+		if (this.afterBatchFlush) this.afterBatchFlush();
 	}
 
 	/**
@@ -810,8 +844,10 @@ class SpriteRenderer {
 		if (!SpriteBatch.active) {
 			return;
 		}
+		if (this.beforeBatchFlush) this.beforeBatchFlush();
 		SpriteBatch.close({ depthTest: _depthTest, depthMask: _depthMask, blendOne: _blendOne });
 		syncAfterBatch();
+		if (this.afterBatchFlush) this.afterBatchFlush();
 	}
 }
 

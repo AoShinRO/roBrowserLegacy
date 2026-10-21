@@ -12,6 +12,7 @@
 import Session from 'Engine/SessionStorage.js';
 import Entity from './Entity/Entity.js';
 import SpriteRenderer from './SpriteRenderer.js';
+import EntityComposer from './Entity/EntityComposer.js';
 import Mouse from 'Controls/MouseEventHandler.js';
 import KEYS from 'Controls/KeyEventHandler.js';
 import PathFinding from 'Utils/PathFinding.js';
@@ -422,7 +423,11 @@ function render(gl, modelView, projection, fog, renderEffects) {
 	try {
 		renderList(modelView, projection, renderEffects, tick);
 	} finally {
-		SpriteRenderer.endBatch();
+		try {
+			EntityComposer.flushPending();
+		} finally {
+			SpriteRenderer.endBatch();
+		}
 	}
 
 	// Clean program

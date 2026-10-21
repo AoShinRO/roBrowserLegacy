@@ -18,6 +18,7 @@ uniform vec3  uFogColor;
 uniform float uShadow;
 uniform vec2 uTextSize;
 uniform bool uIsRGBA;
+uniform bool uPremultiplied;
 
 // With palette we don't have a good result because of the gl.NEAREST, so smooth it.
 vec4 bilinearSample(vec2 uv, sampler2D indexT, sampler2D LUT) {
@@ -57,6 +58,10 @@ void main(void) {
     }
     else {
         textureSample = texture( uDiffuse, vTextureCoord.st );
+    }
+
+    if (uPremultiplied && textureSample.a > 0.0) {
+        textureSample.rgb /= textureSample.a;
     }
 
     // No alpha, skip.

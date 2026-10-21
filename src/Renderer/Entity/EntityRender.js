@@ -399,64 +399,14 @@ const renderEntity = (function renderEntityClosure() {
 		switch (self.objecttype) {
 			case Entity.TYPE_PC:
 			case Entity.TYPE_MERC:
-				SpriteRenderer.position[2] = SpriteRenderer.position[2] + 0.2;
-
-				// Main sprite pass:
-				// depthTest  = resolve world occlusion
-				// depthWrite = allow entity to occlude others
-				// depthCorrection ENABLED (required for isometric depth)
-				SpriteRenderer.runWithDepth(true, true, false, function () {
+				{
+					SpriteRenderer.position[2] = SpriteRenderer.position[2] + 0.2;
 					EntityComposer.begin(self);
 					let cartidx;
-					// madogear don't appear costumes
-					const RIDING_STATUS =
-						self.effectState &
-							(StatusConst.EffectState.RIDING |
-								StatusConst.EffectState.DRAGON1 |
-								StatusConst.EffectState.DRAGON2 |
-								StatusConst.EffectState.DRAGON3 |
-								StatusConst.EffectState.DRAGON4 |
-								StatusConst.EffectState.DRAGON5 |
-								StatusConst.EffectState.WUGRIDER) || self.allRidingState;
-
-					function robeCorrection(lookingFront) {
-						if (self.robe > 0 && self.robeHeight && self.bodyHeight) {
-							const HEAD_SIZE = 64;
-							const COMPENSATION = 25;
-							if (
-								self.robeHeight +
-									(self.action === self.ACTION.SIT
-										? 0
-										: RIDING_STATUS && lookingFront
-											? COMPENSATION * 2
-											: COMPENSATION) >
-								self.bodyHeight + HEAD_SIZE
-							) {
-								if (
-									(self.action === self.ACTION.ATTACK ||
-										self.action === self.ACTION.ATTACK1 ||
-										self.action === self.ACTION.ATTACK2 ||
-										self.action === self.ACTION.ATTACK3) &&
-									!lookingFront
-								) {
-									return -450;
-								}
-								if (self.action === self.ACTION.SIT) {
-									return lookingFront ? -450 : RIDING_STATUS ? 1 : -100;
-								}
-								return lookingFront ? -300 : RIDING_STATUS ? 100 : 1;
-							}
-						}
-						if (self.action === self.ACTION.SIT) {
-							return lookingFront ? -100 : 550;
-						}
-						return lookingFront ? 1 : 400;
-					}
 
 					// Shield is behind on some position, seems to be hardcoded by the client
 					if (self.shield && behind) {
 						SpriteRenderer.runWithDepth(true, false, false, function () {
-							SpriteRenderer.zIndex = -1;
 							renderElement(self, self.files.shield, 'shield', _position, true);
 						});
 					}
@@ -468,43 +418,20 @@ const renderEntity = (function renderEntityClosure() {
 
 							// Draw Cart
 							SpriteRenderer.runWithDepth(true, false, false, function () {
-								SpriteRenderer.zIndex = -1;
 								renderElement(self, self.files.cart_shadow, 'cartshadow', _position, false);
-								SpriteRenderer.zIndex = 1;
 								renderElement(self, self.files.cart[cartidx], 'cart', _position, false);
 							});
 						}
 
 						// Draw Robe
 						if (self.robe > 0) {
-							SpriteRenderer.zIndex = robeCorrection(true);
 							renderElement(self, self.files.robe, 'robe', _position, true);
 						}
-					}
-
-					SpriteRenderer.zIndex = 150;
-					if (
-						RIDING_STATUS &&
-						!isLookingBack(direction) &&
-						(self.action === self.ACTION.SIT || self.action === self.ACTION.WALK)
-					) {
-						SpriteRenderer.zIndex *= 2;
 					}
 
 					// Draw Body
 					renderElement(self, self.files.body, 'body', _position, true);
 
-					// Isometric Projection Body Offset
-					let bodyZOffset = 250;
-					if (RIDING_STATUS) {
-						bodyZOffset *= 2;
-						if (self.action === self.ACTION.WALK && !(direction > 2 && direction < 6)) {
-							bodyZOffset += 250;
-						}
-					}
-
-					SpriteRenderer.zIndex = bodyZOffset + 125;
-					let hat_offsets = bodyZOffset + 125;
 					// Draw Head
 					renderElement(self, self.files.head, 'head', _position, false);
 
@@ -513,9 +440,7 @@ const renderEntity = (function renderEntityClosure() {
 
 					// Hat Middle
 					if (self.accessory3 > 0 && self.accessory3 !== self.accessory) {
-						hat_offsets += 100;
 						// accessory already rendered, avoid render same item again
-						SpriteRenderer.zIndex = hat_offsets;
 						renderElement(self, self.files.accessory3, 'head', _position, false);
 					}
 
@@ -526,15 +451,11 @@ const renderEntity = (function renderEntityClosure() {
 						self.accessory2 !== self.accessory3
 					) {
 						// accessory and accessory3 already rendered, avoid render same item again
-						hat_offsets += 100;
-						SpriteRenderer.zIndex = hat_offsets;
 						renderElement(self, self.files.accessory2, 'head', _position, false);
 					}
 
 					// Hat Bottom
 					if (self.accessory > 0) {
-						hat_offsets += 100;
-						SpriteRenderer.zIndex = hat_offsets;
 						renderElement(self, self.files.accessory, 'head', _position, false);
 					}
 
@@ -543,13 +464,11 @@ const renderEntity = (function renderEntityClosure() {
 
 						// Draw Robe
 						if (self.robe > 0) {
-							SpriteRenderer.zIndex = hat_offsets + robeCorrection(false);
 							renderElement(self, self.files.robe, 'robe', _position, true);
 						}
 
 						// Draw Cart
 						if (Session.Playing == true && self.hasCart == true) {
-							SpriteRenderer.zIndex = bodyZOffset + 500;
 							cartidx = DB.isSuperNovice(self._job) ? 0 : self.CartNum;
 							SpriteRenderer.runWithDepth(true, false, false, function () {
 								renderElement(self, self.files.cart_shadow, 'cartshadow', _position, false);
@@ -560,17 +479,15 @@ const renderEntity = (function renderEntityClosure() {
 
 					// Draw Weapon
 					if (self.weapon > 0) {
-						SpriteRenderer.zIndex = bodyZOffset + 250;
 						renderElement(self, self.files.weapon, 'weapon', _position, true);
 						renderElement(self, self.files.weapon_trail, 'weapon_trail', _position, true);
 					}
 
 					if (self.shield > 0 && !behind) {
-						SpriteRenderer.zIndex = bodyZOffset + 300;
 						renderElement(self, self.files.shield, 'shield', _position, true);
 					}
 					EntityComposer.end();
-				});
+				}
 				break;
 			case Entity.TYPE_HOM:
 				SpriteRenderer.position[2] = SpriteRenderer.position[2] + 0.2;

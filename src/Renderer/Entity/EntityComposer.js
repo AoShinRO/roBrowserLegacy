@@ -343,8 +343,9 @@ class EntityComposer {
 			SpriteRenderer.offset[0] = layer.x;
 			SpriteRenderer.offset[1] = layer.y;
 			SpriteRenderer.angle = layer.angle;
-			SpriteRenderer.zIndex = layer.zIndex;
-			SpriteRenderer.render(layer.additive);
+			SpriteRenderer.runWithDepth(true, true, false, function () {
+				SpriteRenderer.render(layer.additive);
+			});
 		}
 	}
 
@@ -440,8 +441,9 @@ class EntityComposer {
 		SpriteRenderer.offset[0] = minX + width / 2;
 		SpriteRenderer.offset[1] = minY + height / 2;
 		SpriteRenderer.angle = 0;
-		SpriteRenderer.zIndex = 1;
-		SpriteRenderer.render(false);
+		SpriteRenderer.runWithDepth(true, true, false, function () {
+			SpriteRenderer.render(false);
+		});
 	}
 
 	static flushPending() {

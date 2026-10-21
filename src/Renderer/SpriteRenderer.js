@@ -544,7 +544,7 @@ function syncAfterBatch() {
  */
 class SpriteRenderer {
 	static get is3D() {
-		return this.render === RenderCanvas3D;
+		return this.render === RenderCanvas3D || this.render === RecordCanvas3D;
 	}
 
 	static get batchActive() {
